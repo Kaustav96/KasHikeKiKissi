@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Phone } from "lucide-react";
+import { MessageCircle, X, Phone, Music, Pause, Play } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useWeddingTheme } from "@/context/ThemeContext";
+import { useMusic } from "@/context/MusicContext";
 import type { WeddingConfig } from "@shared/schema";
 
 interface FloatingContactProps {
@@ -12,6 +13,7 @@ interface FloatingContactProps {
 export default function FloatingContact({ config }: FloatingContactProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { side } = useWeddingTheme();
+  const { isPlaying, hasStarted, togglePlayPause } = useMusic();
 
   const phone = side === "bride" ? config.bridePhone : config.groomPhone;
   const whatsapp = side === "bride" ? config.brideWhatsapp : config.groomWhatsapp;
@@ -21,21 +23,20 @@ export default function FloatingContact({ config }: FloatingContactProps) {
   const textColor = side === "groom" ? "#2E2A27" : "#3D1A1A";
   const borderColor = side === "groom" ? "rgba(185,151,91,0.3)" : "rgba(139,0,0,0.2)";
 
-  if (!phone && !whatsapp) return null;
-
   const whatsappNumber = (whatsapp || phone || "").replace(/[^0-9]/g, "");
   const callNumber = phone || whatsapp || "";
+  const hasContact = !!(phone || whatsapp);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50" data-testid="floating-contact">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3" data-testid="floating-contact">
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && hasContact && (
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-16 right-0 rounded-xl overflow-hidden shadow-xl"
+            className="absolute bottom-[130px] right-0 rounded-xl overflow-hidden shadow-xl"
             style={{
               background: bgColor,
               border: `1px solid ${borderColor}`,
@@ -100,30 +101,64 @@ export default function FloatingContact({ config }: FloatingContactProps) {
         )}
       </AnimatePresence>
 
-      <motion.button
-        className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors"
-        style={{
-          background: isOpen ? textColor : accentColor,
-          color: "#fff",
-          boxShadow: `0 4px 20px ${side === "groom" ? "rgba(185,151,91,0.4)" : "rgba(139,0,0,0.4)"}`,
-        }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen((prev) => !prev)}
-        data-testid="floating-contact-toggle"
-      >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-              <X size={24} />
-            </motion.div>
+      {hasStarted && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-11 h-11 rounded-full shadow-lg flex items-center justify-center transition-colors relative"
+          style={{
+            background: bgColor,
+            color: accentColor,
+            border: `1px solid ${borderColor}`,
+            boxShadow: `0 2px 12px ${side === "groom" ? "rgba(185,151,91,0.2)" : "rgba(139,0,0,0.2)"}`,
+          }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={togglePlayPause}
+          data-testid="floating-music-toggle"
+        >
+          {isPlaying ? (
+            <>
+              <Pause size={16} />
+              <motion.div
+                className="absolute inset-0 rounded-full border-2"
+                style={{ borderColor: accentColor }}
+                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </>
           ) : (
-            <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-              <MessageCircle size={24} />
-            </motion.div>
+            <Play size={16} className="ml-0.5" />
           )}
-        </AnimatePresence>
-      </motion.button>
+        </motion.button>
+      )}
+
+      {hasContact && (
+        <motion.button
+          className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors"
+          style={{
+            background: isOpen ? textColor : accentColor,
+            color: "#fff",
+            boxShadow: `0 4px 20px ${side === "groom" ? "rgba(185,151,91,0.4)" : "rgba(139,0,0,0.4)"}`,
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsOpen((prev) => !prev)}
+          data-testid="floating-contact-toggle"
+        >
+          <AnimatePresence mode="wait">
+            {isOpen ? (
+              <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <X size={24} />
+              </motion.div>
+            ) : (
+              <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <MessageCircle size={24} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      )}
     </div>
   );
 }
