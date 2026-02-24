@@ -31,6 +31,10 @@ export async function seedDatabase(): Promise<void> {
       adminPasswordHash: "",
       upiId: "",
       backgroundMusicUrl: "",
+      groomPhone: "+919876543210",
+      bridePhone: "+919876543211",
+      groomWhatsapp: "+919876543210",
+      brideWhatsapp: "+919876543211",
     });
     console.log("[Seed] Created wedding config");
   }

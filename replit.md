@@ -57,6 +57,7 @@ SVG component with:
   /components/
     Header.tsx            - Header with theme toggle + mute control
     Countdown.tsx         - Wedding countdown timer
+    FloatingContact.tsx   - Floating chat widget (WhatsApp + Call, side-dynamic)
     KHCrest.tsx           - SVG royal crest component
     WaxSealIntro.tsx      - Cinematic wax seal entry
   /context/
@@ -82,7 +83,7 @@ SVG component with:
 
 ## Database Tables
 
-- `wedding_config` — Singleton config (date, venue, story, UPI, music URL, WhatsApp toggle)
+- `wedding_config` — Singleton config (date, venue, story, UPI, music URL, WhatsApp toggle, groom/bride phone & WhatsApp numbers)
 - `guests` — Guest list with invite slugs, RSVP, adults/children count, food preference
 - `wedding_events` — Events with accommodation, travel info, contact person
 - `story_milestones` — Our Story timeline entries

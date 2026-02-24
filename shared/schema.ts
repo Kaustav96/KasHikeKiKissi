@@ -25,6 +25,10 @@ export const weddingConfig = pgTable("wedding_config", {
   adminPasswordHash: text("admin_password_hash").notNull().default(""),
   upiId: text("upi_id").notNull().default(""),
   backgroundMusicUrl: text("background_music_url").notNull().default(""),
+  groomPhone: text("groom_phone").notNull().default(""),
+  bridePhone: text("bride_phone").notNull().default(""),
+  groomWhatsapp: text("groom_whatsapp").notNull().default(""),
+  brideWhatsapp: text("bride_whatsapp").notNull().default(""),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
 });
 

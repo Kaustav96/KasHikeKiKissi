@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, Gift, ExternalLink, Loader2, Check, MessageCircle, Bot, User } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
@@ -14,6 +14,7 @@ import { useSeal } from "@/context/SealContext";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import FloatingContact from "@/components/FloatingContact";
 import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1024,9 +1025,11 @@ export default function Home() {
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
-  if (config?.backgroundMusicUrl) {
-    setMusicUrl(config.backgroundMusicUrl);
-  }
+  useEffect(() => {
+    if (config?.backgroundMusicUrl) {
+      setMusicUrl(config.backgroundMusicUrl);
+    }
+  }, [config?.backgroundMusicUrl, setMusicUrl]);
 
   if (configLoading) {
     return (
@@ -1057,6 +1060,7 @@ export default function Home() {
         <FaqsSection faqList={faqList} />
         <FooterSection />
       </main>
+      <FloatingContact config={config} />
     </>
   );
 }

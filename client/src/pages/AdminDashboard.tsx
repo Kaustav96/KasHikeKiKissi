@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Users, Calendar, Settings, MessageSquare, Download,
   Plus, Trash2, Edit, LogOut, BarChart3, BookOpen,
-  MapPin, HelpCircle, Gift, Music
+  MapPin, HelpCircle, Gift, Music, Phone
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
@@ -561,6 +561,10 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
     coupleStory: "",
     upiId: "",
     backgroundMusicUrl: "",
+    groomPhone: "",
+    bridePhone: "",
+    groomWhatsapp: "",
+    brideWhatsapp: "",
   });
 
   useEffect(() => {
@@ -574,6 +578,10 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
         coupleStory: config.coupleStory,
         upiId: config.upiId || "",
         backgroundMusicUrl: config.backgroundMusicUrl || "",
+        groomPhone: config.groomPhone || "",
+        bridePhone: config.bridePhone || "",
+        groomWhatsapp: config.groomWhatsapp || "",
+        brideWhatsapp: config.brideWhatsapp || "",
       });
     }
   }, [config]);
@@ -669,6 +677,51 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
               placeholder="https://..."
               className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
               data-testid="input-music-url"
+            />
+          </div>
+        </div>
+        <h3 className="text-sm font-semibold text-foreground pt-2 flex items-center gap-2">
+          <Phone size={14} /> Contact Numbers (Floating Chat Widget)
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Groom Phone</label>
+            <input
+              value={form.groomPhone}
+              onChange={(e) => setForm({ ...form, groomPhone: e.target.value })}
+              placeholder="+91 98765 43210"
+              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+              data-testid="input-groom-phone"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Bride Phone</label>
+            <input
+              value={form.bridePhone}
+              onChange={(e) => setForm({ ...form, bridePhone: e.target.value })}
+              placeholder="+91 98765 43211"
+              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+              data-testid="input-bride-phone"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Groom WhatsApp</label>
+            <input
+              value={form.groomWhatsapp}
+              onChange={(e) => setForm({ ...form, groomWhatsapp: e.target.value })}
+              placeholder="+91 98765 43210"
+              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+              data-testid="input-groom-whatsapp"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Bride WhatsApp</label>
+            <input
+              value={form.brideWhatsapp}
+              onChange={(e) => setForm({ ...form, brideWhatsapp: e.target.value })}
+              placeholder="+91 98765 43211"
+              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+              data-testid="input-bride-whatsapp"
             />
           </div>
         </div>

@@ -303,6 +303,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       whatsappEnabled: z.boolean().optional(),
       upiId: z.string().max(200).optional(),
       backgroundMusicUrl: z.string().max(500).optional().or(z.literal("")),
+      groomPhone: z.string().max(20).optional(),
+      bridePhone: z.string().max(20).optional(),
+      groomWhatsapp: z.string().max(20).optional(),
+      brideWhatsapp: z.string().max(20).optional(),
     });
 
     const parsed = schema.safeParse(req.body);

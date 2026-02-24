@@ -8,6 +8,7 @@ import { useParams } from "wouter";
 import { z } from "zod";
 import KHCrest from "@/components/KHCrest";
 import Header from "@/components/Header";
+import FloatingContact from "@/components/FloatingContact";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -408,6 +409,7 @@ export default function Invite() {
           </div>
         </section>
       </main>
+      {config && <FloatingContact config={config} />}
     </>
   );
 }
