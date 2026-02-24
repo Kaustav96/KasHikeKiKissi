@@ -1,25 +1,15 @@
-/**
- * API Routes for Kaustav & Himasree Wedding Application
- *
- * Structure:
- *   Public routes  → /api/*
- *   Admin routes   → /api/admin/* (JWT protected)
- *   Webhook routes → /api/webhooks/*
- */
-
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage";
 import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth";
-import { rsvpSubmitSchema, insertGuestSchema, insertWeddingEventSchema } from "@shared/schema";
+import { rsvpSubmitSchema } from "@shared/schema";
 import { sendRsvpConfirmation } from "./services/whatsapp";
 import { verifyWebhookSignature } from "./services/whatsapp";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 
-// ─── Rate Limiting (simple in-memory) ────────────────────────────────────────
 const rateLimit = new Map<string, { count: number; reset: number }>();
 
 function isRateLimited(ip: string, limit = 5, windowMs = 60_000): boolean {
@@ -34,7 +24,6 @@ function isRateLimited(ip: string, limit = 5, windowMs = 60_000): boolean {
   return false;
 }
 
-// ─── ICS Calendar generation ──────────────────────────────────────────────────
 function generateICS(event: {
   title: string;
   startTime: Date;
@@ -69,49 +58,48 @@ function generateICS(event: {
   ].join("\r\n");
 }
 
-// ─── Slug generation ──────────────────────────────────────────────────────────
 function generateSlug(name: string): string {
-  const base = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 20);
-  const suffix = randomUUID().split("-")[0]; // 8 hex chars for uniqueness
-  return `${base}-${suffix}`;
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 20);
+  return `${base}-${randomUUID().split("-")[0]}`;
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   app.use(cookieParser());
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // PUBLIC ROUTES
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  // GET /api/config — Public wedding configuration (strips sensitive fields)
   app.get("/api/config", async (_req, res) => {
     const config = await storage.getWeddingConfig();
     if (!config) return res.json(null);
-    // Never expose admin password hash to public
     const { adminPasswordHash: _, ...safe } = config;
     res.json(safe);
   });
 
-  // GET /api/events — Public list of wedding events
   app.get("/api/events", async (_req, res) => {
     const events = await storage.getWeddingEvents();
     res.json(events);
   });
 
-  // GET /api/invite/:slug — Fetch invite details (safe, no enumeration risk via random slug)
+  app.get("/api/stories", async (_req, res) => {
+    const stories = await storage.getStoryMilestones();
+    res.json(stories);
+  });
+
+  app.get("/api/venues", async (_req, res) => {
+    const venueList = await storage.getVenues();
+    res.json(venueList);
+  });
+
+  app.get("/api/faqs", async (_req, res) => {
+    const faqList = await storage.getFaqs();
+    res.json(faqList);
+  });
+
   app.get("/api/invite/:slug", async (req, res) => {
     const guest = await storage.getGuestBySlug(req.params.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
-    // Return only safe fields
-    const { id, name, email, phone, rsvpStatus, plusOne, plusOneName, dietaryRequirements, message, whatsappOptIn, side } = guest;
-    res.json({ id, name, email, phone, rsvpStatus, plusOne, plusOneName, dietaryRequirements, message, whatsappOptIn, side });
+    const { id, name, email, phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side } = guest;
+    res.json({ id, name, email, phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side });
   });
 
-  // POST /api/rsvp — Submit RSVP (rate limited, validated, sanitized)
   app.post("/api/rsvp", async (req, res) => {
     const ip = req.ip || req.connection.remoteAddress || "unknown";
     if (isRateLimited(ip, 5, 60_000)) {
@@ -127,11 +115,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const guest = await storage.getGuestBySlug(data.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
 
-    // Sanitize inputs
     const updates = {
       rsvpStatus: data.rsvpStatus,
-      plusOne: data.plusOne,
-      plusOneName: data.plusOneName.trim().slice(0, 100),
+      adultsCount: data.adultsCount,
+      childrenCount: data.childrenCount,
+      foodPreference: data.foodPreference,
+      eventsAttending: data.eventsAttending.trim(),
       dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
       message: data.message.trim().slice(0, 1000),
       whatsappOptIn: data.whatsappOptIn,
@@ -142,7 +131,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const updated = await storage.updateGuest(guest.id, updates);
     if (!updated) return res.status(500).json({ error: "Failed to update RSVP" });
 
-    // If guest opted into WhatsApp and confirmed, send confirmation message
     if (updates.whatsappOptIn && updates.rsvpStatus === "confirmed" && updates.phone) {
       sendRsvpConfirmation({
         id: updated.id,
@@ -154,7 +142,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true, rsvpStatus: updated.rsvpStatus });
   });
 
-  // GET /api/events/:id/calendar — Download ICS file for an event
   app.get("/api/events/:id/calendar", async (req, res) => {
     const event = await storage.getWeddingEventById(req.params.id);
     if (!event) return res.status(404).json({ error: "Event not found" });
@@ -173,7 +160,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.send(ics);
   });
 
-  // POST /api/webhooks/whatsapp — WhatsApp status webhook (with signature verification)
   app.post("/api/webhooks/whatsapp", (req, res) => {
     const signature = req.headers["x-hub-signature-256"] as string;
     const rawBody = JSON.stringify(req.body);
@@ -182,7 +168,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(403).json({ error: "Invalid webhook signature" });
     }
 
-    // Process message status updates (delivered, read, failed)
     const entry = req.body?.entry?.[0];
     const change = entry?.changes?.[0];
     const statuses = change?.value?.statuses;
@@ -196,7 +181,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ received: true });
   });
 
-  // GET /api/webhooks/whatsapp — Webhook verification challenge
   app.get("/api/webhooks/whatsapp", (req, res) => {
     const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
     const mode = req.query["hub.mode"];
@@ -210,11 +194,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ADMIN AUTH
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  // POST /api/admin/login
   app.post("/api/admin/login", async (req, res) => {
     const schema = z.object({
       username: z.string().min(1),
@@ -234,20 +213,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true, username: user.username });
   });
 
-  // POST /api/admin/logout
   app.post("/api/admin/logout", requireAdmin, (_req, res) => {
     clearAuthCookie(res);
     res.json({ success: true });
   });
 
-  // GET /api/admin/me — Check auth status
   app.get("/api/admin/me", requireAdmin, (req, res) => {
     res.json({ admin: (req as any).admin });
   });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ADMIN — CONFIG
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   app.get("/api/admin/config", requireAdmin, async (_req, res) => {
     const config = await storage.getWeddingConfig();
@@ -263,6 +236,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       venueMapUrl: z.string().url().optional().or(z.literal("")),
       coupleStory: z.string().max(5000).optional(),
       whatsappEnabled: z.boolean().optional(),
+      upiId: z.string().max(200).optional(),
+      backgroundMusicUrl: z.string().max(500).optional().or(z.literal("")),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -277,10 +252,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const { adminPasswordHash: _, ...safe } = config;
     res.json(safe);
   });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ADMIN — GUESTS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   app.get("/api/admin/guests", requireAdmin, async (_req, res) => {
     const guestList = await storage.getGuests();
@@ -307,8 +278,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       inviteSlug: slug,
       rsvpStatus: "pending",
       whatsappOptIn: false,
-      plusOne: false,
-      plusOneName: "",
+      adultsCount: 1,
+      childrenCount: 0,
+      foodPreference: "vegetarian",
+      eventsAttending: "",
       dietaryRequirements: "",
       message: "",
       tableNumber: parsed.data.tableNumber ?? null,
@@ -325,8 +298,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       tableNumber: z.number().int().positive().nullable().optional(),
       rsvpStatus: z.enum(["pending", "confirmed", "declined"]).optional(),
       whatsappOptIn: z.boolean().optional(),
-      plusOne: z.boolean().optional(),
-      plusOneName: z.string().max(100).optional(),
+      adultsCount: z.number().int().min(1).max(20).optional(),
+      childrenCount: z.number().int().min(0).max(20).optional(),
+      foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]).optional(),
+      eventsAttending: z.string().optional(),
       dietaryRequirements: z.string().max(500).optional(),
       message: z.string().max(1000).optional(),
     });
@@ -344,20 +319,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
-  // GET /api/admin/guests/export — Download CSV of all guests
   app.get("/api/admin/guests/export", requireAdmin, async (_req, res) => {
     const guestList = await storage.getGuests();
 
     const headers = [
       "Name", "Email", "Phone", "Side", "RSVP Status",
-      "Plus One", "Plus One Name", "Dietary Requirements",
-      "WhatsApp Opt-In", "Table Number", "Message", "Invite Slug",
+      "Adults", "Children", "Food Preference", "Events Attending",
+      "Dietary Requirements", "WhatsApp Opt-In", "Table Number", "Message", "Invite Slug",
     ];
 
     const rows = guestList.map((g) => [
       g.name, g.email, g.phone, g.side, g.rsvpStatus,
-      g.plusOne ? "Yes" : "No", g.plusOneName, g.dietaryRequirements,
-      g.whatsappOptIn ? "Yes" : "No", g.tableNumber ?? "",
+      g.adultsCount, g.childrenCount, g.foodPreference, g.eventsAttending,
+      g.dietaryRequirements, g.whatsappOptIn ? "Yes" : "No", g.tableNumber ?? "",
       g.message.replace(/"/g, '""'), g.inviteSlug,
     ]);
 
@@ -370,10 +344,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.setHeader("Content-Disposition", "attachment; filename=\"wedding_guests.csv\"");
     res.send(csv);
   });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ADMIN — EVENTS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   app.get("/api/admin/events", requireAdmin, async (_req, res) => {
     const events = await storage.getWeddingEvents();
@@ -392,6 +362,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       isMainEvent: z.boolean().default(false),
       dressCode: z.string().max(200).default(""),
       sortOrder: z.number().int().default(0),
+      howToReach: z.string().max(1000).default(""),
+      accommodation: z.string().max(1000).default(""),
+      distanceInfo: z.string().max(500).default(""),
+      contactPerson: z.string().max(200).default(""),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -418,6 +392,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       isMainEvent: z.boolean().optional(),
       dressCode: z.string().max(200).optional(),
       sortOrder: z.number().int().optional(),
+      howToReach: z.string().max(1000).optional(),
+      accommodation: z.string().max(1000).optional(),
+      distanceInfo: z.string().max(500).optional(),
+      contactPerson: z.string().max(200).optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -437,9 +415,142 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ADMIN — WHATSAPP & MESSAGE LOGS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  app.get("/api/admin/stories", requireAdmin, async (_req, res) => {
+    const stories = await storage.getStoryMilestones();
+    res.json(stories);
+  });
+
+  app.post("/api/admin/stories", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      title: z.string().min(1).max(200),
+      date: z.string().min(1).max(100),
+      description: z.string().max(2000),
+      imageUrl: z.string().max(500).default(""),
+      sortOrder: z.number().int().default(0),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+
+    const milestone = await storage.createStoryMilestone(parsed.data);
+    res.status(201).json(milestone);
+  });
+
+  app.patch("/api/admin/stories/:id", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      title: z.string().min(1).max(200).optional(),
+      date: z.string().min(1).max(100).optional(),
+      description: z.string().max(2000).optional(),
+      imageUrl: z.string().max(500).optional(),
+      sortOrder: z.number().int().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+
+    const updated = await storage.updateStoryMilestone(req.params.id, parsed.data);
+    if (!updated) return res.status(404).json({ error: "Story not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/stories/:id", requireAdmin, async (req, res) => {
+    await storage.deleteStoryMilestone(req.params.id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/admin/venues", requireAdmin, async (_req, res) => {
+    const venueList = await storage.getVenues();
+    res.json(venueList);
+  });
+
+  app.post("/api/admin/venues", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      address: z.string().max(500).default(""),
+      description: z.string().max(2000).default(""),
+      mapUrl: z.string().max(500).default(""),
+      mapEmbedUrl: z.string().max(500).default(""),
+      directions: z.string().max(2000).default(""),
+      accommodation: z.string().max(2000).default(""),
+      contactInfo: z.string().max(500).default(""),
+      imageUrl: z.string().max(500).default(""),
+      sortOrder: z.number().int().default(0),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+
+    const venue = await storage.createVenue(parsed.data);
+    res.status(201).json(venue);
+  });
+
+  app.patch("/api/admin/venues/:id", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      name: z.string().min(1).max(200).optional(),
+      address: z.string().max(500).optional(),
+      description: z.string().max(2000).optional(),
+      mapUrl: z.string().max(500).optional(),
+      mapEmbedUrl: z.string().max(500).optional(),
+      directions: z.string().max(2000).optional(),
+      accommodation: z.string().max(2000).optional(),
+      contactInfo: z.string().max(500).optional(),
+      imageUrl: z.string().max(500).optional(),
+      sortOrder: z.number().int().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+
+    const updated = await storage.updateVenue(req.params.id, parsed.data);
+    if (!updated) return res.status(404).json({ error: "Venue not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/venues/:id", requireAdmin, async (req, res) => {
+    await storage.deleteVenue(req.params.id);
+    res.json({ success: true });
+  });
+
+  app.get("/api/admin/faqs", requireAdmin, async (_req, res) => {
+    const faqList = await storage.getFaqs();
+    res.json(faqList);
+  });
+
+  app.post("/api/admin/faqs", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      question: z.string().min(1).max(500),
+      answer: z.string().min(1).max(2000),
+      category: z.string().max(100).default("general"),
+      sortOrder: z.number().int().default(0),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+
+    const faq = await storage.createFaq(parsed.data);
+    res.status(201).json(faq);
+  });
+
+  app.patch("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      question: z.string().min(1).max(500).optional(),
+      answer: z.string().min(1).max(2000).optional(),
+      category: z.string().max(100).optional(),
+      sortOrder: z.number().int().optional(),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+
+    const updated = await storage.updateFaq(req.params.id, parsed.data);
+    if (!updated) return res.status(404).json({ error: "FAQ not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+    await storage.deleteFaq(req.params.id);
+    res.json({ success: true });
+  });
 
   app.get("/api/admin/message-logs", requireAdmin, async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 100, 500);
@@ -447,10 +558,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(logs);
   });
 
-  // POST /api/admin/whatsapp/send — Manually send a WhatsApp message to a guest
   app.post("/api/admin/whatsapp/send", requireAdmin, async (req, res) => {
     const schema = z.object({
-      guestId: z.string().uuid(),
+      guestId: z.string(),
       messageType: z.string().min(1),
       templateName: z.string().min(1),
     });
@@ -475,7 +585,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
-  // POST /api/admin/whatsapp/toggle — Enable/disable WhatsApp automation
   app.post("/api/admin/whatsapp/toggle", requireAdmin, async (req, res) => {
     const schema = z.object({ enabled: z.boolean() });
     const parsed = schema.safeParse(req.body);

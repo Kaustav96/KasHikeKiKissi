@@ -3,12 +3,14 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { MusicProvider } from "@/context/MusicContext";
+import { SealProvider } from "@/context/SealContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Invite from "@/pages/Invite";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
-import { useEffect } from "react";
 
 function Router() {
   return (
@@ -23,23 +25,18 @@ function Router() {
 }
 
 function App() {
-  // Initialize dark mode from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (saved === "dark" || (!saved && prefersDark)) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <MusicProvider>
+          <SealProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </SealProvider>
+        </MusicProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

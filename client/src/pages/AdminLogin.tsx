@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { apiRequest } from "@/lib/queryClient";
 
 const loginSchema = z.object({
@@ -60,10 +59,6 @@ export default function AdminLogin() {
           backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
           backgroundSize: "40px 40px",
         }} />
-
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

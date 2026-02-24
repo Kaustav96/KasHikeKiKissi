@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -165,6 +167,29 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+:root,
+[data-side="groom"] {
+  --wedding-bg: #EFE6D8;
+  --wedding-accent: #B9975B;
+  --wedding-text: #2E2A27;
+  --wedding-secondary: #D8C3A5;
+  --wedding-muted: #A39585;
+  --wedding-hero-gradient: linear-gradient(135deg, #EFE6D8 0%, #D8C3A5 50%, #C4AD8A 100%);
+  --wedding-card-bg: rgba(239, 230, 216, 0.9);
+  --wedding-border: rgba(185, 151, 91, 0.3);
+}
+
+[data-side="bride"] {
+  --wedding-bg: #F8F1E7;
+  --wedding-accent: #8B0000;
+  --wedding-text: #2E2A27;
+  --wedding-secondary: #C6A75E;
+  --wedding-muted: #5C0A1D;
+  --wedding-hero-gradient: linear-gradient(135deg, #F8F1E7 0%, #F0E0CC 50%, #E8D0B0 100%);
+  --wedding-card-bg: rgba(248, 241, 231, 0.9);
+  --wedding-border: rgba(139, 0, 0, 0.2);
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -173,6 +198,31 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+}
+
+.kh-crest .kh-monogram {
+  animation: shimmer 3s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #B9975B 20%, #F0D68A 50%, #B9975B 80%, transparent 100%);
+}
+
+.royal-text-gradient {
+  background: linear-gradient(135deg, #B9975B 0%, #F0D68A 50%, #B9975B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.wedding-section {
+  @apply py-16 sm:py-24 px-4 sm:px-6;
 }
 
 /**

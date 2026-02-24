@@ -24,16 +24,28 @@ interface CountdownProps {
 
 function CountdownUnit({ value, label }: { value: number; label: string }) {
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       <div
-        className="w-16 h-16 sm:w-20 sm:h-20 rounded-md bg-white/15 backdrop-blur-sm border border-white/25 flex items-center justify-center"
+        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center"
+        style={{
+          background: "var(--wedding-card-bg)",
+          border: "1px solid var(--wedding-border)",
+        }}
         data-testid={`countdown-${label}`}
       >
-        <span className="font-serif text-2xl sm:text-3xl font-bold text-white tabular-nums">
+        <span
+          className="font-serif text-2xl sm:text-3xl font-bold tabular-nums"
+          style={{ color: "var(--wedding-accent)" }}
+        >
           {String(value).padStart(2, "0")}
         </span>
       </div>
-      <span className="text-white/70 text-xs uppercase tracking-widest font-sans">{label}</span>
+      <span
+        className="text-[10px] sm:text-xs uppercase tracking-[0.2em]"
+        style={{ color: "var(--wedding-muted)" }}
+      >
+        {label}
+      </span>
     </div>
   );
 }
@@ -50,14 +62,18 @@ export function Countdown({ targetDate }: CountdownProps) {
 
   if (isPast) {
     return (
-      <p className="text-white/80 font-serif text-lg italic" data-testid="countdown-past">
+      <p
+        className="font-serif text-lg italic"
+        style={{ color: "var(--wedding-accent)" }}
+        data-testid="countdown-past"
+      >
         We are married! Thank you for celebrating with us.
       </p>
     );
   }
 
   return (
-    <div className="flex gap-3 sm:gap-4 justify-center" data-testid="countdown-container">
+    <div className="flex gap-3 sm:gap-5 justify-center" data-testid="countdown-container">
       <CountdownUnit value={timeLeft.days} label="days" />
       <CountdownUnit value={timeLeft.hours} label="hours" />
       <CountdownUnit value={timeLeft.minutes} label="mins" />

@@ -9,21 +9,28 @@ import {
   type InsertMessageLog,
   type User,
   type InsertUser,
+  type StoryMilestone,
+  type InsertStoryMilestone,
+  type Venue,
+  type InsertVenue,
+  type Faq,
+  type InsertFaq,
   guests,
   weddingConfig,
   weddingEvents,
   messageLogs,
   users,
+  storyMilestones,
+  venues,
+  faqs,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc } from "drizzle-orm";
 
 export interface IStorage {
-  // Wedding Config
   getWeddingConfig(): Promise<WeddingConfig | undefined>;
   upsertWeddingConfig(config: Partial<InsertWeddingConfig>): Promise<WeddingConfig>;
 
-  // Guests
   getGuests(): Promise<Guest[]>;
   getGuestById(id: string): Promise<Guest | undefined>;
   getGuestBySlug(slug: string): Promise<Guest | undefined>;
@@ -31,28 +38,42 @@ export interface IStorage {
   updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest | undefined>;
   deleteGuest(id: string): Promise<void>;
 
-  // Wedding Events
   getWeddingEvents(): Promise<WeddingEvent[]>;
   getWeddingEventById(id: string): Promise<WeddingEvent | undefined>;
   createWeddingEvent(event: InsertWeddingEvent): Promise<WeddingEvent>;
   updateWeddingEvent(id: string, event: Partial<InsertWeddingEvent>): Promise<WeddingEvent | undefined>;
   deleteWeddingEvent(id: string): Promise<void>;
 
-  // Message Logs
+  getStoryMilestones(): Promise<StoryMilestone[]>;
+  getStoryMilestoneById(id: string): Promise<StoryMilestone | undefined>;
+  createStoryMilestone(milestone: InsertStoryMilestone): Promise<StoryMilestone>;
+  updateStoryMilestone(id: string, milestone: Partial<InsertStoryMilestone>): Promise<StoryMilestone | undefined>;
+  deleteStoryMilestone(id: string): Promise<void>;
+
+  getVenues(): Promise<Venue[]>;
+  getVenueById(id: string): Promise<Venue | undefined>;
+  createVenue(venue: InsertVenue): Promise<Venue>;
+  updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue | undefined>;
+  deleteVenue(id: string): Promise<void>;
+
+  getFaqs(): Promise<Faq[]>;
+  getFaqById(id: string): Promise<Faq | undefined>;
+  createFaq(faq: InsertFaq): Promise<Faq>;
+  updateFaq(id: string, faq: Partial<InsertFaq>): Promise<Faq | undefined>;
+  deleteFaq(id: string): Promise<void>;
+
   getMessageLogs(limit?: number): Promise<MessageLog[]>;
   getMessageLogsByGuest(guestId: string): Promise<MessageLog[]>;
   createMessageLog(log: InsertMessageLog): Promise<MessageLog>;
   updateMessageLog(id: string, log: Partial<InsertMessageLog>): Promise<MessageLog | undefined>;
   checkDuplicateMessage(guestId: string, messageType: string): Promise<boolean>;
 
-  // Admin Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // ─── Wedding Config ───────────────────────────────────────────────────────
   async getWeddingConfig(): Promise<WeddingConfig | undefined> {
     const [config] = await db.select().from(weddingConfig).limit(1);
     return config;
@@ -76,7 +97,6 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // ─── Guests ──────────────────────────────────────────────────────────────
   async getGuests(): Promise<Guest[]> {
     return db.select().from(guests).orderBy(asc(guests.createdAt));
   }
@@ -109,7 +129,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(guests).where(eq(guests.id, id));
   }
 
-  // ─── Wedding Events ───────────────────────────────────────────────────────
   async getWeddingEvents(): Promise<WeddingEvent[]> {
     return db.select().from(weddingEvents).orderBy(asc(weddingEvents.sortOrder), asc(weddingEvents.startTime));
   }
@@ -137,7 +156,87 @@ export class DatabaseStorage implements IStorage {
     await db.delete(weddingEvents).where(eq(weddingEvents.id, id));
   }
 
-  // ─── Message Logs ─────────────────────────────────────────────────────────
+  async getStoryMilestones(): Promise<StoryMilestone[]> {
+    return db.select().from(storyMilestones).orderBy(asc(storyMilestones.sortOrder));
+  }
+
+  async getStoryMilestoneById(id: string): Promise<StoryMilestone | undefined> {
+    const [m] = await db.select().from(storyMilestones).where(eq(storyMilestones.id, id));
+    return m;
+  }
+
+  async createStoryMilestone(milestone: InsertStoryMilestone): Promise<StoryMilestone> {
+    const [created] = await db.insert(storyMilestones).values(milestone).returning();
+    return created;
+  }
+
+  async updateStoryMilestone(id: string, milestone: Partial<InsertStoryMilestone>): Promise<StoryMilestone | undefined> {
+    const [updated] = await db
+      .update(storyMilestones)
+      .set(milestone)
+      .where(eq(storyMilestones.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteStoryMilestone(id: string): Promise<void> {
+    await db.delete(storyMilestones).where(eq(storyMilestones.id, id));
+  }
+
+  async getVenues(): Promise<Venue[]> {
+    return db.select().from(venues).orderBy(asc(venues.sortOrder));
+  }
+
+  async getVenueById(id: string): Promise<Venue | undefined> {
+    const [v] = await db.select().from(venues).where(eq(venues.id, id));
+    return v;
+  }
+
+  async createVenue(venue: InsertVenue): Promise<Venue> {
+    const [created] = await db.insert(venues).values(venue).returning();
+    return created;
+  }
+
+  async updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue | undefined> {
+    const [updated] = await db
+      .update(venues)
+      .set(venue)
+      .where(eq(venues.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteVenue(id: string): Promise<void> {
+    await db.delete(venues).where(eq(venues.id, id));
+  }
+
+  async getFaqs(): Promise<Faq[]> {
+    return db.select().from(faqs).orderBy(asc(faqs.sortOrder));
+  }
+
+  async getFaqById(id: string): Promise<Faq | undefined> {
+    const [f] = await db.select().from(faqs).where(eq(faqs.id, id));
+    return f;
+  }
+
+  async createFaq(faq: InsertFaq): Promise<Faq> {
+    const [created] = await db.insert(faqs).values(faq).returning();
+    return created;
+  }
+
+  async updateFaq(id: string, faq: Partial<InsertFaq>): Promise<Faq | undefined> {
+    const [updated] = await db
+      .update(faqs)
+      .set(faq)
+      .where(eq(faqs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteFaq(id: string): Promise<void> {
+    await db.delete(faqs).where(eq(faqs.id, id));
+  }
+
   async getMessageLogs(limit = 100): Promise<MessageLog[]> {
     return db
       .select()
@@ -178,7 +277,6 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  // ─── Admin Users ─────────────────────────────────────────────────────────
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
