@@ -80,6 +80,21 @@ export const rsvpSubmitSchema = z.object({
 });
 export type RsvpSubmit = z.infer<typeof rsvpSubmitSchema>;
 
+export const publicRsvpSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  phone: z.string().min(5, "Phone number is required").max(20),
+  email: z.string().email().optional().or(z.literal("")),
+  rsvpStatus: z.enum(["confirmed", "declined"]),
+  adultsCount: z.number().int().min(1).max(20).default(1),
+  childrenCount: z.number().int().min(0).max(20).default(0),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]).default("vegetarian"),
+  eventsAttending: z.string().default(""),
+  dietaryRequirements: z.string().max(500).default(""),
+  message: z.string().max(1000).default(""),
+  whatsappOptIn: z.boolean().default(false),
+});
+export type PublicRsvp = z.infer<typeof publicRsvpSchema>;
+
 export const weddingEvents = pgTable("wedding_events", {
   id: varchar("id", { length: 36 })
     .primaryKey()

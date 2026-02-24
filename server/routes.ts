@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage";
 import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth";
-import { rsvpSubmitSchema } from "@shared/schema";
+import { rsvpSubmitSchema, publicRsvpSchema } from "@shared/schema";
 import { sendRsvpConfirmation } from "./services/whatsapp";
 import { verifyWebhookSignature } from "./services/whatsapp";
 import bcrypt from "bcryptjs";
@@ -140,6 +140,71 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     res.json({ success: true, rsvpStatus: updated.rsvpStatus });
+  });
+
+  app.post("/api/rsvp/public", async (req, res) => {
+    const ip = req.ip || req.connection.remoteAddress || "unknown";
+    if (isRateLimited(ip, 5, 60_000)) {
+      return res.status(429).json({ error: "Too many requests. Please try again later." });
+    }
+
+    const parsed = publicRsvpSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid RSVP data", details: parsed.error.flatten() });
+    }
+
+    const data = parsed.data;
+    const normalizedPhone = data.phone.replace(/\s+/g, "").trim();
+
+    let guest = await storage.getGuestByPhone(normalizedPhone);
+
+    if (guest) {
+      const updated = await storage.updateGuest(guest.id, {
+        name: data.name,
+        rsvpStatus: data.rsvpStatus,
+        adultsCount: data.adultsCount,
+        childrenCount: data.childrenCount,
+        foodPreference: data.foodPreference,
+        eventsAttending: data.eventsAttending.trim(),
+        dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
+        message: data.message.trim().slice(0, 1000),
+        whatsappOptIn: data.whatsappOptIn,
+        email: (data.email || "").trim(),
+      });
+      if (!updated) return res.status(500).json({ error: "Failed to update RSVP" });
+
+      if (data.whatsappOptIn && data.rsvpStatus === "confirmed" && normalizedPhone) {
+        sendRsvpConfirmation({ id: updated.id, name: updated.name, phone: normalizedPhone })
+          .catch((err) => console.error("[RSVP] WhatsApp send failed:", err));
+      }
+
+      return res.json({ success: true, rsvpStatus: updated.rsvpStatus, isNew: false });
+    }
+
+    const slug = generateSlug(data.name);
+    const newGuest = await storage.createGuest({
+      name: data.name,
+      phone: normalizedPhone,
+      email: (data.email || "").trim(),
+      inviteSlug: slug,
+      rsvpStatus: data.rsvpStatus,
+      adultsCount: data.adultsCount,
+      childrenCount: data.childrenCount,
+      foodPreference: data.foodPreference,
+      eventsAttending: data.eventsAttending.trim(),
+      dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
+      message: data.message.trim().slice(0, 1000),
+      whatsappOptIn: data.whatsappOptIn,
+      side: "both",
+      tableNumber: null,
+    });
+
+    if (data.whatsappOptIn && data.rsvpStatus === "confirmed" && normalizedPhone) {
+      sendRsvpConfirmation({ id: newGuest.id, name: newGuest.name, phone: normalizedPhone })
+        .catch((err) => console.error("[RSVP] WhatsApp send failed:", err));
+    }
+
+    res.status(201).json({ success: true, rsvpStatus: newGuest.rsvpStatus, isNew: true });
   });
 
   app.get("/api/events/:id/calendar", async (req, res) => {

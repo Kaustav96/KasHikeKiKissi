@@ -1,8 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, Gift, ExternalLink } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, AnimatePresence } from "framer-motion";
+import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, Gift, ExternalLink, Loader2, Check, MessageCircle, Bot, User } from "lucide-react";
 import { useState, useRef } from "react";
 import { Link } from "wouter";
+import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
 import WaxSealIntro from "@/components/WaxSealIntro";
@@ -12,7 +15,8 @@ import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "@shared/schema";
-import { getQueryFn } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 function GoldDivider() {
   return (
@@ -453,11 +457,66 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
   );
 }
 
-function RsvpSection() {
+const publicRsvpFormSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  phone: z.string().min(5, "Phone number is required").max(20),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  rsvpStatus: z.enum(["confirmed", "declined"]),
+  adultsCount: z.number().int().min(1).max(20),
+  childrenCount: z.number().int().min(0).max(20),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]),
+  eventsAttending: z.string(),
+  dietaryRequirements: z.string().max(500),
+  message: z.string().max(1000),
+  whatsappOptIn: z.boolean(),
+});
+type PublicRsvpForm = z.infer<typeof publicRsvpFormSchema>;
+
+function RsvpSection({ events }: { events: WeddingEvent[] }) {
+  const { toast } = useToast();
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedStatus, setSubmittedStatus] = useState<string>("");
+
+  const form = useForm<PublicRsvpForm>({
+    resolver: zodResolver(publicRsvpFormSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      rsvpStatus: "confirmed",
+      adultsCount: 1,
+      childrenCount: 0,
+      foodPreference: "vegetarian",
+      eventsAttending: "",
+      dietaryRequirements: "",
+      message: "",
+      whatsappOptIn: false,
+    },
+  });
+
+  const rsvpMutation = useMutation({
+    mutationFn: async (data: PublicRsvpForm) => {
+      const res = await apiRequest("POST", "/api/rsvp/public", data);
+      return res.json();
+    },
+    onSuccess: (result) => {
+      setSubmitted(true);
+      setSubmittedStatus(result.rsvpStatus);
+      toast({ title: "RSVP Submitted", description: "Thank you for your response!" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const rsvpStatus = form.watch("rsvpStatus");
+  const whatsappOptIn = form.watch("whatsappOptIn");
+
   return (
     <section id="rsvp" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="rsvp-section">
-      <div className="max-w-lg mx-auto text-center">
+      <div className="max-w-lg mx-auto">
         <motion.div
+          className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -466,23 +525,356 @@ function RsvpSection() {
             RSVP
           </h2>
           <GoldDivider />
-          <p className="text-sm mt-6 mb-8 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            Please use your personalized invitation link to RSVP. If you haven't received one,
-            please contact the wedding coordinator.
+          <p className="text-sm mt-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+            We would be honoured to have you celebrate with us. Please let us know if you can make it.
           </p>
-          <div
-            className="p-6 rounded-xl"
-            style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-          >
-            <Heart size={32} className="mx-auto mb-4" style={{ color: "var(--wedding-accent)" }} />
-            <p className="font-serif text-lg mb-4" style={{ color: "var(--wedding-text)" }}>
-              Have your invite link?
-            </p>
-            <p className="text-xs mb-4" style={{ color: "var(--wedding-muted)" }}>
-              Check your WhatsApp or email for your personalized invitation link.
-            </p>
-          </div>
         </motion.div>
+
+        <AnimatePresence mode="wait">
+          {submitted ? (
+            <motion.div
+              key="success"
+              className="rounded-xl p-8 text-center"
+              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              data-testid="rsvp-success"
+            >
+              {submittedStatus === "confirmed" ? (
+                <>
+                  <Check size={48} className="mx-auto mb-4" style={{ color: "#22c55e" }} />
+                  <h3 className="font-serif text-xl mb-2" style={{ color: "var(--wedding-text)" }}>
+                    Thank You!
+                  </h3>
+                  <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
+                    We're thrilled you'll be joining us. We can't wait to celebrate with you!
+                  </p>
+                  {whatsappOptIn && (
+                    <div className="mt-6 p-4 rounded-lg" style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)" }}>
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Bot size={16} style={{ color: "#25D366" }} />
+                        <span className="text-xs font-medium" style={{ color: "#25D366" }}>AI Chatbot Enabled</span>
+                      </div>
+                      <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                        You'll receive wedding updates and can ask questions anytime via our WhatsApp AI assistant.
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Heart size={48} className="mx-auto mb-4" style={{ color: "var(--wedding-accent)" }} />
+                  <h3 className="font-serif text-xl mb-2" style={{ color: "var(--wedding-text)" }}>
+                    We'll Miss You
+                  </h3>
+                  <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
+                    Thank you for letting us know. You'll be in our thoughts!
+                  </p>
+                </>
+              )}
+
+              <button
+                onClick={() => { setSubmitted(false); form.reset(); }}
+                className="mt-6 text-xs underline"
+                style={{ color: "var(--wedding-accent)" }}
+                data-testid="rsvp-submit-another"
+              >
+                Submit another RSVP
+              </button>
+            </motion.div>
+          ) : (
+            <motion.form
+              key="form"
+              className="rounded-xl p-6 sm:p-8 space-y-6"
+              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onSubmit={form.handleSubmit((data) => rsvpMutation.mutate(data))}
+              data-testid="rsvp-form"
+            >
+              <div>
+                <label className="text-xs tracking-[0.15em] uppercase mb-3 block" style={{ color: "var(--wedding-accent)" }}>
+                  Will you be attending?
+                </label>
+                <div className="flex gap-3">
+                  {(["confirmed", "declined"] as const).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => form.setValue("rsvpStatus", status)}
+                      className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
+                      style={{
+                        background: rsvpStatus === status ? "var(--wedding-accent)" : "transparent",
+                        color: rsvpStatus === status ? "#fff" : "var(--wedding-text)",
+                        border: `1px solid ${rsvpStatus === status ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
+                      }}
+                      data-testid={`rsvp-${status}`}
+                    >
+                      {status === "confirmed" ? "Joyfully Accept" : "Respectfully Decline"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                    Your Name *
+                  </label>
+                  <input
+                    type="text"
+                    {...form.register("name")}
+                    placeholder="Full Name"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm"
+                    style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                    data-testid="input-name"
+                  />
+                  {form.formState.errors.name && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.name.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    {...form.register("phone")}
+                    placeholder="+91 98765 43210"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm"
+                    style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                    data-testid="input-phone"
+                  />
+                  {form.formState.errors.phone && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.phone.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                  Email (optional)
+                </label>
+                <input
+                  type="email"
+                  {...form.register("email")}
+                  placeholder="your@email.com"
+                  className="w-full px-4 py-2.5 rounded-lg text-sm"
+                  style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                  data-testid="input-email"
+                />
+              </div>
+
+              {rsvpStatus === "confirmed" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                        Number of Adults
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        {...form.register("adultsCount", { valueAsNumber: true })}
+                        className="w-full px-4 py-2.5 rounded-lg text-sm"
+                        style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                        data-testid="input-adults"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                        Number of Children
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={20}
+                        {...form.register("childrenCount", { valueAsNumber: true })}
+                        className="w-full px-4 py-2.5 rounded-lg text-sm"
+                        style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                        data-testid="input-children"
+                      />
+                    </div>
+                  </div>
+
+                  {events.length > 0 && (
+                    <div>
+                      <label className="text-xs tracking-wide uppercase mb-2 block" style={{ color: "var(--wedding-accent)" }}>
+                        Events Attending
+                      </label>
+                      <div className="space-y-2">
+                        {events.map((ev) => {
+                          const attending = form.watch("eventsAttending").split(",").filter(Boolean);
+                          const isSelected = attending.includes(ev.id);
+                          return (
+                            <label
+                              key={ev.id}
+                              className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors"
+                              style={{
+                                background: isSelected ? "var(--wedding-accent)" : "transparent",
+                                color: isSelected ? "#fff" : "var(--wedding-text)",
+                                border: `1px solid ${isSelected ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
+                              }}
+                              data-testid={`event-select-${ev.id}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  const current = form.getValues("eventsAttending").split(",").filter(Boolean);
+                                  const next = isSelected
+                                    ? current.filter((id) => id !== ev.id)
+                                    : [...current, ev.id];
+                                  form.setValue("eventsAttending", next.join(","));
+                                }}
+                                className="sr-only"
+                              />
+                              <span className="text-sm">{ev.title}</span>
+                              <span className="text-[10px] ml-auto opacity-70">
+                                {new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                      Food Preference
+                    </label>
+                    <select
+                      {...form.register("foodPreference")}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm"
+                      style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                      data-testid="select-food"
+                    >
+                      <option value="vegetarian">Vegetarian</option>
+                      <option value="non-vegetarian">Non-Vegetarian</option>
+                      <option value="vegan">Vegan</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                      Dietary Requirements (optional)
+                    </label>
+                    <input
+                      type="text"
+                      {...form.register("dietaryRequirements")}
+                      placeholder="Any allergies or special requirements"
+                      className="w-full px-4 py-2.5 rounded-lg text-sm"
+                      style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                      data-testid="input-dietary"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                  Personal Message (optional)
+                </label>
+                <textarea
+                  {...form.register("message")}
+                  rows={3}
+                  placeholder="Share your wishes for the couple..."
+                  className="w-full px-4 py-2.5 rounded-lg text-sm resize-none"
+                  style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                  data-testid="input-message"
+                />
+              </div>
+
+              <div
+                className="rounded-xl p-4 space-y-3"
+                style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)" }}
+              >
+                <label className="flex items-start gap-3 cursor-pointer" data-testid="whatsapp-optin">
+                  <input
+                    type="checkbox"
+                    {...form.register("whatsappOptIn")}
+                    className="w-4 h-4 rounded mt-0.5 flex-shrink-0"
+                    style={{ accentColor: "#25D366" }}
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <MessageCircle size={14} style={{ color: "#25D366" }} />
+                      <span className="text-sm font-medium" style={{ color: "var(--wedding-text)" }}>
+                        Get WhatsApp AI Updates
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+                      Opt in to receive wedding updates via our AI-powered WhatsApp chatbot.
+                      Get instant answers about venue, schedule, dress code, and more — anytime you need them.
+                    </p>
+                  </div>
+                </label>
+
+                <AnimatePresence>
+                  {whatsappOptIn && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="rounded-lg p-3 mt-1"
+                        style={{ background: "var(--wedding-card-bg)", border: "1px dashed var(--wedding-border)" }}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Bot size={14} style={{ color: "#25D366" }} />
+                          <span className="text-[10px] tracking-wider uppercase font-medium" style={{ color: "#25D366" }}>
+                            AI Wedding Assistant
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <Bot size={12} className="mt-0.5 flex-shrink-0" style={{ color: "#25D366" }} />
+                            <div className="rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--wedding-bg)", color: "var(--wedding-text)" }}>
+                              "Hi! I'm your wedding AI assistant. Ask me anything about the event!"
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 justify-end">
+                            <div className="rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--wedding-accent)", color: "#fff" }}>
+                              "What's the dress code for the reception?"
+                            </div>
+                            <User size={12} className="mt-0.5 flex-shrink-0" style={{ color: "var(--wedding-muted)" }} />
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <Bot size={12} className="mt-0.5 flex-shrink-0" style={{ color: "#25D366" }} />
+                            <div className="rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--wedding-bg)", color: "var(--wedding-text)" }}>
+                              "Indian Formal — Sarees & Sherwanis are suggested for the Reception on Dec 14."
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-[10px] mt-2 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+                          Real-time updates, schedule reminders, venue directions, and travel info — all at your fingertips.
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <button
+                type="submit"
+                disabled={rsvpMutation.isPending}
+                className="w-full py-3 rounded-lg text-sm font-medium tracking-wider uppercase transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ background: "var(--wedding-accent)", color: "#fff" }}
+                data-testid="submit-rsvp"
+              >
+                {rsvpMutation.isPending ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  "Submit RSVP"
+                )}
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -660,7 +1052,7 @@ export default function Home() {
         <StorySection milestones={milestones} />
         <EventsSection events={events} />
         <VenueSection venueList={venueList} />
-        <RsvpSection />
+        <RsvpSection events={events} />
         <ShagunSection config={config} />
         <FaqsSection faqList={faqList} />
         <FooterSection />
