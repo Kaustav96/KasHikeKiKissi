@@ -17,14 +17,14 @@ export function useSeal() {
 export function SealProvider({ children }: { children: ReactNode }) {
   const [sealOpened, setSealOpened] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("seal-opened") === "true";
+      return sessionStorage.getItem("seal-opened") === "true";
     }
     return false;
   });
 
   const handleSetSealOpened = (v: boolean) => {
     setSealOpened(v);
-    if (v) localStorage.setItem("seal-opened", "true");
+    if (v) sessionStorage.setItem("seal-opened", "true");
   };
 
   return (

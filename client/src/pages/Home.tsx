@@ -998,7 +998,7 @@ function FooterSection() {
 
 export default function Home() {
   const { sealOpened, setSealOpened } = useSeal();
-  const { setMusicUrl } = useMusic();
+  const { setMusicUrl, hasStarted, fadeIn } = useMusic();
 
   const { data: config, isLoading: configLoading } = useQuery<WeddingConfig>({
     queryKey: ["/api/config"],
@@ -1030,6 +1030,24 @@ export default function Home() {
       setMusicUrl(config.backgroundMusicUrl);
     }
   }, [config?.backgroundMusicUrl, setMusicUrl]);
+
+  useEffect(() => {
+    if (!sealOpened || hasStarted || !config?.backgroundMusicUrl) return;
+    const startOnInteraction = () => {
+      fadeIn();
+      document.removeEventListener("click", startOnInteraction);
+      document.removeEventListener("touchstart", startOnInteraction);
+      document.removeEventListener("scroll", startOnInteraction);
+    };
+    document.addEventListener("click", startOnInteraction, { once: true });
+    document.addEventListener("touchstart", startOnInteraction, { once: true });
+    document.addEventListener("scroll", startOnInteraction, { once: true });
+    return () => {
+      document.removeEventListener("click", startOnInteraction);
+      document.removeEventListener("touchstart", startOnInteraction);
+      document.removeEventListener("scroll", startOnInteraction);
+    };
+  }, [sealOpened, hasStarted, config?.backgroundMusicUrl, fadeIn]);
 
   if (configLoading) {
     return (
