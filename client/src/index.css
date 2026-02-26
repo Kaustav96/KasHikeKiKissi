@@ -169,25 +169,25 @@
 
 :root,
 [data-side="groom"] {
-  --wedding-bg: #EFE6D8;
-  --wedding-accent: #B9975B;
-  --wedding-text: #2E2A27;
-  --wedding-secondary: #D8C3A5;
-  --wedding-muted: #A39585;
-  --wedding-hero-gradient: linear-gradient(135deg, #EFE6D8 0%, #D8C3A5 50%, #C4AD8A 100%);
-  --wedding-card-bg: rgba(239, 230, 216, 0.9);
-  --wedding-border: rgba(185, 151, 91, 0.3);
+  --wedding-bg: #1A0F0A;
+  --wedding-accent: #D4AF37;
+  --wedding-text: #F5E6D3;
+  --wedding-secondary: #8B4513;
+  --wedding-muted: #C19A6B;
+  --wedding-hero-gradient: linear-gradient(135deg, #1A0F0A 0%, #2C1810 40%, #3D2213 70%, #8B4513 100%);
+  --wedding-card-bg: rgba(26, 15, 10, 0.95);
+  --wedding-border: rgba(212, 175, 55, 0.4);
 }
 
 [data-side="bride"] {
-  --wedding-bg: #F8F1E7;
-  --wedding-accent: #8B0000;
-  --wedding-text: #2E2A27;
-  --wedding-secondary: #C6A75E;
-  --wedding-muted: #5C0A1D;
-  --wedding-hero-gradient: linear-gradient(135deg, #F8F1E7 0%, #F0E0CC 50%, #E8D0B0 100%);
-  --wedding-card-bg: rgba(248, 241, 231, 0.9);
-  --wedding-border: rgba(139, 0, 0, 0.2);
+  --wedding-bg: #1C0A0E;
+  --wedding-accent: #E8B4A0;
+  --wedding-text: #FFE5E5;
+  --wedding-secondary: #6B1926;
+  --wedding-muted: #C97B84;
+  --wedding-hero-gradient: linear-gradient(135deg, #1C0A0E 0%, #2D1319 40%, #4A1929 70%, #6B1926 100%);
+  --wedding-card-bg: rgba(28, 10, 14, 0.95);
+  --wedding-border: rgba(232, 180, 160, 0.3);
 }
 
 @layer base {
@@ -211,11 +211,11 @@
 
 .gold-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, #B9975B 20%, #F0D68A 50%, #B9975B 80%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, #D4AF37 20%, #FFD700 50%, #D4AF37 80%, transparent 100%);
 }
 
 .royal-text-gradient {
-  background: linear-gradient(135deg, #B9975B 0%, #F0D68A 50%, #B9975B 100%);
+  background: linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #DAA520 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -223,6 +223,192 @@
 
 .wedding-section {
   @apply py-16 sm:py-24 px-4 sm:px-6;
+}
+
+/* Royal Luxury Panel Styles */
+.royal-panel {
+  position: relative;
+  background: linear-gradient(135deg,
+    rgba(26, 15, 10, 0.98) 0%,
+    rgba(44, 24, 16, 0.95) 50%,
+    rgba(26, 15, 10, 0.98) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow:
+    0 0 40px rgba(212, 175, 55, 0.1),
+    inset 0 0 60px rgba(212, 175, 55, 0.03),
+    0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.royal-panel::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(212, 175, 55, 0.08);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.royal-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+[data-side="bride"] .royal-panel {
+  background: linear-gradient(135deg,
+    rgba(28, 10, 14, 0.98) 0%,
+    rgba(45, 19, 25, 0.95) 50%,
+    rgba(28, 10, 14, 0.98) 100%);
+  border-color: rgba(232, 180, 160, 0.12);
+  box-shadow:
+    0 0 40px rgba(232, 180, 160, 0.08),
+    inset 0 0 60px rgba(232, 180, 160, 0.03),
+    0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+[data-side="bride"] .royal-panel::before {
+  border-color: rgba(232, 180, 160, 0.06);
+}
+
+[data-side="bride"] .royal-panel::after {
+  background: radial-gradient(circle at 50% 0%, rgba(232, 180, 160, 0.06) 0%, transparent 70%);
+}
+
+/* Layered scroll effect */
+.royal-scroll {
+  position: relative;
+  padding: 2rem;
+  background: linear-gradient(to bottom,
+    rgba(26, 15, 10, 0.6) 0%,
+    rgba(44, 24, 16, 0.8) 20%,
+    rgba(44, 24, 16, 0.9) 80%,
+    rgba(26, 15, 10, 0.6) 100%);
+  border: 2px solid rgba(212, 175, 55, 0.2);
+  box-shadow:
+    0 0 30px rgba(212, 175, 55, 0.15),
+    inset 0 2px 20px rgba(212, 175, 55, 0.05),
+    0 15px 50px rgba(0, 0, 0, 0.6);
+}
+
+.royal-scroll::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  pointer-events: none;
+}
+
+[data-side="bride"] .royal-scroll {
+  background: linear-gradient(to bottom,
+    rgba(28, 10, 14, 0.6) 0%,
+    rgba(45, 19, 25, 0.8) 20%,
+    rgba(45, 19, 25, 0.9) 80%,
+    rgba(28, 10, 14, 0.6) 100%);
+  border-color: rgba(232, 180, 160, 0.15);
+  box-shadow:
+    0 0 30px rgba(232, 180, 160, 0.12),
+    inset 0 2px 20px rgba(232, 180, 160, 0.04),
+    0 15px 50px rgba(0, 0, 0, 0.6);
+}
+
+[data-side="bride"] .royal-scroll::before {
+  border-color: rgba(232, 180, 160, 0.08);
+}
+
+/* Enhanced gold text effects */
+.gold-text {
+  color: #D4AF37;
+  text-shadow:
+    0 0 10px rgba(212, 175, 55, 0.3),
+    0 0 20px rgba(212, 175, 55, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.gold-text-glow {
+  color: #FFD700;
+  text-shadow:
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 0 40px rgba(212, 175, 55, 0.4),
+    0 0 60px rgba(184, 134, 11, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.05em;
+}
+
+/* Ornamental divider with dots */
+.ornate-divider {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.2) 25%,
+    rgba(212, 175, 55, 0.4) 50%,
+    rgba(212, 175, 55, 0.2) 75%,
+    transparent 100%);
+}
+
+.ornate-divider::before,
+.ornate-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(circle, #D4AF37 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.ornate-divider::before {
+  left: 25%;
+}
+
+.ornate-divider::after {
+  right: 25%;
+}
+
+/* Royal card with depth */
+.royal-card {
+  position: relative;
+  background: linear-gradient(145deg,
+    rgba(44, 24, 16, 0.9) 0%,
+    rgba(26, 15, 10, 0.95) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow:
+    0 5px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(212, 175, 55, 0.1),
+    0 0 30px rgba(212, 175, 55, 0.08);
+  transition: all 0.3s ease;
+}
+
+.royal-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(212, 175, 55, 0.15),
+    0 0 40px rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+[data-side="bride"] .royal-card {
+  background: linear-gradient(145deg,
+    rgba(45, 19, 25, 0.9) 0%,
+    rgba(28, 10, 14, 0.95) 100%);
+  border-color: rgba(232, 180, 160, 0.15);
+  box-shadow:
+    0 5px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(232, 180, 160, 0.08),
+    0 0 30px rgba(232, 180, 160, 0.06);
+}
+
+[data-side="bride"] .royal-card:hover {
+  border-color: rgba(232, 180, 160, 0.25);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(232, 180, 160, 0.12),
+    0 0 40px rgba(232, 180, 160, 0.1);
 }
 
 /**

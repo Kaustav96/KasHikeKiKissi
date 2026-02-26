@@ -669,15 +669,39 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
-              <Music size={12} /> Background Music URL
+              <Music size={12} /> Background Music
             </label>
-            <input
-              value={form.backgroundMusicUrl}
-              onChange={(e) => setForm({ ...form, backgroundMusicUrl: e.target.value })}
-              placeholder="https://..."
-              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
-              data-testid="input-music-url"
-            />
+            <div className="space-y-2">
+              <input
+                value={form.backgroundMusicUrl}
+                onChange={(e) => setForm({ ...form, backgroundMusicUrl: e.target.value })}
+                placeholder="Enter music URL or upload file below"
+                className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+                data-testid="input-music-url"
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const dataUrl = event.target?.result as string;
+                        setForm({ ...form, backgroundMusicUrl: dataUrl });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="text-xs text-muted-foreground file:mr-2 file:px-3 file:py-1 file:rounded file:border-0 file:text-xs file:bg-secondary file:text-secondary-foreground"
+                  data-testid="input-music-file"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Upload MP3, WAV, or OGG file, or provide a direct URL to the audio file
+              </p>
+            </div>
           </div>
         </div>
         <h3 className="text-sm font-semibold text-foreground pt-2 flex items-center gap-2">

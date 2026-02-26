@@ -28,7 +28,36 @@ export default function FloatingContact({ config }: FloatingContactProps) {
   const hasContact = !!(phone || whatsapp);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3" data-testid="floating-contact">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" data-testid="floating-contact">
+      {/* Music Control - Always visible above chat */}
+      <motion.button
+        onClick={togglePlayPause}
+        className="p-4 rounded-full shadow-xl border-2 transition-all"
+        style={{
+          background: bgColor,
+          borderColor: accentColor,
+          color: accentColor,
+        }}
+        title={isPlaying ? "Pause music" : "Play music"}
+        data-testid="music-toggle"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <motion.div
+          animate={{ rotate: isPlaying ? 360 : 0 }}
+          transition={{
+            duration: 3,
+            repeat: isPlaying ? Infinity : 0,
+            ease: "linear",
+          }}
+        >
+          <Music size={22} />
+        </motion.div>
+      </motion.button>
+
       <AnimatePresence>
         {isOpen && hasContact && (
           <motion.div
@@ -100,38 +129,6 @@ export default function FloatingContact({ config }: FloatingContactProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {hasStarted && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-11 h-11 rounded-full shadow-lg flex items-center justify-center transition-colors relative"
-          style={{
-            background: bgColor,
-            color: accentColor,
-            border: `1px solid ${borderColor}`,
-            boxShadow: `0 2px 12px ${side === "groom" ? "rgba(185,151,91,0.2)" : "rgba(139,0,0,0.2)"}`,
-          }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={togglePlayPause}
-          data-testid="floating-music-toggle"
-        >
-          {isPlaying ? (
-            <>
-              <Pause size={16} />
-              <motion.div
-                className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: accentColor }}
-                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </>
-          ) : (
-            <Play size={16} className="ml-0.5" />
-          )}
-        </motion.button>
-      )}
 
       {hasContact && (
         <motion.button

@@ -6,6 +6,7 @@ interface MusicContextType {
   hasStarted: boolean;
   play: () => void;
   pause: () => void;
+  stop: () => void;
   togglePlayPause: () => void;
   toggleMute: () => void;
   setMusicUrl: (url: string) => void;
@@ -18,6 +19,7 @@ const MusicContext = createContext<MusicContextType>({
   hasStarted: false,
   play: () => {},
   pause: () => {},
+  stop: () => {},
   togglePlayPause: () => {},
   toggleMute: () => {},
   setMusicUrl: () => {},
@@ -94,6 +96,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setIsPlaying(false);
   }, []);
 
+  const stop = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = 0;
+    setIsPlaying(false);
+    setHasStarted(false);
+  }, []);
+
   const togglePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -119,7 +131,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <MusicContext.Provider value={{ isPlaying, isMuted, hasStarted, play, pause, togglePlayPause, toggleMute, setMusicUrl, fadeIn }}>
+    <MusicContext.Provider value={{ isPlaying, isMuted, hasStarted, play, pause, stop, togglePlayPause, toggleMute, setMusicUrl, fadeIn }}>
       {children}
     </MusicContext.Provider>
   );

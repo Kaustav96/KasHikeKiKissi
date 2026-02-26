@@ -10,11 +10,14 @@ import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
 import WaxSealIntro from "@/components/WaxSealIntro";
 import Header from "@/components/Header";
+import SideSelectionLanding from "@/components/SideSelectionLanding";
+import ViewingSideOverlay from "@/components/ViewingSideOverlay";
 import { useSeal } from "@/context/SealContext";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import FloatingContact from "@/components/FloatingContact";
+import { MandalaHalfOrnament, GoldMedallion, ThinGoldDivider, RoyalFrame } from "@/components/RoyalOrnaments";
 import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -33,10 +36,18 @@ function HeroSection({ config }: { config: WeddingConfig }) {
   return (
     <section
       id="hero"
-      className="min-h-screen flex flex-col items-center justify-center relative pt-14"
+      className="min-h-screen flex flex-col items-center justify-center relative pt-14 overflow-hidden"
       style={{ background: "var(--wedding-hero-gradient)" }}
       data-testid="hero-section"
     >
+      {/* Mandala ornaments on sides */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-20 pointer-events-none">
+        <MandalaHalfOrnament side="left" />
+      </div>
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-20 pointer-events-none">
+        <MandalaHalfOrnament side="right" />
+      </div>
+
       <div
         className="absolute inset-0 opacity-5"
         style={{
@@ -45,11 +56,22 @@ function HeroSection({ config }: { config: WeddingConfig }) {
       />
 
       <motion.div
-        className="text-center z-10 px-4"
+        className="text-center z-10 px-4 relative"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, delay: 0.3 }}
       >
+        {/* Central medallion above names */}
+        <div className="flex justify-center mb-6">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 1, delay: 0.5, type: "spring" }}
+          >
+            <GoldMedallion size={100} />
+          </motion.div>
+        </div>
+
         <p
           className="text-xs sm:text-sm tracking-[0.3em] uppercase mb-4"
           style={{ color: "var(--wedding-muted)" }}
@@ -62,7 +84,7 @@ function HeroSection({ config }: { config: WeddingConfig }) {
           style={{ color: "var(--wedding-text)" }}
           data-testid="hero-title"
         >
-          Kaustav
+          Himasree
         </h1>
         <div className="flex items-center justify-center gap-4 my-3">
           <div className="gold-divider w-16" />
@@ -78,13 +100,13 @@ function HeroSection({ config }: { config: WeddingConfig }) {
           className="font-serif text-5xl sm:text-7xl lg:text-8xl font-bold mb-8"
           style={{ color: "var(--wedding-text)" }}
         >
-          Himasree
+          Kaustav
         </h1>
 
         <GoldDivider />
 
         <div className="mt-8">
-          {config.weddingDate ? (
+          {config.weddingDate && config.dateConfirmed ? (
             <>
               <p
                 className="font-serif text-lg sm:text-xl mb-6"
@@ -103,9 +125,9 @@ function HeroSection({ config }: { config: WeddingConfig }) {
             <p
               className="font-serif text-xl italic"
               style={{ color: "var(--wedding-accent)" }}
-              data-testid="date-tba"
+              data-testid="date-tbd"
             >
-              Date To Be Announced
+              Date TBD
             </p>
           )}
         </div>
@@ -141,7 +163,15 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
   if (milestones.length === 0) return null;
 
   return (
-    <section id="story" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="story-section">
+    <section id="story" className="wedding-section relative overflow-hidden" style={{ background: "var(--wedding-bg)" }} data-testid="story-section">
+      {/* Decorative mandala ornaments */}
+      <div className="absolute top-20 left-0 w-48 md:w-64 opacity-10 pointer-events-none">
+        <MandalaHalfOrnament side="left" />
+      </div>
+      <div className="absolute bottom-20 right-0 w-48 md:w-64 opacity-10 pointer-events-none">
+        <MandalaHalfOrnament side="right" />
+      </div>
+
       <div className="max-w-4xl mx-auto">
         <motion.div
           className="text-center mb-16"
@@ -156,7 +186,8 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
         </motion.div>
 
         <div className="relative">
-          <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 hidden sm:block" style={{ background: "var(--wedding-border)" }} />
+          {/* Central ornate timeline */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 hidden sm:block ornate-divider" />
 
           {milestones.map((milestone, idx) => {
             const isLeft = idx % 2 === 0;
@@ -171,29 +202,38 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
                 data-testid={`story-milestone-${milestone.id}`}
               >
                 <div className={`flex-1 ${isLeft ? "sm:text-right" : "sm:text-left"}`}>
-                  {milestone.imageUrl && (
-                    <img
-                      src={milestone.imageUrl}
-                      alt={milestone.title}
-                      className="w-full h-48 object-cover rounded-lg mb-4"
-                      loading="lazy"
-                    />
-                  )}
-                  <h3 className="font-serif text-xl font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                    {milestone.title}
-                  </h3>
-                  <p className="text-xs tracking-[0.15em] uppercase mb-3" style={{ color: "var(--wedding-accent)" }}>
-                    {milestone.date}
-                  </p>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                    {milestone.description}
-                  </p>
+                  <div className="royal-panel rounded-lg p-6">
+                    {milestone.imageUrl && (
+                      <img
+                        src={milestone.imageUrl}
+                        alt={milestone.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4 border border-[var(--wedding-border)]"
+                        loading="lazy"
+                      />
+                    )}
+                    <h3 className="font-serif text-xl font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
+                      {milestone.title}
+                    </h3>
+                    <p className="text-xs tracking-[0.15em] uppercase mb-3" style={{ color: "var(--wedding-accent)" }}>
+                      {milestone.date}
+                    </p>
+                    <ThinGoldDivider className="my-3" />
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+                      {milestone.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="hidden sm:flex flex-col items-center">
+                <div className="hidden sm:flex flex-col items-center z-10">
                   <div
-                    className="w-3 h-3 rounded-full border-2"
-                    style={{ borderColor: "var(--wedding-accent)", background: "var(--wedding-bg)" }}
-                  />
+                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
+                    style={{
+                      borderColor: "var(--wedding-accent)",
+                      background: "var(--wedding-bg)",
+                      boxShadow: "0 0 20px rgba(212, 175, 55, 0.3)"
+                    }}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-[var(--wedding-accent)]" />
+                  </div>
                 </div>
                 <div className="flex-1 hidden sm:block" />
               </motion.div>
@@ -263,9 +303,8 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
           {activeEvents.map((event, idx) => (
             <motion.div
               key={event.id}
-              className="rounded-xl p-6 sm:p-8"
+              className="royal-card rounded-xl p-6 sm:p-8 relative"
               style={{
-                background: "var(--wedding-card-bg)",
                 border: event.isMainEvent
                   ? "2px solid var(--wedding-accent)"
                   : "1px solid var(--wedding-border)",
@@ -275,31 +314,35 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
               transition={{ delay: idx * 0.1 }}
               data-testid={`event-card-${event.id}`}
             >
-              {event.isMainEvent && (
-                <span
-                  className="inline-block px-3 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase mb-3"
-                  style={{ background: "var(--wedding-accent)", color: "#fff" }}
-                >
-                  Main Event
-                </span>
-              )}
-              <h3 className="font-serif text-xl font-semibold mb-3" style={{ color: "var(--wedding-text)" }}>
-                {event.title}
-              </h3>
-              <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                {event.description}
-              </p>
-              <div className="space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
-                <p className="flex items-center gap-2">
-                  <Clock size={14} style={{ color: "var(--wedding-accent)" }} />
-                  {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                  {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
+              <RoyalFrame>
+                {event.isMainEvent && (
+                  <div className="flex justify-center mb-4">
+                    <span
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase"
+                      style={{ background: "var(--wedding-accent)", color: "#fff" }}
+                    >
+                      Main Event
+                    </span>
+                  </div>
+                )}
+                <h3 className="font-serif text-xl font-semibold mb-3 text-center" style={{ color: "var(--wedding-text)" }}>
+                  {event.title}
+                </h3>
+                <ThinGoldDivider className="mb-4" />
+                <p className="text-sm mb-4 leading-relaxed text-center" style={{ color: "var(--wedding-muted)" }}>
+                  {event.description}
                 </p>
-                <p className="flex items-center gap-2">
-                  <MapPin size={14} style={{ color: "var(--wedding-accent)" }} />
-                  {event.venueName}
-                </p>
-                {event.dressCode && (
+                <div className="space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
+                  <p className="flex items-center gap-2">
+                    <Clock size={14} style={{ color: "var(--wedding-accent)" }} />
+                    {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                    {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <MapPin size={14} style={{ color: "var(--wedding-accent)" }} />
+                    {event.venueName}
+                  </p>
+                  {event.dressCode && (
                   <p className="text-xs mt-2" style={{ color: "var(--wedding-muted)" }}>
                     Dress Code: {event.dressCode}
                   </p>
@@ -354,6 +397,7 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
                   </a>
                 )}
               </div>
+              </RoyalFrame>
             </motion.div>
           ))}
         </div>
@@ -998,7 +1042,9 @@ function FooterSection() {
 
 export default function Home() {
   const { sealOpened, setSealOpened } = useSeal();
-  const { setMusicUrl, hasStarted, fadeIn } = useMusic();
+  const { setMusicUrl, fadeIn, play, stop } = useMusic();
+  const { setSide } = useWeddingTheme();
+  const [sideSelected, setSideSelected] = useState(false);
 
   const { data: config, isLoading: configLoading } = useQuery<WeddingConfig>({
     queryKey: ["/api/config"],
@@ -1031,23 +1077,15 @@ export default function Home() {
     }
   }, [config?.backgroundMusicUrl, setMusicUrl]);
 
+  // Start music when seal opens
   useEffect(() => {
-    if (!sealOpened || hasStarted || !config?.backgroundMusicUrl) return;
-    const startOnInteraction = () => {
-      fadeIn();
-      document.removeEventListener("click", startOnInteraction);
-      document.removeEventListener("touchstart", startOnInteraction);
-      document.removeEventListener("scroll", startOnInteraction);
-    };
-    document.addEventListener("click", startOnInteraction, { once: true });
-    document.addEventListener("touchstart", startOnInteraction, { once: true });
-    document.addEventListener("scroll", startOnInteraction, { once: true });
-    return () => {
-      document.removeEventListener("click", startOnInteraction);
-      document.removeEventListener("touchstart", startOnInteraction);
-      document.removeEventListener("scroll", startOnInteraction);
-    };
-  }, [sealOpened, hasStarted, config?.backgroundMusicUrl, fadeIn]);
+    if (sealOpened && config?.backgroundMusicUrl) {
+      // Small delay to ensure audio context is ready
+      setTimeout(() => {
+        fadeIn();
+      }, 500);
+    }
+  }, [sealOpened, config?.backgroundMusicUrl, fadeIn]);
 
   if (configLoading) {
     return (
@@ -1062,12 +1100,34 @@ export default function Home() {
 
   if (!config) return null;
 
+  // Show side selection landing first
+  if (!sideSelected) {
+    return (
+      <SideSelectionLanding
+        onSelectSide={(side) => {
+          setSide(side);
+          setSideSelected(true);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       {!sealOpened && (
         <WaxSealIntro onSealOpen={() => setSealOpened(true)} />
       )}
       <Header />
+      <ViewingSideOverlay
+        onBackToSelection={() => {
+          stop();
+          setSideSelected(false);
+          setSealOpened(false);
+        }}
+        onSideChange={(newSide) => {
+          setSide(newSide);
+        }}
+      />
       <main>
         <HeroSection config={config} />
         <StorySection milestones={milestones} />
