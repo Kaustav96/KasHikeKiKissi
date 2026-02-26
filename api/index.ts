@@ -25,19 +25,37 @@ let dbInitialized = false;
 async function initializeDatabase() {
   if (!dbInitialized) {
     try {
+      console.log("[API] DATABASE_URL exists:", !!process.env.DATABASE_URL);
+      console.log("[API] NODE_ENV:", process.env.NODE_ENV);
       await seedDatabase();
       dbInitialized = true;
       console.log("[API] Database initialized successfully");
     } catch (error) {
       console.error("[API] Database initialization error:", error);
+      // Don't block requests even if seeding fails
+      dbInitialized = true;
     }
   }
 }
 
 // Initialize on first request
 app.use(async (_req, _res, next) => {
-  await initializeDatabase();
+  try {
+    await initializeDatabase();
+  } catch (error) {
+    console.error("[API] Middleware initialization error:", error);
+  }
   next();
+});
+
+// Health check endpoint
+app.get("/api/health", (_req, res) => {
+  res.json({ 
+    status: "ok", 
+    dbInitialized,
+    hasDbUrl: !!process.env.DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV 
+  });
 });
 
 // Register API routes with httpServer
