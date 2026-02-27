@@ -46,6 +46,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     audio.loop = true;
     audio.volume = 0;
     audio.preload = "auto";
+    // iOS Safari compatibility
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
     audioRef.current = audio;
 
     audio.addEventListener("pause", () => setIsPlaying(false));
@@ -67,18 +70,30 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const fadeIn = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !audio.src || audio.src === window.location.href) return;
+
+    // Reset state for fresh start
     audio.volume = 0;
     audio.muted = isMuted;
-    audio.play().then(() => {
-      setIsPlaying(true);
-      setHasStarted(true);
-      let vol = 0;
-      const interval = setInterval(() => {
-        vol = Math.min(vol + 0.05, 0.6);
-        if (!audio.muted) audio.volume = vol;
-        if (vol >= 0.6) clearInterval(interval);
-      }, 100);
-    }).catch(() => {});
+    audio.currentTime = 0;
+
+    // iOS Safari requires play() to be called directly from user interaction
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        setIsPlaying(true);
+        setHasStarted(true);
+        let vol = 0;
+        const interval = setInterval(() => {
+          vol = Math.min(vol + 0.05, 0.6);
+          if (!audio.muted) audio.volume = vol;
+          if (vol >= 0.6) clearInterval(interval);
+        }, 100);
+      }).catch((error) => {
+        console.log('Audio playback failed:', error);
+        // On iOS, this might fail if not from direct user interaction
+      });
+    }
   }, [isMuted]);
 
   const play = useCallback(() => {

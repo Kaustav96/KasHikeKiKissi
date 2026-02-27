@@ -13,16 +13,11 @@ export default function WaxSealIntro({ onSealOpen }: WaxSealIntroProps) {
   const [phase, setPhase] = useState<AnimPhase>("idle");
   const { fadeIn } = useMusic();
 
-  // Start music when seal appears
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fadeIn();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [fadeIn]);
-
   const handleSealClick = useCallback(() => {
     if (phase !== "idle") return;
+
+    // Start music on user click (iOS Safari requirement)
+    fadeIn();
 
     setPhase("fadeout");
 
@@ -30,7 +25,7 @@ export default function WaxSealIntro({ onSealOpen }: WaxSealIntroProps) {
       setPhase("complete");
       onSealOpen();
     }, 800);
-  }, [phase, onSealOpen]);
+  }, [phase, onSealOpen, fadeIn]);
 
   if (phase === "complete") return null;
 
