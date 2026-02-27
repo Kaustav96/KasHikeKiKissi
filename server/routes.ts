@@ -73,6 +73,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(safe);
   });
 
+  app.post("/api/increment-view", async (_req, res) => {
+    try {
+      const config = await storage.getWeddingConfig();
+      if (!config) return res.status(404).json({ error: "Config not found" });
+
+      await storage.upsertWeddingConfig({ viewCount: (config.viewCount || 0) + 1 });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error incrementing view count:", error);
+      res.status(500).json({ error: "Failed to increment view count" });
+    }
+  });
+
   app.get("/api/events", async (_req, res) => {
     const events = await storage.getWeddingEvents();
     res.json(events);
@@ -98,6 +111,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!guest) return res.status(404).json({ error: "Invite not found" });
     const { id, name, email, phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side } = guest;
     res.json({ id, name, email, phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side });
+  });
+
+  app.get("/api/guests/by-phone", async (req, res) => {
+    const phone = req.query.phone as string;
+    if (!phone) return res.status(400).json({ error: "Phone number required" });
+
+    const normalizedPhone = phone.replace(/\s+/g, "").trim();
+    const guest = await storage.getGuestByPhone(normalizedPhone);
+
+    if (!guest) return res.status(404).json({ error: "Guest not found" });
+
+    const { id, name, email, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side } = guest;
+    res.json({ id, name, email, phone: guest.phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side });
   });
 
   app.post("/api/rsvp", async (req, res) => {
@@ -155,21 +181,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     const data = parsed.data;
     const normalizedPhone = data.phone.replace(/\s+/g, "").trim();
+    const normalizedEmail = (data.email || "").trim().toLowerCase();
 
-    let guest = await storage.getGuestByPhone(normalizedPhone);
+    // Check by phone to update existing guest record
+    let guest = normalizedPhone ? await storage.getGuestByPhone(normalizedPhone) : null;
 
     if (guest) {
       const updated = await storage.updateGuest(guest.id, {
         name: data.name,
         rsvpStatus: data.rsvpStatus,
-        adultsCount: data.adultsCount,
-        childrenCount: data.childrenCount,
-        foodPreference: data.foodPreference,
-        eventsAttending: data.eventsAttending.trim(),
+        adultsCount: data.rsvpStatus === "declined" ? 0 : data.adultsCount,
+        childrenCount: data.rsvpStatus === "declined" ? 0 : data.childrenCount,
+        foodPreference: data.rsvpStatus === "declined" ? "" : (data.foodPreference || "vegetarian"),
+        eventsAttending: data.rsvpStatus === "declined" ? "" : data.eventsAttending.trim(),
         dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
         message: data.message.trim().slice(0, 1000),
         whatsappOptIn: data.whatsappOptIn,
         email: (data.email || "").trim(),
+        side: data.side, // Preserve side on update
       });
       if (!updated) return res.status(500).json({ error: "Failed to update RSVP" });
 
@@ -188,14 +217,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       email: (data.email || "").trim(),
       inviteSlug: slug,
       rsvpStatus: data.rsvpStatus,
-      adultsCount: data.adultsCount,
-      childrenCount: data.childrenCount,
-      foodPreference: data.foodPreference,
-      eventsAttending: data.eventsAttending.trim(),
+      adultsCount: data.rsvpStatus === "declined" ? 0 : data.adultsCount,
+      childrenCount: data.rsvpStatus === "declined" ? 0 : data.childrenCount,
+      foodPreference: data.rsvpStatus === "declined" ? "" : (data.foodPreference || "vegetarian"),
+      eventsAttending: data.rsvpStatus === "declined" ? "" : data.eventsAttending.trim(),
       dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
       message: data.message.trim().slice(0, 1000),
       whatsappOptIn: data.whatsappOptIn,
-      side: "both",
+      side: data.side, // Now properly validated by schema
       tableNumber: null,
     });
 
@@ -303,6 +332,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       whatsappEnabled: z.boolean().optional(),
       upiId: z.string().max(200).optional(),
       backgroundMusicUrl: z.string().optional().or(z.literal("")),
+      groomMusicUrls: z.array(z.string()).optional(),
+      brideMusicUrls: z.array(z.string()).optional(),
       groomPhone: z.string().max(20).optional(),
       bridePhone: z.string().max(20).optional(),
       groomWhatsapp: z.string().max(20).optional(),
@@ -369,7 +400,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       whatsappOptIn: z.boolean().optional(),
       adultsCount: z.number().int().min(1).max(20).optional(),
       childrenCount: z.number().int().min(0).max(20).optional(),
-      foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]).optional(),
+      foodPreference: z.enum(["vegetarian", "non-vegetarian"]).optional(),
       eventsAttending: z.string().optional(),
       dietaryRequirements: z.string().max(500).optional(),
       message: z.string().max(1000).optional(),
@@ -378,18 +409,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
-    const updated = await storage.updateGuest(req.params.id, parsed.data as any);
+    const updated = await storage.updateGuest(String(req.params.id), parsed.data as any);
     if (!updated) return res.status(404).json({ error: "Guest not found" });
     res.json(updated);
   });
 
   app.delete("/api/admin/guests/:id", requireAdmin, async (req, res) => {
-    await storage.deleteGuest(req.params.id);
+    await storage.deleteGuest(String(req.params.id));
     res.json({ success: true });
   });
 
-  app.get("/api/admin/guests/export", requireAdmin, async (_req, res) => {
-    const guestList = await storage.getGuests();
+  app.get("/api/admin/guests/export", requireAdmin, async (req, res) => {
+    const allGuests = await storage.getGuests();
+    const events = await storage.getWeddingEvents();
+
+    // Get filter parameters
+    const eventFilter = req.query.event as string || "";
+    const foodFilter = req.query.food as string || "";
+    const sideFilter = req.query.side as string || "";
+
+    // Filter guests based on parameters
+    let guestList = allGuests.filter(g => g.rsvpStatus !== "declined");
+
+    if (eventFilter) {
+      guestList = guestList.filter(g => g.eventsAttending.includes(eventFilter));
+    }
+    if (foodFilter) {
+      guestList = guestList.filter(g => g.foodPreference === foodFilter);
+    }
+    if (sideFilter) {
+      guestList = guestList.filter(g => g.side === sideFilter);
+    }
+
+    // Create a map of event IDs to event names
+    const eventMap = new Map(events.map(e => [e.id, e.title]));
 
     const headers = [
       "Name", "Email", "Phone", "Side", "RSVP Status",
@@ -397,20 +450,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       "Dietary Requirements", "WhatsApp Opt-In", "Table Number", "Message", "Invite Slug",
     ];
 
-    const rows = guestList.map((g) => [
-      g.name, g.email, g.phone, g.side, g.rsvpStatus,
-      g.adultsCount, g.childrenCount, g.foodPreference, g.eventsAttending,
-      g.dietaryRequirements, g.whatsappOptIn ? "Yes" : "No", g.tableNumber ?? "",
-      g.message.replace(/"/g, '""'), g.inviteSlug,
-    ]);
+    const rows = guestList.map((g) => {
+      // Convert event IDs to event names
+      const eventIds = g.eventsAttending.split(",").filter(Boolean);
+      const eventNames = eventIds.map(id => eventMap.get(id) || id).join(", ");
+
+      return [
+        g.name, g.email, g.phone, g.side, g.rsvpStatus,
+        g.adultsCount, g.childrenCount, g.foodPreference, eventNames,
+        g.dietaryRequirements, g.whatsappOptIn ? "Yes" : "No", g.tableNumber ?? "",
+        g.message.replace(/"/g, '""'), g.inviteSlug,
+      ];
+    });
 
     const csv = [
       headers.join(","),
       ...rows.map((r) => r.map((c) => `"${c}"`).join(",")),
     ].join("\n");
 
+    // Generate filename based on filters
+    let filename = "wedding_guests";
+    if (eventFilter || foodFilter || sideFilter) {
+      const filterParts = [];
+      if (eventFilter) {
+        const event = events.find(e => e.id === eventFilter);
+        filterParts.push(event?.title.replace(/\s+/g, "_") || "event");
+      }
+      if (foodFilter) filterParts.push(foodFilter);
+      if (sideFilter) filterParts.push(sideFilter);
+      filename += "_" + filterParts.join("_");
+    }
+    filename += ".csv";
+
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", "attachment; filename=\"wedding_guests.csv\"");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(csv);
   });
 
@@ -474,13 +547,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (parsed.data.startTime) updateData.startTime = new Date(parsed.data.startTime);
     if (parsed.data.endTime !== undefined) updateData.endTime = parsed.data.endTime ? new Date(parsed.data.endTime) : null;
 
-    const updated = await storage.updateWeddingEvent(req.params.id, updateData as any);
+    const updated = await storage.updateWeddingEvent(String(req.params.id), updateData as any);
     if (!updated) return res.status(404).json({ error: "Event not found" });
     res.json(updated);
   });
 
   app.delete("/api/admin/events/:id", requireAdmin, async (req, res) => {
-    await storage.deleteWeddingEvent(req.params.id);
+    await storage.deleteWeddingEvent(String(req.params.id));
     res.json({ success: true });
   });
 
@@ -517,13 +590,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
-    const updated = await storage.updateStoryMilestone(req.params.id, parsed.data);
+    const updated = await storage.updateStoryMilestone(String(req.params.id), parsed.data);
     if (!updated) return res.status(404).json({ error: "Story not found" });
     res.json(updated);
   });
 
   app.delete("/api/admin/stories/:id", requireAdmin, async (req, res) => {
-    await storage.deleteStoryMilestone(req.params.id);
+    await storage.deleteStoryMilestone(String(req.params.id));
     res.json({ success: true });
   });
 
@@ -570,13 +643,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
-    const updated = await storage.updateVenue(req.params.id, parsed.data);
+    const updated = await storage.updateVenue(String(req.params.id), parsed.data);
     if (!updated) return res.status(404).json({ error: "Venue not found" });
     res.json(updated);
   });
 
   app.delete("/api/admin/venues/:id", requireAdmin, async (req, res) => {
-    await storage.deleteVenue(req.params.id);
+    await storage.deleteVenue(String(req.params.id));
     res.json({ success: true });
   });
 
@@ -611,13 +684,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
-    const updated = await storage.updateFaq(req.params.id, parsed.data);
+    const updated = await storage.updateFaq(String(req.params.id), parsed.data);
     if (!updated) return res.status(404).json({ error: "FAQ not found" });
     res.json(updated);
   });
 
   app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
-    await storage.deleteFaq(req.params.id);
+    await storage.deleteFaq(String(req.params.id));
     res.json({ success: true });
   });
 

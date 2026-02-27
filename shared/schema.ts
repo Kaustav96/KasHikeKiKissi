@@ -25,10 +25,13 @@ export const weddingConfig = pgTable("wedding_config", {
   adminPasswordHash: text("admin_password_hash").notNull().default(""),
   upiId: text("upi_id").notNull().default(""),
   backgroundMusicUrl: text("background_music_url").notNull().default(""),
+  groomMusicUrls: jsonb("groom_music_urls").notNull().default(sql`'[]'::jsonb`),
+  brideMusicUrls: jsonb("bride_music_urls").notNull().default(sql`'[]'::jsonb`),
   groomPhone: text("groom_phone").notNull().default(""),
   bridePhone: text("bride_phone").notNull().default(""),
   groomWhatsapp: text("groom_whatsapp").notNull().default(""),
   brideWhatsapp: text("bride_whatsapp").notNull().default(""),
+  viewCount: integer("view_count").notNull().default(0),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
 });
 
@@ -74,7 +77,7 @@ export const rsvpSubmitSchema = z.object({
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20).default(1),
   childrenCount: z.number().int().min(0).max(20).default(0),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]).default("vegetarian"),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"]).default("vegetarian"),
   eventsAttending: z.string().default(""),
   dietaryRequirements: z.string().max(500).default(""),
   message: z.string().max(1000).default(""),
@@ -91,12 +94,24 @@ export const publicRsvpSchema = z.object({
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20).default(1),
   childrenCount: z.number().int().min(0).max(20).default(0),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]).default("vegetarian"),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"]).optional(),
   eventsAttending: z.string().default(""),
   dietaryRequirements: z.string().max(500).default(""),
   message: z.string().max(1000).default(""),
   whatsappOptIn: z.boolean().default(false),
-});
+  side: z.enum(["groom", "bride", "both"]).default("both"),
+}).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return data.eventsAttending && data.eventsAttending.length > 0 && data.foodPreference;
+    }
+    return true;
+  },
+  {
+    message: "Please select at least one event and food preference when confirming",
+    path: ["eventsAttending"],
+  }
+);
 export type PublicRsvp = z.infer<typeof publicRsvpSchema>;
 
 export const weddingEvents = pgTable("wedding_events", {
@@ -112,6 +127,7 @@ export const weddingEvents = pgTable("wedding_events", {
   venueMapUrl: text("venue_map_url").notNull().default(""),
   isMainEvent: boolean("is_main_event").notNull().default(false),
   dressCode: text("dress_code").notNull().default(""),
+  side: text("side").notNull().default("both"),
   sortOrder: integer("sort_order").notNull().default(0),
   howToReach: text("how_to_reach").notNull().default(""),
   accommodation: text("accommodation").notNull().default(""),

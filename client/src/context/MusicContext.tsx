@@ -11,6 +11,7 @@ interface MusicContextType {
   toggleMute: () => void;
   setMusicUrl: (url: string) => void;
   fadeIn: () => void;
+  setOnTrackEnd: (callback: (() => void) | null) => void;
 }
 
 const MusicContext = createContext<MusicContextType>({
@@ -24,6 +25,7 @@ const MusicContext = createContext<MusicContextType>({
   toggleMute: () => {},
   setMusicUrl: () => {},
   fadeIn: () => {},
+  setOnTrackEnd: () => {},
 });
 
 export function useMusic() {
@@ -34,6 +36,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const wasPlayingRef = useRef(false); // Track if music was playing before pause
+  const onTrackEndRef = useRef<(() => void) | null>(null);
   const [isMuted, setIsMuted] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("music-muted") === "true";
@@ -43,7 +47,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const audio = new Audio();
-    audio.loop = true;
+    audio.loop = false; // Disable loop to allow track end detection
     audio.volume = 0;
     audio.preload = "auto";
     // iOS Safari compatibility
@@ -53,10 +57,50 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
     audio.addEventListener("pause", () => setIsPlaying(false));
     audio.addEventListener("play", () => setIsPlaying(true));
+    audio.addEventListener("ended", () => {
+      setIsPlaying(false);
+      if (onTrackEndRef.current) {
+        onTrackEndRef.current();
+      }
+    });
+
+    // Pause music when tab/window loses focus or visibility
+    const handleVisibilityChange = () => {
+      if (document.hidden && audioRef.current && !audioRef.current.paused) {
+        wasPlayingRef.current = true; // Remember we were playing
+        audioRef.current.pause();
+      } else if (!document.hidden && wasPlayingRef.current && audioRef.current) {
+        // Resume when tab becomes visible again
+        audioRef.current.play().catch(() => {});
+        wasPlayingRef.current = false;
+      }
+    };
+
+    const handleBlur = () => {
+      if (audioRef.current && !audioRef.current.paused) {
+        wasPlayingRef.current = true; // Remember we were playing
+        audioRef.current.pause();
+      }
+    };
+
+    const handleFocus = () => {
+      if (wasPlayingRef.current && audioRef.current) {
+        // Resume when window gets focus back
+        audioRef.current.play().catch(() => {});
+        wasPlayingRef.current = false;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       audio.pause();
       audio.src = "";
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -145,8 +189,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setOnTrackEnd = useCallback((callback: (() => void) | null) => {
+    onTrackEndRef.current = callback;
+  }, []);
+
   return (
-    <MusicContext.Provider value={{ isPlaying, isMuted, hasStarted, play, pause, stop, togglePlayPause, toggleMute, setMusicUrl, fadeIn }}>
+    <MusicContext.Provider value={{ isPlaying, isMuted, hasStarted, play, pause, stop, togglePlayPause, toggleMute, setMusicUrl, fadeIn, setOnTrackEnd }}>
       {children}
     </MusicContext.Provider>
   );

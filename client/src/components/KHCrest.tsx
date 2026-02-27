@@ -74,7 +74,7 @@ export default function KHCrest({ size = 200, className = "" }: KHCrestProps) {
         filter="url(#innerShadow)"
         className="kh-monogram"
       >
-        KH
+        HK
       </text>
 
       {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {

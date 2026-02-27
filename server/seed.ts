@@ -43,15 +43,16 @@ export async function seedDatabase(): Promise<void> {
   if (existingEvents.length === 0) {
     const events = [
       {
-        title: "Haldi & Sangeet",
-        description: "A joyful evening of music, dance, and traditional rituals. Join us for the Haldi ceremony followed by an enchanting Sangeet night filled with family performances and celebrations.",
-        startTime: new Date("2026-12-13T16:00:00.000Z"),
-        endTime: new Date("2026-12-13T21:00:00.000Z"),
+        title: "Haldi",
+        description: "A joyful traditional ritual where turmeric paste is applied to the bride and groom, bringing blessings and glow. Join us for this vibrant, colorful ceremony filled with laughter, music, and family love.",
+        startTime: new Date("2026-12-12T15:00:00.000Z"),
+        endTime: new Date("2026-12-12T18:00:00.000Z"),
         venueName: "Chatterjee Family Home",
         venueAddress: "45 Rabindra Nagar, Kolkata, West Bengal 700019",
         venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",
         isMainEvent: false,
         dressCode: "Casual Indian — Yellows & Greens",
+        side: "both",
         sortOrder: 1,
         howToReach: "15 minutes from Kolkata airport by taxi. Take NH-12 and turn at Rabindra Nagar junction.",
         accommodation: "Guest rooms available at the family home. Hotels nearby: Hotel Bengal, Oberoi Grand.",
@@ -59,15 +60,16 @@ export async function seedDatabase(): Promise<void> {
         contactPerson: "Kaustav: +91 98765 43210",
       },
       {
-        title: "Wedding Ceremony",
-        description: "The sacred union of Kaustav and Himasree in a traditional Bengali wedding ceremony. Witness the timeless rituals of Saptapadi and exchange of garlands as our couple begins their journey together.",
-        startTime: new Date("2026-12-14T05:30:00.000Z"),
-        endTime: new Date("2026-12-14T09:00:00.000Z"),
+        title: "Engagement & Sangeet",
+        description: "An enchanting evening of engagement ceremony followed by Sangeet night filled with music, dance performances, and celebrations. Join us as our families come together in joy and harmony.",
+        startTime: new Date("2026-12-12T18:30:00.000Z"),
+        endTime: new Date("2026-12-12T23:00:00.000Z"),
         venueName: "The Grand Pavilion",
         venueAddress: "12 Marigold Lane, Kolkata, West Bengal 700001",
         venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",
-        isMainEvent: true,
-        dressCode: "Traditional Indian Formal",
+        isMainEvent: false,
+        dressCode: "Indian Formal — Bright Colors Welcome",
+        side: "both",
         sortOrder: 2,
         howToReach: "Located on Marigold Lane, 10 minutes from Park Street Metro Station. Valet parking available.",
         accommodation: "The Oberoi Grand (2 km), ITC Royal Bengal (5 km), Taj Bengal (4 km)",
@@ -75,16 +77,51 @@ export async function seedDatabase(): Promise<void> {
         contactPerson: "Wedding Coordinator: +91 98765 12345",
       },
       {
+        title: "Wedding Ceremony",
+        description: "The sacred union of Kaustav and Himasree in a traditional Bengali wedding ceremony. Witness the timeless rituals of Saptapadi and exchange of garlands as our couple begins their journey together.",
+        startTime: new Date("2026-12-13T05:30:00.000Z"),
+        endTime: new Date("2026-12-13T09:00:00.000Z"),
+        venueName: "The Grand Pavilion",
+        venueAddress: "12 Marigold Lane, Kolkata, West Bengal 700001",
+        venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",
+        isMainEvent: true,
+        dressCode: "Traditional Indian Formal",
+        side: "both",
+        sortOrder: 3,
+        howToReach: "Located on Marigold Lane, 10 minutes from Park Street Metro Station. Valet parking available.",
+        accommodation: "The Oberoi Grand (2 km), ITC Royal Bengal (5 km), Taj Bengal (4 km)",
+        distanceInfo: "Airport: 20 km | Railway Station (Howrah): 5 km",
+        contactPerson: "Wedding Coordinator: +91 98765 12345",
+      },
+      {
+        title: "Vidai & Bashi Biye",
+        description: "A touching farewell ceremony as the bride departs from her parental home, followed by Bashi Biye—the post-wedding rituals. An emotional and beautiful Bengali tradition celebrating new beginnings.",
+        startTime: new Date("2026-12-14T10:00:00.000Z"),
+        endTime: new Date("2026-12-14T13:00:00.000Z"),
+        venueName: "Bride's Family Home",
+        venueAddress: "45 Rabindra Nagar, Kolkata, West Bengal 700019",
+        venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",
+        isMainEvent: false,
+        dressCode: "Traditional Indian — Elegant Attire",
+        side: "bride",
+        sortOrder: 4,
+        howToReach: "15 minutes from Kolkata airport by taxi. Take NH-12 and turn at Rabindra Nagar junction.",
+        accommodation: "Guest rooms available at the family home. Hotels nearby: Hotel Bengal, Oberoi Grand.",
+        distanceInfo: "Airport: 15 km | Railway Station (Howrah): 8 km",
+        contactPerson: "Himasree: +91 98765 43211",
+      },
+      {
         title: "Wedding Reception",
-        description: "Celebrate with the newlyweds at a grand reception featuring live music, gourmet dining, and heartfelt moments shared with family and friends.",
-        startTime: new Date("2026-12-14T18:00:00.000Z"),
-        endTime: new Date("2026-12-14T23:00:00.000Z"),
+        description: "Celebrate with the newlyweds at a grand reception featuring live music, gourmet dining, and heartfelt moments shared with family and friends. An evening of elegance, joy, and beautiful memories.",
+        startTime: new Date("2026-12-15T18:00:00.000Z"),
+        endTime: new Date("2026-12-15T23:00:00.000Z"),
         venueName: "The Grand Pavilion",
         venueAddress: "12 Marigold Lane, Kolkata, West Bengal 700001",
         venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",
         isMainEvent: false,
         dressCode: "Indian Formal — Sarees & Sherwanis",
-        sortOrder: 3,
+        side: "both",
+        sortOrder: 5,
         howToReach: "Same venue as the wedding ceremony. Complimentary shuttle from select hotels.",
         accommodation: "The Oberoi Grand (2 km), ITC Royal Bengal (5 km), Taj Bengal (4 km)",
         distanceInfo: "Airport: 20 km | Railway Station (Howrah): 5 km",
@@ -146,31 +183,7 @@ export async function seedDatabase(): Promise<void> {
     console.log("[Seed] Created FAQs");
   }
 
-  const existingGuests = await storage.getGuests();
-  if (existingGuests.length === 0) {
-    const guestData = [
-      { name: "Priya Sharma", email: "priya@example.com", phone: "9876543210", side: "bride", rsvpStatus: "confirmed" },
-      { name: "Rohan Das", email: "rohan@example.com", phone: "9876543211", side: "groom", rsvpStatus: "confirmed" },
-      { name: "Anjali Bose", email: "anjali@example.com", phone: "9876543212", side: "bride", rsvpStatus: "pending" },
-      { name: "Subhash Mukherjee", email: "subhash@example.com", phone: "9876543213", side: "groom", rsvpStatus: "pending" },
-      { name: "Ritu Chatterjee", email: "ritu@example.com", phone: "9876543214", side: "both", rsvpStatus: "declined" },
-    ];
-
-    for (const g of guestData) {
-      await storage.createGuest({
-        ...g,
-        inviteSlug: slugify(g.name),
-        whatsappOptIn: false,
-        adultsCount: 1,
-        childrenCount: 0,
-        foodPreference: "vegetarian",
-        eventsAttending: "",
-        dietaryRequirements: "",
-        message: "",
-      });
-    }
-    console.log("[Seed] Created sample guests");
-  }
+  // No default guests - they will be created via RSVP submissions
 
   console.log("[Seed] Database seeding complete.");
 }

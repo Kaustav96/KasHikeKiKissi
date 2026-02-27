@@ -18,7 +18,7 @@ const rsvpFormSchema = z.object({
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20),
   childrenCount: z.number().int().min(0).max(20),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian", "vegan"]),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"]),
   eventsAttending: z.string(),
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
@@ -94,7 +94,7 @@ export default function Invite() {
         rsvpStatus: guest.rsvpStatus === "declined" ? "declined" : "confirmed",
         adultsCount: guest.adultsCount || 1,
         childrenCount: guest.childrenCount || 0,
-        foodPreference: (guest.foodPreference as "vegetarian" | "non-vegetarian" | "vegan") || "vegetarian",
+        foodPreference: (guest.foodPreference as "vegetarian" | "non-vegetarian") || "vegetarian",
         eventsAttending: guest.eventsAttending || "",
         dietaryRequirements: guest.dietaryRequirements || "",
         message: guest.message || "",
@@ -331,7 +331,6 @@ export default function Invite() {
                       >
                         <option value="vegetarian">Vegetarian</option>
                         <option value="non-vegetarian">Non-Vegetarian</option>
-                        <option value="vegan">Vegan</option>
                       </select>
                     </div>
 
