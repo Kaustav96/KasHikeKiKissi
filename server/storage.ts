@@ -23,7 +23,7 @@ import {
   storyMilestones,
   venues,
   faqs,
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { db } from "./db";
 import { eq, desc, asc } from "drizzle-orm";
 
