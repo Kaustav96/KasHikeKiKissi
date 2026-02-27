@@ -3,11 +3,11 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import cookieParser from "cookie-parser";
-import { storage } from "../server/storage";
-import { requireAdmin, setAuthCookie, clearAuthCookie } from "../server/middleware/auth";
-import { rsvpSubmitSchema, publicRsvpSchema } from "../shared/schema";
-import { sendRsvpConfirmation } from "../server/services/whatsapp";
-import { verifyWebhookSignature } from "../server/services/whatsapp";
+import { storage } from "../server/storage.js";
+import { requireAdmin, setAuthCookie, clearAuthCookie } from "../server/middleware/auth.js";
+import { rsvpSubmitSchema, publicRsvpSchema } from "../shared/schema.js";
+import { sendRsvpConfirmation } from "../server/services/whatsapp.js";
+import { verifyWebhookSignature } from "../server/services/whatsapp.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -32,7 +32,7 @@ async function initializeDatabase() {
   if (!dbInitialized) {
     try {
       console.log("[API] Initializing database...");
-      const { seedDatabase } = await import("../server/seed");
+      const { seedDatabase } = await import("../server/seed.js");
       await seedDatabase();
       dbInitialized = true;
       console.log("[API] Database initialized successfully");
