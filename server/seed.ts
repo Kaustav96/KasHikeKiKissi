@@ -31,10 +31,10 @@ export async function seedDatabase(): Promise<void> {
       adminPasswordHash: "",
       upiId: "",
       backgroundMusicUrl: "",
-      groomPhone: "+919876543210",
-      bridePhone: "+919876543211",
-      groomWhatsapp: "+919876543210",
-      brideWhatsapp: "+919876543211",
+      groomPhone: process.env.GROOM_PHONE || "+919876543210",
+      bridePhone: process.env.BRIDE_PHONE || "+919876543211",
+      groomWhatsapp: process.env.GROOM_WHATSAPP || "+919876543210",
+      brideWhatsapp: process.env.BRIDE_WHATSAPP || "+919876543211",
     });
     console.log("[Seed] Created wedding config");
   }
@@ -57,7 +57,7 @@ export async function seedDatabase(): Promise<void> {
         howToReach: "15 minutes from Kolkata airport by taxi. Take NH-12 and turn at Rabindra Nagar junction.",
         accommodation: "Guest rooms available at the family home. Hotels nearby: Hotel Bengal, Oberoi Grand.",
         distanceInfo: "Airport: 15 km | Railway Station (Howrah): 8 km",
-        contactPerson: "Kaustav: +91 98765 43210",
+        contactPerson: `Kaustav: ${process.env.GROOM_PHONE || "+919876543210"}`,
       },
       {
         title: "Engagement & Sangeet",
@@ -108,7 +108,7 @@ export async function seedDatabase(): Promise<void> {
         howToReach: "15 minutes from Kolkata airport by taxi. Take NH-12 and turn at Rabindra Nagar junction.",
         accommodation: "Guest rooms available at the family home. Hotels nearby: Hotel Bengal, Oberoi Grand.",
         distanceInfo: "Airport: 15 km | Railway Station (Howrah): 8 km",
-        contactPerson: "Himasree: +91 98765 43211",
+        contactPerson: `Himasree: ${process.env.BRIDE_PHONE || "+919876543211"}`,
       },
       {
         title: "Wedding Reception",
