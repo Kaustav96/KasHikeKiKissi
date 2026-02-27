@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
   WeddingConfig, Guest, WeddingEvent, MessageLog,
   StoryMilestone, Venue, Faq
-} from "@shared/schema";
+} from "../../../shared/schema.js";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();

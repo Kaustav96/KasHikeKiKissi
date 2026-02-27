@@ -18,7 +18,7 @@ import { useMusic } from "@/context/MusicContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import FloatingContact from "@/components/FloatingContact";
 import { MandalaHalfOrnament, GoldMedallion, ThinGoldDivider, RoyalFrame } from "@/components/RoyalOrnaments";
-import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "@shared/schema";
+import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "../../../shared/schema.js";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage";
 import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth";
-import { rsvpSubmitSchema, publicRsvpSchema } from "@shared/schema";
+import { rsvpSubmitSchema, publicRsvpSchema } from "../shared/schema.js";
 import { sendRsvpConfirmation } from "./services/whatsapp";
 import { verifyWebhookSignature } from "./services/whatsapp";
 import bcrypt from "bcryptjs";

@@ -12,7 +12,7 @@ import FloatingContact from "@/components/FloatingContact";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { WeddingConfig, WeddingEvent } from "@shared/schema";
+import type { WeddingConfig, WeddingEvent } from "../../../shared/schema.js";
 
 const rsvpFormSchema = z.object({
   rsvpStatus: z.enum(["confirmed", "declined"]),

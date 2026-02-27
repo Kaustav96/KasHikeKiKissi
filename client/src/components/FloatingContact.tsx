@@ -4,7 +4,7 @@ import { MessageCircle, X, Phone, Music, Pause, Play } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
-import type { WeddingConfig } from "@shared/schema";
+import type { WeddingConfig } from "../../../shared/schema.js";
 
 interface FloatingContactProps {
   config: WeddingConfig;

@@ -4,7 +4,7 @@
 
 Full-stack TypeScript wedding invitation platform with dual royal theme system (groom/bride sides), WhatsApp integration, and admin management. Built on Express.js + React (Vite) with PostgreSQL.
 
-**Key Pattern**: Shared schemas in `/shared/schema.ts` serve as single source of truth - all Drizzle ORM tables + Zod validators defined here. Import from `@shared/schema` in both client and server.
+**Key Pattern**: Shared schemas in `/shared/schema.ts` serve as single source of truth - all Drizzle ORM tables + Zod validators defined here. Import from `../shared/schema.js` in both client and server.
 
 ## Project Structure
 
