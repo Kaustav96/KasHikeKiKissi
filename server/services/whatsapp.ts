@@ -58,7 +58,7 @@ async function sendWhatsAppTemplate(
   toPhone: string,
   templateName: string,
   components: WhatsAppTemplateComponent[] = [],
-  languageCode = "en"
+  languageCode = "en_US"
 ): Promise<string> {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -72,7 +72,6 @@ async function sendWhatsAppTemplate(
 
   const payload = {
     messaging_product: "whatsapp",
-    recipient_type: "individual",
     to: normalizedPhone,
     type: "template",
     template: {
@@ -110,7 +109,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
     templateName,
     messageType,
     components = [],
-    languageCode = "en",
+    languageCode = "en_US",
   } = options;
 
   // Check if WhatsApp automation is globally enabled

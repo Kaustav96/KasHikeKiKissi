@@ -20,3 +20,6 @@ npm-debug.log*
 .idea/
 *.swp
 *.swo
+# WhatsApp test scripts (contain sensitive test data)
+test-whatsapp.js
+test-rsvp.js
