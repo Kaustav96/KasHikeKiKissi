@@ -64,10 +64,10 @@ app.use((req, res, next) => {
 (async () => {
   // Seed the database with initial data
   try {
-    if (process.env.NODE_ENV !== "production") {
-      const { seedDatabase } = await import("./seed");
-      await seedDatabase();
-    }
+
+    const { seedDatabase } = await import("./seed");
+    await seedDatabase();
+
   } catch (err) {
     console.error("Failed to seed database:", err);
   }
