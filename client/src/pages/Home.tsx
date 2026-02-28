@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink, Loader2, Check, MessageCircle, Bot, User } from "lucide-react";
+import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink, Loader2, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { z } from "zod";
@@ -511,27 +511,37 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
 
 const publicRsvpFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
-  phone: z.string().min(5, "Phone number is required").max(20),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20),
   childrenCount: z.number().int().min(0).max(20),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian"]).optional(),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"], {
+    errorMap: () => ({ message: "Please select your food preference" }),
+  }).optional(),
   eventsAttending: z.string(),
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
-  whatsappOptIn: z.boolean(),
   side: z.enum(["groom", "bride", "both"]),
 }).refine(
   (data) => {
     if (data.rsvpStatus === "confirmed") {
-      return data.eventsAttending && data.eventsAttending.length > 0 && data.foodPreference;
+      return data.eventsAttending && data.eventsAttending.length > 0;
     }
     return true;
   },
   {
-    message: "Please select at least one event and food preference when confirming",
+    message: "Please select at least one event to attend",
     path: ["eventsAttending"],
+  }
+).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return !!data.foodPreference;
+    }
+    return true;
+  },
+  {
+    message: "Please select your food preference",
+    path: ["foodPreference"],
   }
 );
 type PublicRsvpForm = z.infer<typeof publicRsvpFormSchema>;
@@ -541,17 +551,15 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
   const { side, setSide } = useWeddingTheme();
   const [submitted, setSubmitted] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState<string>("");
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [checkingPhone, setCheckingPhone] = useState(false);
-  const [showGuestConfirmPopup, setShowGuestConfirmPopup] = useState(false);
+  const [checkingName, setCheckingName] = useState(false);
   const [foundGuest, setFoundGuest] = useState<any>(null);
+  const [showGuestConfirmPopup, setShowGuestConfirmPopup] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const form = useForm<PublicRsvpForm>({
     resolver: zodResolver(publicRsvpFormSchema),
     defaultValues: {
       name: "",
-      phone: "",
-      email: "",
       rsvpStatus: undefined as any,
       adultsCount: 1,
       childrenCount: 0,
@@ -559,7 +567,6 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
       eventsAttending: "",
       dietaryRequirements: "",
       message: "",
-      whatsappOptIn: false,
       side: side as "groom" | "bride" | "both",
     },
   });
@@ -569,56 +576,27 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
     form.setValue("side", side as "groom" | "bride" | "both");
   }, [side, form]);
 
-  // Update side field when theme changes
-  useEffect(() => {
-    form.setValue("side", side as "groom" | "bride" | "both");
-  }, [side, form]);
+  // Check for existing guest by name
+  const checkExistingGuest = async (name: string) => {
+    if (!name || name.length < 3) return;
 
-  // Auto-remove WhatsApp opt-in when declining RSVP
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === "rsvpStatus" && value.rsvpStatus === "declined") {
-        form.setValue("whatsappOptIn", false);
-        form.setValue("eventsAttending", "");
-        form.setValue("foodPreference", undefined);
-        form.setValue("adultsCount", 1);
-        form.setValue("childrenCount", 0);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  // Check if guest exists when phone is entered
-  const checkExistingGuest = async (phone: string) => {
-    if (!phone || phone.length < 5) return;
-
-    setCheckingPhone(true);
+    setCheckingName(true);
     try {
-      const normalizedPhone = phone.replace(/\s+/g, "").trim();
-      const res = await fetch(`/api/guests/by-phone?phone=${encodeURIComponent(normalizedPhone)}`);
-
+      const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
       if (res.ok) {
         const guest = await res.json();
-        if (guest) {
-          // Found existing guest - show confirmation popup
-          setFoundGuest(guest);
-          setShowGuestConfirmPopup(true);
-        } else {
-          // Phone not in database - continue with normal flow
-          setIsUpdating(false);
-          setFoundGuest(null);
-        }
+        // Found existing guest - show confirmation popup
+        setFoundGuest(guest);
+        setShowGuestConfirmPopup(true);
       } else {
-        // Error response - continue with normal flow
-        setIsUpdating(false);
+        // Name not in database - continue with normal flow
         setFoundGuest(null);
       }
     } catch (err) {
       console.error("Error checking guest:", err);
-      setIsUpdating(false);
       setFoundGuest(null);
     } finally {
-      setCheckingPhone(false);
+      setCheckingName(false);
     }
   };
 
@@ -633,7 +611,6 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
     // Pre-fill form with existing data
     setIsUpdating(true);
     form.setValue("name", foundGuest.name);
-    form.setValue("email", foundGuest.email || "");
     form.setValue("rsvpStatus", foundGuest.rsvpStatus);
     form.setValue("adultsCount", foundGuest.adultsCount || 1);
     form.setValue("childrenCount", foundGuest.childrenCount || 0);
@@ -641,42 +618,33 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
     form.setValue("eventsAttending", foundGuest.eventsAttending || "");
     form.setValue("dietaryRequirements", foundGuest.dietaryRequirements || "");
     form.setValue("message", foundGuest.message || "");
-    form.setValue("whatsappOptIn", foundGuest.whatsappOptIn || false);
 
     setShowGuestConfirmPopup(false);
 
     toast({
       title: "Welcome back!",
-      description: "We found your previous RSVP. You can update your response below.",
+      description: "You can update your events and food preferences below.",
     });
   };
 
   const continueAsNewGuest = () => {
-    setIsUpdating(false);
     setFoundGuest(null);
     setShowGuestConfirmPopup(false);
-    // Keep the phone number but clear other fields
-    form.setValue("name", "");
-    form.setValue("email", "");
-    form.setValue("rsvpStatus", undefined as any);
-    form.setValue("adultsCount", 1);
-    form.setValue("childrenCount", 0);
-    form.setValue("foodPreference", undefined as any);
-    form.setValue("eventsAttending", "");
-    form.setValue("dietaryRequirements", "");
-    form.setValue("message", "");
-    form.setValue("whatsappOptIn", false);
+    // Keep the name but allow new RSVP
   };
 
   const rsvpMutation = useMutation({
     mutationFn: async (data: PublicRsvpForm) => {
-      const res = await apiRequest("POST", "/api/rsvp/public", data);
-      return res.json();
+      // If updating existing guest, use their ID
+      if (isUpdating && foundGuest) {
+        const res = await apiRequest("POST", "/api/rsvp", { ...data, slug: foundGuest.inviteSlug });
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/rsvp/public", data);
+        return res.json();
+      }
     },
     onSuccess: (result) => {
-      // Don't hide form, just reset it
-      setIsUpdating(false);
-
       // Show appropriate success message
       if (result.rsvpStatus === "confirmed") {
         toast({
@@ -692,11 +660,13 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
         });
       }
 
+      // Reset all states
+      setIsUpdating(false);
+      setFoundGuest(null);
+
       // Reset form to defaults - no pre-selected RSVP status
       form.reset({
         name: "",
-        phone: "",
-        email: "",
         rsvpStatus: undefined as any,
         adultsCount: 1,
         childrenCount: 0,
@@ -704,11 +674,8 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
         eventsAttending: "",
         dietaryRequirements: "",
         message: "",
-        whatsappOptIn: false,
         side: side as "groom" | "bride" | "both",
       });
-      setIsUpdating(false);
-      setFoundGuest(null);
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -716,7 +683,6 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
   });
 
   const rsvpStatus = form.watch("rsvpStatus");
-  const whatsappOptIn = form.watch("whatsappOptIn");
 
   return (
     <section id="rsvp" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="rsvp-section">
@@ -754,7 +720,13 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                     <button
                       key={status}
                       type="button"
-                      onClick={() => form.setValue("rsvpStatus", status)}
+                      onClick={() => {
+                        form.setValue("rsvpStatus", status);
+                        if (status === "declined") {
+                          form.setValue("eventsAttending", "");
+                          form.setValue("foodPreference", undefined);
+                        }
+                      }}
                       className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
                       style={{
                         background: rsvpStatus === status ? "var(--wedding-accent)" : "transparent",
@@ -779,78 +751,31 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                   <input
                     type="text"
                     {...form.register("name")}
+                    onBlur={(e) => checkExistingGuest(e.target.value)}
                     placeholder="Full Name"
-                    readOnly={isUpdating}
-                    className="w-full px-4 py-2.5 rounded-lg text-sm"
-                    style={{
-                      background: isUpdating ? "var(--wedding-muted-bg)" : "var(--wedding-bg)",
-                      border: "1px solid var(--wedding-border)",
-                      color: "var(--wedding-text)",
-                      cursor: isUpdating ? "not-allowed" : "text",
-                      opacity: isUpdating ? 0.7 : 1,
-                    }}
-                    data-testid="input-name"
-                  />
-                  {form.formState.errors.name && (
-                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.name.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    {...form.register("phone")}
-                    onChange={(e) => {
-                      form.setValue("phone", e.target.value);
-                      const phone = e.target.value.replace(/\s+/g, "").trim();
-                      // Check when we have at least 13 digits (with country code)
-                      // Always check, even if updating, so we can detect when user changes to a different phone
-                      if (phone.length >= 13) {
-                        checkExistingGuest(phone);
-                      }
-                    }}
-                    placeholder="+91 98765 43210"
+                    disabled={isUpdating}
                     className="w-full px-4 py-2.5 rounded-lg text-sm"
                     style={{
                       background: "var(--wedding-bg)",
                       border: "1px solid var(--wedding-border)",
                       color: "var(--wedding-text)",
                     }}
-                    data-testid="input-phone"
+                    data-testid="input-name"
                   />
-                  {form.formState.errors.phone && (
-                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.phone.message}</p>
-                  )}
-                  {checkingPhone && (
-                    <p className="text-xs mt-1" style={{ color: "var(--wedding-accent)" }}>Checking your details...</p>
+                  {checkingName && (
+                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "var(--wedding-accent)" }}>
+                      <Loader2 className="animate-spin" size={12} /> Checking details...
+                    </p>
                   )}
                   {isUpdating && (
-                    <p className="text-xs mt-1" style={{ color: "#22c55e" }}>✓ Updating your existing RSVP</p>
+                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#22c55e" }}>
+                      <Check size={12} /> Updating your existing RSVP
+                    </p>
+                  )}
+                  {form.formState.errors.name && (
+                    <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.name.message}</p>
                   )}
                 </div>
-              </div>
-
-              <div>
-                <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
-                  Email (optional)
-                </label>
-                <input
-                  type="email"
-                  {...form.register("email")}
-                  placeholder="your@email.com"
-                  readOnly={isUpdating}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm"
-                  style={{
-                    background: isUpdating ? "var(--wedding-muted-bg)" : "var(--wedding-bg)",
-                    border: "1px solid var(--wedding-border)",
-                    color: "var(--wedding-text)",
-                    cursor: isUpdating ? "not-allowed" : "text",
-                    opacity: isUpdating ? 0.7 : 1,
-                  }}
-                  data-testid="input-email"
-                />
               </div>
 
               {rsvpStatus === "confirmed" && events.length > 0 && (
@@ -881,7 +806,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                               const next = isSelected
                                 ? current.filter((id) => id !== ev.id)
                                 : [...current, ev.id];
-                              form.setValue("eventsAttending", next.join(","));
+                              form.setValue("eventsAttending", next.join(","), { shouldValidate: true });
                             }}
                             className="sr-only"
                           />
@@ -950,80 +875,6 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                 />
               </div>
 
-              {rsvpStatus === "confirmed" && (
-                <div
-                  className="rounded-xl p-4 space-y-3"
-                  style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)" }}
-                >
-                  <label className="flex items-start gap-3 cursor-pointer" data-testid="whatsapp-optin">
-                  <input
-                    type="checkbox"
-                    {...form.register("whatsappOptIn")}
-                    className="w-4 h-4 rounded mt-0.5 flex-shrink-0"
-                    style={{ accentColor: "#25D366" }}
-                  />
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageCircle size={14} style={{ color: "#25D366" }} />
-                      <span className="text-sm font-medium" style={{ color: "var(--wedding-text)" }}>
-                        Get WhatsApp AI Updates
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                      Opt in to receive wedding updates via our AI-powered WhatsApp chatbot.
-                      Get instant answers about venue, schedule, dress code, and more — anytime you need them.
-                    </p>
-                  </div>
-                </label>
-
-                <AnimatePresence>
-                  {whatsappOptIn && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div
-                        className="rounded-lg p-3 mt-1"
-                        style={{ background: "var(--wedding-card-bg)", border: "1px dashed var(--wedding-border)" }}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Bot size={14} style={{ color: "#25D366" }} />
-                          <span className="text-[10px] tracking-wider uppercase font-medium" style={{ color: "#25D366" }}>
-                            AI Wedding Assistant
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <Bot size={12} className="mt-0.5 flex-shrink-0" style={{ color: "#25D366" }} />
-                            <div className="rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--wedding-bg)", color: "var(--wedding-text)" }}>
-                              "Hi! I'm your wedding AI assistant. Ask me anything about the event!"
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2 justify-end">
-                            <div className="rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--wedding-accent)", color: "#fff" }}>
-                              "What's the dress code for the reception?"
-                            </div>
-                            <User size={12} className="mt-0.5 flex-shrink-0" style={{ color: "var(--wedding-muted)" }} />
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <Bot size={12} className="mt-0.5 flex-shrink-0" style={{ color: "#25D366" }} />
-                            <div className="rounded-lg px-3 py-1.5 text-xs" style={{ background: "var(--wedding-bg)", color: "var(--wedding-text)" }}>
-                              "Indian Formal — Sarees & Sherwanis are suggested for the Reception on Dec 14."
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-[10px] mt-2 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                          Real-time updates, schedule reminders, venue directions, and travel info — all at your fingertips.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              )}
-
               <button
                 type="submit"
                 disabled={rsvpMutation.isPending}
@@ -1041,71 +892,75 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
               )}
             </motion.form>
 
-        {/* Guest Confirmation Popup */}
-        <AnimatePresence>
-          {showGuestConfirmPopup && foundGuest && (
-            <motion.div
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowGuestConfirmPopup(false)}
-            >
-              <motion.div
-                className="max-w-md w-full rounded-xl p-6 sm:p-8"
-                style={{ background: "var(--wedding-card-bg)", border: "2px solid var(--wedding-accent)" }}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="text-center mb-6">
-                  <div className="mb-4">
-                    <KHCrest size={60} />
-                  </div>
-                  <h3 className="font-serif text-2xl font-bold mb-2" style={{ color: "var(--wedding-text)" }}>
-                    Welcome Back!
-                  </h3>
-                  <p className="text-sm mb-4" style={{ color: "var(--wedding-muted)" }}>
-                    We found an existing RSVP with this phone number:
-                  </p>
-                  <div className="p-4 rounded-lg mb-6" style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)" }}>
-                    <p className="font-semibold text-lg mb-1" style={{ color: "var(--wedding-text)" }}>
-                      {foundGuest.name}
-                    </p>
-                    <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
-                      {foundGuest.phone}
-                    </p>
-                    {foundGuest.email && (
+            {/* Guest Confirmation Popup */}
+            <AnimatePresence>
+              {showGuestConfirmPopup && foundGuest && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                  onClick={() => setShowGuestConfirmPopup(false)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="max-w-md w-full rounded-xl p-6 shadow-2xl"
+                    style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+                  >
+                    <div className="text-center mb-4">
+                      <Heart className="mx-auto mb-3" size={40} style={{ color: "var(--wedding-accent)" }} />
+                      <h3 className="font-serif text-2xl font-bold mb-2" style={{ color: "var(--wedding-text)" }}>
+                        Welcome Back!
+                      </h3>
                       <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
-                        {foundGuest.email}
+                        We found an existing RSVP for <strong>{foundGuest.name}</strong>
                       </p>
-                    )}
-                  </div>
-                  <p className="text-sm mb-6" style={{ color: "var(--wedding-muted)" }}>
-                    Is this you?
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={confirmExistingGuest}
-                    className="w-full py-3 rounded-lg text-sm font-medium tracking-wider uppercase transition-all hover:opacity-90"
-                    style={{ background: "var(--wedding-accent)", color: "#fff" }}
-                  >
-                    Yes, that's me
-                  </button>
-                  <button
-                    onClick={continueAsNewGuest}
-                    className="w-full py-3 rounded-lg text-sm font-medium tracking-wider uppercase transition-all hover:opacity-90"
-                    style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
-                  >
-                    No, continue as new guest
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    </div>
+
+                    <div className="bg-background/50 rounded-lg p-4 mb-4 space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
+                      <p><strong>Current Status:</strong> {foundGuest.rsvpStatus === "confirmed" ? "✓ Confirmed" : "✗ Declined"}</p>
+                      {foundGuest.foodPreference && (
+                        <p><strong>Food Preference:</strong> {foundGuest.foodPreference}</p>
+                      )}
+                      {foundGuest.eventsAttending && (
+                        <p><strong>Events:</strong> {foundGuest.eventsAttending.split(",").length} selected</p>
+                      )}
+                    </div>
+
+                    <p className="text-xs mb-4 text-center" style={{ color: "var(--wedding-muted)" }}>
+                      Would you like to update your events and food preferences?
+                    </p>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={continueAsNewGuest}
+                        className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                        style={{
+                          background: "transparent",
+                          color: "var(--wedding-text)",
+                          border: "1px solid var(--wedding-border)",
+                        }}
+                      >
+                        Continue as New
+                      </button>
+                      <button
+                        onClick={confirmExistingGuest}
+                        className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                        style={{
+                          background: "var(--wedding-accent)",
+                          color: "#fff",
+                        }}
+                      >
+                        Update RSVP
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
       </div>
     </section>
   );
@@ -1514,7 +1369,7 @@ export default function Home() {
         <FaqsSection faqList={faqList} />
         <FooterSection />
       </main>
-      <FloatingContact config={config} />
+      <FloatingContact />
     </>
   );
 }

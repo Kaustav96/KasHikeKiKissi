@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Users, Calendar, Settings, MessageSquare, Download,
+  Users, Calendar, Settings, Download,
   Plus, Trash2, Edit, LogOut, BarChart3, BookOpen,
-  MapPin, HelpCircle, Gift, Music, Phone, Eye
+  MapPin, HelpCircle, Gift, Music, Eye
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
-  WeddingConfig, Guest, WeddingEvent, MessageLog,
+  WeddingConfig, Guest, WeddingEvent,
   StoryMilestone, Venue, Faq
 } from "../../../shared/schema.js";
 
@@ -75,13 +75,6 @@ export default function AdminDashboard() {
     refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
-  const { data: messageLogs = [] } = useQuery<MessageLog[]>({
-    queryKey: ["/api/admin/message-logs"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
-  });
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -125,7 +118,6 @@ export default function AdminDashboard() {
             <TabsTrigger value="venues" data-testid="tab-venues" className="text-xs"><MapPin size={14} className="mr-1" /> <span className="hidden sm:inline">Venues</span></TabsTrigger>
             <TabsTrigger value="faqs" data-testid="tab-faqs" className="text-xs"><HelpCircle size={14} className="mr-1" /> FAQs</TabsTrigger>
             <TabsTrigger value="config" data-testid="tab-config" className="text-xs"><Settings size={14} className="mr-1" /> Config</TabsTrigger>
-            <TabsTrigger value="whatsapp" data-testid="tab-whatsapp" className="text-xs"><MessageSquare size={14} className="mr-1" /> <span className="hidden sm:inline">WhatsApp</span></TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -232,10 +224,6 @@ export default function AdminDashboard() {
           <TabsContent value="config">
             <ConfigTab config={config} qc={qc} toast={toast} />
           </TabsContent>
-
-          <TabsContent value="whatsapp">
-            <WhatsAppTab config={config} messageLogs={messageLogs} qc={qc} toast={toast} />
-          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -265,10 +253,9 @@ function OverviewTab({ guests, confirmed, declined, pending, totalAttending, eve
         <StatCard label="Pending" value={pending.length} icon={Users} />
         <StatCard label="Total Attending" value={totalAttending} icon={Users} />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <StatCard label="Declined" value={declined.length} icon={Users} />
         <StatCard label="Events" value={events.length} icon={Calendar} />
-        <StatCard label="WhatsApp Opt-in" value={guests.filter((g: any) => g.whatsappOptIn).length} icon={MessageSquare} />
         <StatCard label="Website Views" value={config?.viewCount || 0} icon={Eye} />
       </div>
     </div>
@@ -277,7 +264,7 @@ function OverviewTab({ guests, confirmed, declined, pending, totalAttending, eve
 
 function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: WeddingEvent[]; qc: any; toast: any }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [newGuest, setNewGuest] = useState({ name: "", email: "", phone: "", side: "both" });
+  const [newGuest, setNewGuest] = useState({ name: "", side: "both" });
   const [eventFilter, setEventFilter] = useState<string>("");
   const [foodFilter, setFoodFilter] = useState<string>("");
   const [sideFilter, setSideFilter] = useState<string>("");
@@ -360,7 +347,7 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
       qc.invalidateQueries({ queryKey: ["/api/admin/guests"] });
       toast({ title: "Guest added" });
       setShowAdd(false);
-      setNewGuest({ name: "", email: "", phone: "", side: "both" });
+      setNewGuest({ name: "", side: "both" });
     },
   });
 
@@ -457,22 +444,6 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
             className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
             data-testid="input-guest-name"
           />
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              placeholder="Email"
-              value={newGuest.email}
-              onChange={(e) => setNewGuest({ ...newGuest, email: e.target.value })}
-              className="px-3 py-2 rounded bg-background border text-sm text-foreground"
-              data-testid="input-guest-email"
-            />
-            <input
-              placeholder="Phone"
-              value={newGuest.phone}
-              onChange={(e) => setNewGuest({ ...newGuest, phone: e.target.value })}
-              className="px-3 py-2 rounded bg-background border text-sm text-foreground"
-              data-testid="input-guest-phone"
-            />
-          </div>
           <select
             value={newGuest.side}
             onChange={(e) => setNewGuest({ ...newGuest, side: e.target.value })}
@@ -499,7 +470,6 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
           <thead>
             <tr className="border-b text-left text-xs text-muted-foreground">
               <th className="pb-2 pr-2 sm:pr-4 pl-3 sm:pl-0">Name</th>
-              <th className="pb-2 pr-2 sm:pr-4 hidden sm:table-cell">Phone</th>
               <th className="pb-2 pr-2 sm:pr-4">Side</th>
               <th className="pb-2 pr-2 sm:pr-4">RSVP</th>
               <th className="pb-2 pr-2 sm:pr-4 hidden md:table-cell">Events</th>
@@ -516,7 +486,6 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
               return (
                 <tr key={g.id} className="border-b border-border" data-testid={`guest-row-${g.id}`}>
                   <td className="py-2 pr-2 sm:pr-4 pl-3 sm:pl-0 text-foreground">{g.name}</td>
-                  <td className="py-2 pr-2 sm:pr-4 text-muted-foreground hidden sm:table-cell">{g.phone || "—"}</td>
                   <td className="py-2 pr-2 sm:pr-4">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
                       {g.side}
@@ -837,27 +806,19 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
     backgroundMusicUrl: "",
     groomMusicUrls: [] as string[],
     brideMusicUrls: [] as string[],
-    groomPhone: "",
-    bridePhone: "",
-    groomWhatsapp: "",
-    brideWhatsapp: "",
   });
 
   useEffect(() => {
     if (config) {
       setForm({
         weddingDate: config.weddingDate ? new Date(config.weddingDate).toISOString().slice(0, 16) : "",
-        dateToBeDecided: true,
-        dateConfirmed: config.dateConfirmed,
+        dateToBeDecided: true, // Always default to TBD checked
+        dateConfirmed: false, // Always default to unchecked
         coupleStory: config.coupleStory,
         upiId: config.upiId || "",
         backgroundMusicUrl: config.backgroundMusicUrl || "",
         groomMusicUrls: Array.isArray(config.groomMusicUrls) ? config.groomMusicUrls : [],
         brideMusicUrls: Array.isArray(config.brideMusicUrls) ? config.brideMusicUrls : [],
-        groomPhone: config.groomPhone || "",
-        bridePhone: config.bridePhone || "",
-        groomWhatsapp: config.groomWhatsapp || "",
-        brideWhatsapp: config.brideWhatsapp || "",
       });
     }
   }, [config]);
@@ -870,6 +831,7 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
         payload.weddingDate = new Date(payload.weddingDate).toISOString();
       } else {
         delete payload.weddingDate;
+        payload.dateConfirmed = false; // If date is TBD, can't be confirmed
       }
       // Remove dateToBeDecided from payload (not in DB)
       delete payload.dateToBeDecided;
@@ -895,9 +857,10 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
             type="checkbox"
             checked={form.dateToBeDecided}
             onChange={(e) => {
-              setForm({ ...form, dateToBeDecided: e.target.checked });
               if (e.target.checked) {
-                setForm({ ...form, dateToBeDecided: true, weddingDate: "" });
+                setForm({ ...form, dateToBeDecided: true, dateConfirmed: false, weddingDate: "" });
+              } else {
+                setForm({ ...form, dateToBeDecided: false });
               }
             }}
           />
@@ -1111,36 +1074,6 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
             </div>
           </div>
         </div>
-        <h3 className="text-sm font-semibold text-foreground pt-2 flex items-center gap-2">
-          <Phone size={14} /> Contact Numbers (Floating Chat Widget)
-        </h3>
-        <p className="text-xs text-muted-foreground mb-3">These numbers are configured in seed.ts and cannot be edited here.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Groom Phone</label>
-            <div className="w-full px-3 py-2 rounded bg-muted border text-sm text-muted-foreground">
-              {form.groomPhone || "Not set"}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Bride Phone</label>
-            <div className="w-full px-3 py-2 rounded bg-muted border text-sm text-muted-foreground">
-              {form.bridePhone || "Not set"}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Groom WhatsApp</label>
-            <div className="w-full px-3 py-2 rounded bg-muted border text-sm text-muted-foreground">
-              {form.groomWhatsapp || "Not set"}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Bride WhatsApp</label>
-            <div className="w-full px-3 py-2 rounded bg-muted border text-sm text-muted-foreground">
-              {form.brideWhatsapp || "Not set"}
-            </div>
-          </div>
-        </div>
         <button
           onClick={() => saveMutation.mutate(form)}
           disabled={saveMutation.isPending}
@@ -1149,66 +1082,6 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
         >
           {saveMutation.isPending ? "Saving..." : "Save Configuration"}
         </button>
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppTab({ config, messageLogs, qc, toast }: { config: WeddingConfig | undefined; messageLogs: MessageLog[]; qc: any; toast: any }) {
-  const toggleMutation = useMutation({
-    mutationFn: (enabled: boolean) => apiRequest("POST", "/api/admin/whatsapp/toggle", { enabled }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/admin/config"] });
-      toast({ title: "WhatsApp automation updated" });
-    },
-  });
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-card border rounded-lg p-6">
-        <h3 className="text-sm font-semibold mb-4 text-foreground">WhatsApp Automation</h3>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-foreground" data-testid="whatsapp-toggle">
-            <input
-              type="checkbox"
-              checked={config?.whatsappEnabled || false}
-              onChange={(e) => toggleMutation.mutate(e.target.checked)}
-            />
-            Enable automated WhatsApp reminders
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Requires WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, and WHATSAPP_APP_SECRET environment variables.
-        </p>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-semibold mb-3 text-foreground">Message Logs ({messageLogs.length})</h3>
-        <div className="space-y-2">
-          {messageLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No messages sent yet.</p>
-          ) : (
-            messageLogs.map((log) => (
-              <div key={log.id} className="bg-card border rounded-lg p-3 text-xs" data-testid={`log-${log.id}`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-foreground">{log.guestName}</span>
-                  <span className={`px-2 py-0.5 rounded-full ${
-                    log.status === "sent" ? "bg-green-100 text-green-800" :
-                    log.status === "failed" ? "bg-red-100 text-red-800" :
-                    "bg-yellow-100 text-yellow-800"
-                  }`}>
-                    {log.status}
-                  </span>
-                </div>
-                <p className="text-muted-foreground mt-1">{log.messageType} — {log.templateName}</p>
-                {log.errorMessage && <p className="text-destructive mt-1">{log.errorMessage}</p>}
-                <p className="text-muted-foreground mt-1">
-                  {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
       </div>
     </div>
   );

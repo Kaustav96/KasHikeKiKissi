@@ -62,14 +62,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Initialize the reminder engine (runs hourly cron for WhatsApp reminders)
-  try {
-    const { initReminderEngine } = await import("./services/reminders");
-    initReminderEngine();
-  } catch (err) {
-    console.error("Failed to initialize reminder engine:", err);
-  }
-
   // Seed the database with initial data
   try {
     const { seedDatabase } = await import("./seed");

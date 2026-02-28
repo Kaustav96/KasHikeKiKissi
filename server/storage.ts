@@ -25,7 +25,7 @@ import {
   faqs,
 } from "../shared/schema.js";
 import { db } from "./db";
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, desc, asc, like } from "drizzle-orm";
 
 export interface IStorage {
   getWeddingConfig(): Promise<WeddingConfig | undefined>;
@@ -34,8 +34,7 @@ export interface IStorage {
   getGuests(): Promise<Guest[]>;
   getGuestById(id: string): Promise<Guest | undefined>;
   getGuestBySlug(slug: string): Promise<Guest | undefined>;
-  getGuestByPhone(phone: string): Promise<Guest | undefined>;
-  getGuestByEmail(email: string): Promise<Guest | undefined>;
+  getGuestByName(name: string): Promise<Guest | undefined>;
   createGuest(guest: InsertGuest): Promise<Guest>;
   updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest | undefined>;
   deleteGuest(id: string): Promise<void>;
@@ -113,13 +112,8 @@ export class DatabaseStorage implements IStorage {
     return guest;
   }
 
-  async getGuestByPhone(phone: string): Promise<Guest | undefined> {
-    const [guest] = await db.select().from(guests).where(eq(guests.phone, phone));
-    return guest;
-  }
-
-  async getGuestByEmail(email: string): Promise<Guest | undefined> {
-    const [guest] = await db.select().from(guests).where(eq(guests.email, email));
+  async getGuestByName(name: string): Promise<Guest | undefined> {
+    const [guest] = await db.select().from(guests).where(like(guests.name, `%${name}%`));
     return guest;
   }
 

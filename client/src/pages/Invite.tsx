@@ -18,21 +18,38 @@ const rsvpFormSchema = z.object({
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20),
   childrenCount: z.number().int().min(0).max(20),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian"]),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"]).optional(),
   eventsAttending: z.string(),
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
-  whatsappOptIn: z.boolean(),
-  phone: z.string().max(20),
-  email: z.string().email().optional().or(z.literal("")),
-});
+}).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return data.eventsAttending && data.eventsAttending.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Please select at least one event to attend",
+    path: ["eventsAttending"],
+  }
+).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return !!data.foodPreference;
+    }
+    return true;
+  },
+  {
+    message: "Please select your food preference",
+    path: ["foodPreference"],
+  }
+);
 type RsvpFormData = z.infer<typeof rsvpFormSchema>;
 
 interface GuestData {
   id: string;
   name: string;
-  email: string;
-  phone: string;
   rsvpStatus: string;
   adultsCount: number;
   childrenCount: number;
@@ -40,7 +57,6 @@ interface GuestData {
   eventsAttending: string;
   dietaryRequirements: string;
   message: string;
-  whatsappOptIn: boolean;
   side: string;
 }
 
@@ -82,9 +98,6 @@ export default function Invite() {
       eventsAttending: "",
       dietaryRequirements: "",
       message: "",
-      whatsappOptIn: false,
-      phone: "",
-      email: "",
     },
   });
 
@@ -98,9 +111,6 @@ export default function Invite() {
         eventsAttending: guest.eventsAttending || "",
         dietaryRequirements: guest.dietaryRequirements || "",
         message: guest.message || "",
-        whatsappOptIn: guest.whatsappOptIn || false,
-        phone: guest.phone || "",
-        email: guest.email || "",
       });
     }
   }, [guest, form]);
@@ -231,7 +241,13 @@ export default function Invite() {
                       <button
                         key={status}
                         type="button"
-                        onClick={() => form.setValue("rsvpStatus", status)}
+                        onClick={() => {
+                          form.setValue("rsvpStatus", status);
+                          if (status === "declined") {
+                            form.setValue("eventsAttending", "");
+                            form.setValue("foodPreference", undefined);
+                          }
+                        }}
                         className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
                         style={{
                           background: form.watch("rsvpStatus") === status ? "var(--wedding-accent)" : "transparent",
@@ -352,20 +368,6 @@ export default function Invite() {
 
                 <div>
                   <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    {...form.register("phone")}
-                    placeholder="+91 98765 43210"
-                    className="w-full px-4 py-2.5 rounded-lg text-sm"
-                    style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
-                    data-testid="input-phone"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
                     Personal Message (optional)
                   </label>
                   <textarea
@@ -377,18 +379,6 @@ export default function Invite() {
                     data-testid="input-message"
                   />
                 </div>
-
-                <label className="flex items-center gap-3 cursor-pointer" data-testid="whatsapp-optin">
-                  <input
-                    type="checkbox"
-                    {...form.register("whatsappOptIn")}
-                    className="w-4 h-4 rounded"
-                    style={{ accentColor: "var(--wedding-accent)" }}
-                  />
-                  <span className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-                    Receive wedding updates via WhatsApp
-                  </span>
-                </label>
 
                 <button
                   type="submit"
@@ -408,7 +398,7 @@ export default function Invite() {
           </div>
         </section>
       </main>
-      {config && <FloatingContact config={config} />}
+      <FloatingContact />
     </>
   );
 }

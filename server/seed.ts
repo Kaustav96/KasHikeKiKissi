@@ -19,22 +19,16 @@ export async function seedDatabase(): Promise<void> {
 
   const existingConfig = await storage.getWeddingConfig();
   if (!existingConfig) {
-    const weddingDate = new Date("2026-12-14T10:30:00.000Z");
     await storage.upsertWeddingConfig({
-      weddingDate,
-      dateConfirmed: true,
+      weddingDate: null, // Default to TBD
+      dateConfirmed: false, // Default to not confirmed
       venueName: "The Grand Pavilion",
       venueAddress: "12 Marigold Lane, Kolkata, West Bengal 700001",
       venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",
       coupleStory: "Kaustav and Himasree first met at a monsoon evening in Kolkata — over a shared umbrella and a debate about Tagore's poetry. What began as a spirited argument blossomed into countless evening walks, shared chai, and a love story written in laughter and letters.\n\nKaustav's quiet determination and Himasree's warmth made them inseparable. Through years of shared dreams and adventures, they knew they had found their forever in each other.\n\nToday, they invite you to witness the next beautiful chapter of their story.",
-      whatsappEnabled: false,
       adminPasswordHash: "",
       upiId: "",
       backgroundMusicUrl: "",
-      groomPhone: process.env.GROOM_PHONE || "+919876543210",
-      bridePhone: process.env.BRIDE_PHONE || "+919876543211",
-      groomWhatsapp: process.env.GROOM_WHATSAPP || "+919876543210",
-      brideWhatsapp: process.env.BRIDE_WHATSAPP || "+919876543211",
     });
     console.log("[Seed] Created wedding config");
   }

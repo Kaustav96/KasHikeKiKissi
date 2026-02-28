@@ -21,16 +21,11 @@ export const weddingConfig = pgTable("wedding_config", {
   venueAddress: text("venue_address").notNull().default(""),
   venueMapUrl: text("venue_map_url").notNull().default(""),
   coupleStory: text("couple_story").notNull().default(""),
-  whatsappEnabled: boolean("whatsapp_enabled").notNull().default(false),
   adminPasswordHash: text("admin_password_hash").notNull().default(""),
   upiId: text("upi_id").notNull().default(""),
   backgroundMusicUrl: text("background_music_url").notNull().default(""),
   groomMusicUrls: jsonb("groom_music_urls").notNull().default(sql`'[]'::jsonb`),
   brideMusicUrls: jsonb("bride_music_urls").notNull().default(sql`'[]'::jsonb`),
-  groomPhone: text("groom_phone").notNull().default(""),
-  bridePhone: text("bride_phone").notNull().default(""),
-  groomWhatsapp: text("groom_whatsapp").notNull().default(""),
-  brideWhatsapp: text("bride_whatsapp").notNull().default(""),
   viewCount: integer("view_count").notNull().default(0),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
 });
@@ -47,9 +42,6 @@ export const guests = pgTable("guests", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  email: text("email").notNull().default(""),
-  phone: text("phone").notNull().default(""),
-  whatsappOptIn: boolean("whatsapp_opt_in").notNull().default(false),
   rsvpStatus: text("rsvp_status").notNull().default("pending"),
   adultsCount: integer("adults_count").notNull().default(1),
   childrenCount: integer("children_count").notNull().default(0),
@@ -77,39 +69,70 @@ export const rsvpSubmitSchema = z.object({
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20).default(1),
   childrenCount: z.number().int().min(0).max(20).default(0),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian"]).default("vegetarian"),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"], {
+    errorMap: () => ({ message: "Please select your food preference" }),
+  }).optional(),
   eventsAttending: z.string().default(""),
   dietaryRequirements: z.string().max(500).default(""),
   message: z.string().max(1000).default(""),
-  whatsappOptIn: z.boolean().default(false),
-  phone: z.string().max(20).default(""),
-  email: z.string().email().optional().or(z.literal("")),
-});
-export type RsvpSubmit = z.infer<typeof rsvpSubmitSchema>;
-
-export const publicRsvpSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200),
-  phone: z.string().min(5, "Phone number is required").max(20),
-  email: z.string().email().optional().or(z.literal("")),
-  rsvpStatus: z.enum(["confirmed", "declined"]),
-  adultsCount: z.number().int().min(1).max(20).default(1),
-  childrenCount: z.number().int().min(0).max(20).default(0),
-  foodPreference: z.enum(["vegetarian", "non-vegetarian"]).optional(),
-  eventsAttending: z.string().default(""),
-  dietaryRequirements: z.string().max(500).default(""),
-  message: z.string().max(1000).default(""),
-  whatsappOptIn: z.boolean().default(false),
-  side: z.enum(["groom", "bride", "both"]).default("both"),
 }).refine(
   (data) => {
     if (data.rsvpStatus === "confirmed") {
-      return data.eventsAttending && data.eventsAttending.length > 0 && data.foodPreference;
+      return data.eventsAttending && data.eventsAttending.length > 0;
     }
     return true;
   },
   {
-    message: "Please select at least one event and food preference when confirming",
+    message: "Please select at least one event to attend",
     path: ["eventsAttending"],
+  }
+).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return !!data.foodPreference;
+    }
+    return true;
+  },
+  {
+    message: "Please select your food preference",
+    path: ["foodPreference"],
+  }
+);
+export type RsvpSubmit = z.infer<typeof rsvpSubmitSchema>;
+
+export const publicRsvpSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  rsvpStatus: z.enum(["confirmed", "declined"]),
+  adultsCount: z.number().int().min(1).max(20).default(1),
+  childrenCount: z.number().int().min(0).max(20).default(0),
+  foodPreference: z.enum(["vegetarian", "non-vegetarian"], {
+    errorMap: () => ({ message: "Please select your food preference" }),
+  }).optional(),
+  eventsAttending: z.string().default(""),
+  dietaryRequirements: z.string().max(500).default(""),
+  message: z.string().max(1000).default(""),
+  side: z.enum(["groom", "bride", "both"]).default("both"),
+}).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return data.eventsAttending && data.eventsAttending.length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Please select at least one event to attend",
+    path: ["eventsAttending"],
+  }
+).refine(
+  (data) => {
+    if (data.rsvpStatus === "confirmed") {
+      return !!data.foodPreference;
+    }
+    return true;
+  },
+  {
+    message: "Please select your food preference",
+    path: ["foodPreference"],
   }
 );
 export type PublicRsvp = z.infer<typeof publicRsvpSchema>;

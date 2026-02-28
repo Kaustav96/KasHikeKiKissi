@@ -4,8 +4,6 @@ import cookieParser from "cookie-parser";
 import { storage } from "./storage";
 import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth";
 import { rsvpSubmitSchema, publicRsvpSchema } from "../shared/schema.js";
-import { sendRsvpConfirmation } from "./services/whatsapp";
-import { verifyWebhookSignature } from "./services/whatsapp";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -109,21 +107,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/invite/:slug", async (req, res) => {
     const guest = await storage.getGuestBySlug(req.params.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
-    const { id, name, email, phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side } = guest;
-    res.json({ id, name, email, phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side });
+    const { id, name, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, side } = guest;
+    res.json({ id, name, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, side });
   });
 
-  app.get("/api/guests/by-phone", async (req, res) => {
-    const phone = req.query.phone as string;
-    if (!phone) return res.status(400).json({ error: "Phone number required" });
+  app.get("/api/guests/by-name", async (req, res) => {
+    const name = req.query.name as string;
+    if (!name) return res.status(400).json({ error: "Name is required" });
 
-    const normalizedPhone = phone.replace(/\s+/g, "").trim();
-    const guest = await storage.getGuestByPhone(normalizedPhone);
-
+    const guest = await storage.getGuestByName(name);
     if (!guest) return res.status(404).json({ error: "Guest not found" });
 
-    const { id, name, email, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side } = guest;
-    res.json({ id, name, email, phone: guest.phone, rsvpStatus, adultsCount, childrenCount, foodPreference, eventsAttending, dietaryRequirements, message, whatsappOptIn, side });
+    res.json(guest);
   });
 
   app.post("/api/rsvp", async (req, res) => {
@@ -143,27 +138,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     const updates = {
       rsvpStatus: data.rsvpStatus,
-      adultsCount: data.adultsCount,
-      childrenCount: data.childrenCount,
-      foodPreference: data.foodPreference,
+      adultsCount: data.rsvpStatus === "declined" ? 0 : data.adultsCount,
+      childrenCount: data.rsvpStatus === "declined" ? 0 : data.childrenCount,
+      foodPreference: data.rsvpStatus === "declined" ? "" : data.foodPreference,
       eventsAttending: data.eventsAttending.trim(),
       dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
       message: data.message.trim().slice(0, 1000),
-      whatsappOptIn: data.whatsappOptIn,
-      phone: data.phone.trim().slice(0, 20),
-      email: (data.email || "").trim().slice(0, 255),
     };
 
     const updated = await storage.updateGuest(guest.id, updates);
     if (!updated) return res.status(500).json({ error: "Failed to update RSVP" });
-
-    if (updates.whatsappOptIn && updates.rsvpStatus === "confirmed" && updates.phone) {
-      sendRsvpConfirmation({
-        id: updated.id,
-        name: updated.name,
-        phone: updates.phone,
-      }).catch((err) => console.error("[RSVP] WhatsApp send failed:", err));
-    }
 
     res.json({ success: true, rsvpStatus: updated.rsvpStatus });
   });
@@ -180,41 +164,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     const data = parsed.data;
-    const normalizedPhone = data.phone.replace(/\s+/g, "").trim();
-    const normalizedEmail = (data.email || "").trim().toLowerCase();
 
-    // Check by phone to update existing guest record
-    let guest = normalizedPhone ? await storage.getGuestByPhone(normalizedPhone) : null;
-
-    if (guest) {
-      const updated = await storage.updateGuest(guest.id, {
-        name: data.name,
-        rsvpStatus: data.rsvpStatus,
-        adultsCount: data.rsvpStatus === "declined" ? 0 : data.adultsCount,
-        childrenCount: data.rsvpStatus === "declined" ? 0 : data.childrenCount,
-        foodPreference: data.rsvpStatus === "declined" ? "" : (data.foodPreference || "vegetarian"),
-        eventsAttending: data.rsvpStatus === "declined" ? "" : data.eventsAttending.trim(),
-        dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
-        message: data.message.trim().slice(0, 1000),
-        whatsappOptIn: data.whatsappOptIn,
-        email: (data.email || "").trim(),
-        side: data.side, // Preserve side on update
-      });
-      if (!updated) return res.status(500).json({ error: "Failed to update RSVP" });
-
-      if (data.whatsappOptIn && data.rsvpStatus === "confirmed" && normalizedPhone) {
-        sendRsvpConfirmation({ id: updated.id, name: updated.name, phone: normalizedPhone })
-          .catch((err) => console.error("[RSVP] WhatsApp send failed:", err));
-      }
-
-      return res.json({ success: true, rsvpStatus: updated.rsvpStatus, isNew: false });
-    }
-
+    // Create new guest
     const slug = generateSlug(data.name);
     const newGuest = await storage.createGuest({
       name: data.name,
-      phone: normalizedPhone,
-      email: (data.email || "").trim(),
       inviteSlug: slug,
       rsvpStatus: data.rsvpStatus,
       adultsCount: data.rsvpStatus === "declined" ? 0 : data.adultsCount,
@@ -223,15 +177,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       eventsAttending: data.rsvpStatus === "declined" ? "" : data.eventsAttending.trim(),
       dietaryRequirements: data.dietaryRequirements.trim().slice(0, 500),
       message: data.message.trim().slice(0, 1000),
-      whatsappOptIn: data.whatsappOptIn,
-      side: data.side, // Now properly validated by schema
+      side: data.side,
       tableNumber: null,
     });
-
-    if (data.whatsappOptIn && data.rsvpStatus === "confirmed" && normalizedPhone) {
-      sendRsvpConfirmation({ id: newGuest.id, name: newGuest.name, phone: normalizedPhone })
-        .catch((err) => console.error("[RSVP] WhatsApp send failed:", err));
-    }
 
     res.status(201).json({ success: true, rsvpStatus: newGuest.rsvpStatus, isNew: true });
   });
@@ -252,40 +200,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.setHeader("Content-Type", "text/calendar; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${event.title.replace(/\s+/g, "_")}.ics"`);
     res.send(ics);
-  });
-
-  app.post("/api/webhooks/whatsapp", (req, res) => {
-    const signature = req.headers["x-hub-signature-256"] as string;
-    const rawBody = JSON.stringify(req.body);
-
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      return res.status(403).json({ error: "Invalid webhook signature" });
-    }
-
-    const entry = req.body?.entry?.[0];
-    const change = entry?.changes?.[0];
-    const statuses = change?.value?.statuses;
-
-    if (statuses) {
-      for (const status of statuses) {
-        console.log(`[Webhook] Message ${status.id} status: ${status.status}`);
-      }
-    }
-
-    res.json({ received: true });
-  });
-
-  app.get("/api/webhooks/whatsapp", (req, res) => {
-    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
-    const mode = req.query["hub.mode"];
-    const token = req.query["hub.verify_token"];
-    const challenge = req.query["hub.challenge"];
-
-    if (mode === "subscribe" && token === verifyToken) {
-      res.status(200).send(challenge);
-    } else {
-      res.status(403).json({ error: "Forbidden" });
-    }
   });
 
   app.post("/api/admin/login", async (req, res) => {
@@ -329,15 +243,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       venueAddress: z.string().max(500).optional(),
       venueMapUrl: z.string().url().optional().or(z.literal("")),
       coupleStory: z.string().max(5000).optional(),
-      whatsappEnabled: z.boolean().optional(),
       upiId: z.string().max(200).optional(),
       backgroundMusicUrl: z.string().optional().or(z.literal("")),
       groomMusicUrls: z.array(z.string()).optional(),
       brideMusicUrls: z.array(z.string()).optional(),
-      groomPhone: z.string().max(20).optional(),
-      bridePhone: z.string().max(20).optional(),
-      groomWhatsapp: z.string().max(20).optional(),
-      brideWhatsapp: z.string().max(20).optional(),
     });
 
     const parsed = schema.safeParse(req.body);
@@ -361,8 +270,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/admin/guests", requireAdmin, async (req, res) => {
     const schema = z.object({
       name: z.string().min(1).max(200),
-      email: z.string().email().optional().or(z.literal("")),
-      phone: z.string().max(20).optional().or(z.literal("")),
       side: z.enum(["bride", "groom", "both"]).default("both"),
       tableNumber: z.number().int().positive().optional(),
     });
@@ -373,11 +280,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const slug = generateSlug(parsed.data.name);
     const guest = await storage.createGuest({
       ...parsed.data,
-      email: parsed.data.email || "",
-      phone: parsed.data.phone || "",
       inviteSlug: slug,
       rsvpStatus: "pending",
-      whatsappOptIn: false,
       adultsCount: 1,
       childrenCount: 0,
       foodPreference: "vegetarian",
@@ -392,12 +296,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.patch("/api/admin/guests/:id", requireAdmin, async (req, res) => {
     const schema = z.object({
       name: z.string().min(1).max(200).optional(),
-      email: z.string().email().optional().or(z.literal("")),
-      phone: z.string().max(20).optional(),
       side: z.enum(["bride", "groom", "both"]).optional(),
       tableNumber: z.number().int().positive().nullable().optional(),
       rsvpStatus: z.enum(["pending", "confirmed", "declined"]).optional(),
-      whatsappOptIn: z.boolean().optional(),
       adultsCount: z.number().int().min(1).max(20).optional(),
       childrenCount: z.number().int().min(0).max(20).optional(),
       foodPreference: z.enum(["vegetarian", "non-vegetarian"]).optional(),
@@ -445,9 +346,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const eventMap = new Map(events.map(e => [e.id, e.title]));
 
     const headers = [
-      "Name", "Email", "Phone", "Side", "RSVP Status",
+      "Name", "Side", "RSVP Status",
       "Adults", "Children", "Food Preference", "Events Attending",
-      "Dietary Requirements", "WhatsApp Opt-In", "Table Number", "Message", "Invite Slug",
+      "Dietary Requirements", "Table Number", "Message", "Invite Slug",
     ];
 
     const rows = guestList.map((g) => {
@@ -456,9 +357,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const eventNames = eventIds.map(id => eventMap.get(id) || id).join(", ");
 
       return [
-        g.name, g.email, g.phone, g.side, g.rsvpStatus,
+        g.name, g.side, g.rsvpStatus,
         g.adultsCount, g.childrenCount, g.foodPreference, eventNames,
-        g.dietaryRequirements, g.whatsappOptIn ? "Yes" : "No", g.tableNumber ?? "",
+        g.dietaryRequirements, g.tableNumber ?? "",
         g.message.replace(/"/g, '""'), g.inviteSlug,
       ];
     });
@@ -692,48 +593,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
     await storage.deleteFaq(String(req.params.id));
     res.json({ success: true });
-  });
-
-  app.get("/api/admin/message-logs", requireAdmin, async (req, res) => {
-    const limit = Math.min(Number(req.query.limit) || 100, 500);
-    const logs = await storage.getMessageLogs(limit);
-    res.json(logs);
-  });
-
-  app.post("/api/admin/whatsapp/send", requireAdmin, async (req, res) => {
-    const schema = z.object({
-      guestId: z.string(),
-      messageType: z.string().min(1),
-      templateName: z.string().min(1),
-    });
-
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Invalid data" });
-
-    const guest = await storage.getGuestById(parsed.data.guestId);
-    if (!guest) return res.status(404).json({ error: "Guest not found" });
-    if (!guest.phone) return res.status(400).json({ error: "Guest has no phone number" });
-
-    const { sendMessage, buildBodyComponents } = await import("./services/whatsapp");
-    await sendMessage({
-      guestId: guest.id,
-      guestName: guest.name,
-      phone: guest.phone,
-      templateName: parsed.data.templateName,
-      messageType: parsed.data.messageType,
-      components: buildBodyComponents([guest.name]),
-    });
-
-    res.json({ success: true });
-  });
-
-  app.post("/api/admin/whatsapp/toggle", requireAdmin, async (req, res) => {
-    const schema = z.object({ enabled: z.boolean() });
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Invalid data" });
-
-    const config = await storage.upsertWeddingConfig({ whatsappEnabled: parsed.data.enabled });
-    res.json({ whatsappEnabled: config.whatsappEnabled });
   });
 
   return httpServer;
