@@ -16,6 +16,22 @@ import { db } from "./db.js";
 
 const rateLimit = new Map<string, { count: number; reset: number }>();
 
+function normalizeEvents(value: unknown): string[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
 function isRateLimited(ip: string, limit = 5, windowMs = 60_000): boolean {
   const now = Date.now();
   const entry = rateLimit.get(ip);
@@ -199,7 +215,9 @@ export async function registerRoutes(
       foodPreference:
         data.rsvpStatus === "declined" ? "" : data.foodPreference,
       eventsAttending:
-        data.rsvpStatus === "declined" ? [] : data.eventsAttending,
+        data.rsvpStatus === "declined"
+          ? []
+          : normalizeEvents(data.eventsAttending),
       dietaryRequirements: data.dietaryRequirements,
       message: data.message,
     });
@@ -236,7 +254,9 @@ export async function registerRoutes(
         childrenCount: data.childrenCount,
         foodPreference: data.foodPreference,
         eventsAttending:
-          data.rsvpStatus === "declined" ? [] : data.eventsAttending,
+          data.rsvpStatus === "declined"
+            ? []
+            : normalizeEvents(data.eventsAttending),
         dietaryRequirements: data.dietaryRequirements,
         message: data.message,
       });
