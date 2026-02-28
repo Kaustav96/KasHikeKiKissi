@@ -13,6 +13,14 @@ export default function WaxSealIntro({ onSealOpen }: WaxSealIntroProps) {
   const [phase, setPhase] = useState<AnimPhase>("idle");
   const { fadeIn } = useMusic();
 
+  // Prevent body scroll when seal is visible
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   const handleSealClick = useCallback(() => {
     if (phase !== "idle") return;
 
@@ -23,6 +31,7 @@ export default function WaxSealIntro({ onSealOpen }: WaxSealIntroProps) {
 
     setTimeout(() => {
       setPhase("complete");
+      document.body.style.overflow = '';
       onSealOpen();
     }, 800);
   }, [phase, onSealOpen, fadeIn]);

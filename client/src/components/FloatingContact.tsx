@@ -87,7 +87,7 @@ export default function FloatingContact({ config }: FloatingContactProps) {
             <div className="p-2 space-y-1">
               {whatsappNumber && (
                 <a
-                  href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hi! I have a question about the wedding.")}`}
+                  href={`https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodeURIComponent("Hi! I have a question about the wedding.")}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all hover:opacity-80"

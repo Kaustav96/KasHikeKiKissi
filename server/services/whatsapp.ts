@@ -205,9 +205,9 @@ export async function sendRsvpConfirmation(guest: {
     guestId: guest.id,
     guestName: guest.name,
     phone: guest.phone,
-    templateName: "wedding_rsvp_confirmation",
+    templateName: "hello_world", // Temporary: using hello_world for testing
     messageType: "rsvp_confirmation",
-    components: buildBodyComponents([guest.name, "Kaustav & Himasree"]),
+    components: [], // hello_world template has no parameters
   });
 }
 

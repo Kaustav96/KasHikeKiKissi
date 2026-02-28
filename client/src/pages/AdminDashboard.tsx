@@ -900,15 +900,25 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
           Date To Be Decided
         </label>
         {!form.dateToBeDecided && (
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Wedding Date</label>
-            <input
-              type="datetime-local"
-              value={form.weddingDate}
-              onChange={(e) => setForm({ ...form, weddingDate: e.target.value })}
-              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
-              data-testid="input-wedding-date"
-            />
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Wedding Date</label>
+              <input
+                type="datetime-local"
+                value={form.weddingDate}
+                onChange={(e) => setForm({ ...form, weddingDate: e.target.value })}
+                className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+                data-testid="input-wedding-date"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-foreground" data-testid="config-date-confirmed">
+              <input
+                type="checkbox"
+                checked={form.dateConfirmed}
+                onChange={(e) => setForm({ ...form, dateConfirmed: e.target.checked })}
+              />
+              Date Confirmed (Show countdown instead of TBD)
+            </label>
           </div>
         )}
         <div>
