@@ -58,24 +58,28 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/stories"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   const { data: venues = [] } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   const { data: faqs = [] } = useQuery<Faq[]>({
     queryKey: ["/api/admin/faqs"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   const { data: messageLogs = [] } = useQuery<MessageLog[]>({
     queryKey: ["/api/admin/message-logs"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
   });
 
   if (authLoading) {
