@@ -843,7 +843,7 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
     if (config) {
       setForm({
         weddingDate: config.weddingDate ? new Date(config.weddingDate).toISOString().slice(0, 16) : "",
-        dateToBeDecided: !config.weddingDate,
+        dateToBeDecided: true,
         dateConfirmed: config.dateConfirmed,
         coupleStory: config.coupleStory,
         upiId: config.upiId || "",
