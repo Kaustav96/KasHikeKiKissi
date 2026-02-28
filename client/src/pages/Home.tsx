@@ -350,60 +350,60 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
                     {event.venueName}
                   </p>
                   {event.dressCode && (
-                  <p className="text-xs mt-2" style={{ color: "var(--wedding-muted)" }}>
-                    Dress Code: {event.dressCode}
-                  </p>
+                    <p className="text-xs mt-2" style={{ color: "var(--wedding-muted)" }}>
+                      Dress Code: {event.dressCode}
+                    </p>
+                  )}
+                </div>
+
+                {(event.howToReach || event.accommodation || event.distanceInfo || event.contactPerson) && (
+                  <details className="mt-4">
+                    <summary
+                      className="text-xs tracking-wide uppercase cursor-pointer flex items-center gap-1"
+                      style={{ color: "var(--wedding-accent)" }}
+                    >
+                      <ChevronRight size={12} />
+                      More Details
+                    </summary>
+                    <div className="mt-3 space-y-2 text-xs" style={{ color: "var(--wedding-muted)" }}>
+                      {event.howToReach && <p><strong>How to Reach:</strong> {event.howToReach}</p>}
+                      {event.accommodation && <p><strong>Accommodation:</strong> {event.accommodation}</p>}
+                      {event.distanceInfo && <p><strong>Distance:</strong> {event.distanceInfo}</p>}
+                      {event.contactPerson && <p><strong>Contact:</strong> {event.contactPerson}</p>}
+                    </div>
+                  </details>
                 )}
-              </div>
 
-              {(event.howToReach || event.accommodation || event.distanceInfo || event.contactPerson) && (
-                <details className="mt-4">
-                  <summary
-                    className="text-xs tracking-wide uppercase cursor-pointer flex items-center gap-1"
-                    style={{ color: "var(--wedding-accent)" }}
-                  >
-                    <ChevronRight size={12} />
-                    More Details
-                  </summary>
-                  <div className="mt-3 space-y-2 text-xs" style={{ color: "var(--wedding-muted)" }}>
-                    {event.howToReach && <p><strong>How to Reach:</strong> {event.howToReach}</p>}
-                    {event.accommodation && <p><strong>Accommodation:</strong> {event.accommodation}</p>}
-                    {event.distanceInfo && <p><strong>Distance:</strong> {event.distanceInfo}</p>}
-                    {event.contactPerson && <p><strong>Contact:</strong> {event.contactPerson}</p>}
-                  </div>
-                </details>
-              )}
-
-              <div className="mt-4 flex gap-2">
-                <a
-                  href={`/api/events/${event.id}/calendar`}
-                  className="text-xs px-3 py-1.5 rounded transition-colors"
-                  style={{
-                    border: "1px solid var(--wedding-border)",
-                    color: "var(--wedding-accent)",
-                  }}
-                  data-testid={`download-ics-${event.id}`}
-                >
-                  <Calendar size={12} className="inline mr-1" />
-                  Add to Calendar
-                </a>
-                {event.venueMapUrl && (
+                <div className="mt-4 flex gap-2">
                   <a
-                    href={event.venueMapUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`/api/events/${event.id}/calendar`}
                     className="text-xs px-3 py-1.5 rounded transition-colors"
                     style={{
                       border: "1px solid var(--wedding-border)",
                       color: "var(--wedding-accent)",
                     }}
-                    data-testid={`map-link-${event.id}`}
+                    data-testid={`download-ics-${event.id}`}
                   >
-                    <ExternalLink size={12} className="inline mr-1" />
-                    View Map
+                    <Calendar size={12} className="inline mr-1" />
+                    Add to Calendar
                   </a>
-                )}
-              </div>
+                  {event.venueMapUrl && (
+                    <a
+                      href={event.venueMapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs px-3 py-1.5 rounded transition-colors"
+                      style={{
+                        border: "1px solid var(--wedding-border)",
+                        color: "var(--wedding-accent)",
+                      }}
+                      data-testid={`map-link-${event.id}`}
+                    >
+                      <ExternalLink size={12} className="inline mr-1" />
+                      View Map
+                    </a>
+                  )}
+                </div>
               </RoyalFrame>
             </motion.div>
           ))}
@@ -517,14 +517,14 @@ const publicRsvpFormSchema = z.object({
   foodPreference: z.enum(["vegetarian", "non-vegetarian"], {
     errorMap: () => ({ message: "Please select your food preference" }),
   }).optional(),
-  eventsAttending: z.string(),
+  eventsAttending: z.array(z.string()).default([]),
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
   side: z.enum(["groom", "bride", "both"]),
 }).refine(
   (data) => {
     if (data.rsvpStatus === "confirmed") {
-      return data.eventsAttending && data.eventsAttending.length > 0;
+      return data.eventsAttending.length > 0;
     }
     return true;
   },
@@ -564,7 +564,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
       adultsCount: 1,
       childrenCount: 0,
       foodPreference: "" as any,
-      eventsAttending: "",
+      eventsAttending: [],
       dietaryRequirements: "",
       message: "",
       side: side as "groom" | "bride" | "both",
@@ -615,7 +615,12 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
     form.setValue("adultsCount", foundGuest.adultsCount || 1);
     form.setValue("childrenCount", foundGuest.childrenCount || 0);
     form.setValue("foodPreference", foundGuest.foodPreference || "");
-    form.setValue("eventsAttending", foundGuest.eventsAttending || "");
+    form.setValue(
+      "eventsAttending",
+      Array.isArray(foundGuest.eventsAttending)
+        ? foundGuest.eventsAttending
+        : []
+    );
     form.setValue("dietaryRequirements", foundGuest.dietaryRequirements || "");
     form.setValue("message", foundGuest.message || "");
 
@@ -671,7 +676,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
         adultsCount: 1,
         childrenCount: 0,
         foodPreference: "" as any,
-        eventsAttending: "",
+        eventsAttending: [],
         dietaryRequirements: "",
         message: "",
         side: side as "groom" | "bride" | "both",
@@ -711,38 +716,38 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
           onSubmit={form.handleSubmit((data) => rsvpMutation.mutate(data))}
           data-testid="rsvp-form"
         >
-              <div>
-                <label className="text-xs tracking-[0.15em] uppercase mb-3 block" style={{ color: "var(--wedding-accent)" }}>
-                  Will you be attending?
-                </label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {(["confirmed", "declined"] as const).map((status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => {
-                        form.setValue("rsvpStatus", status);
-                        if (status === "declined") {
-                          form.setValue("eventsAttending", "");
-                          form.setValue("foodPreference", undefined);
-                        }
-                      }}
-                      className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
-                      style={{
-                        background: rsvpStatus === status ? "var(--wedding-accent)" : "transparent",
-                        color: rsvpStatus === status ? "#fff" : "var(--wedding-text)",
-                        border: `1px solid ${rsvpStatus === status ? "var(--wedding-accent)" : "var(--wedding-border)"}`
-                      }}
-                      data-testid={`rsvp-${status}`}
-                    >
-                      {status === "confirmed" ? "Joyfully Accept" : "Respectfully Decline"}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div>
+            <label className="text-xs tracking-[0.15em] uppercase mb-3 block" style={{ color: "var(--wedding-accent)" }}>
+              Will you be attending?
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {(["confirmed", "declined"] as const).map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => {
+                    form.setValue("rsvpStatus", status);
+                    if (status === "declined") {
+                      form.setValue("eventsAttending", []);
+                      form.setValue("foodPreference", undefined);
+                    }
+                  }}
+                  className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    background: rsvpStatus === status ? "var(--wedding-accent)" : "transparent",
+                    color: rsvpStatus === status ? "#fff" : "var(--wedding-text)",
+                    border: `1px solid ${rsvpStatus === status ? "var(--wedding-accent)" : "var(--wedding-border)"}`
+                  }}
+                  data-testid={`rsvp-${status}`}
+                >
+                  {status === "confirmed" ? "Joyfully Accept" : "Respectfully Decline"}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              {rsvpStatus && (
-                <>
+          {rsvpStatus && (
+            <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
@@ -785,7 +790,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                   </label>
                   <div className="space-y-2">
                     {events.map((ev) => {
-                      const attending = form.watch("eventsAttending").split(",").filter(Boolean);
+                      const attending = form.watch("eventsAttending") || [];
                       const isSelected = attending.includes(ev.id);
                       return (
                         <label
@@ -802,11 +807,13 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => {
-                              const current = form.getValues("eventsAttending").split(",").filter(Boolean);
+                              const current = form.getValues("eventsAttending") || [];
+
                               const next = isSelected
                                 ? current.filter((id) => id !== ev.id)
                                 : [...current, ev.id];
-                              form.setValue("eventsAttending", next.join(","), { shouldValidate: true });
+
+                              form.setValue("eventsAttending", next, { shouldValidate: true });
                             }}
                             className="sr-only"
                           />
@@ -888,79 +895,85 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                   "Submit RSVP"
                 )}
               </button>
-                </>
-              )}
-            </motion.form>
+            </>
+          )}
+        </motion.form>
 
-            {/* Guest Confirmation Popup */}
-            <AnimatePresence>
-              {showGuestConfirmPopup && foundGuest && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-                  onClick={() => setShowGuestConfirmPopup(false)}
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="max-w-md w-full rounded-xl p-6 shadow-2xl"
-                    style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-                  >
-                    <div className="text-center mb-4">
-                      <Heart className="mx-auto mb-3" size={40} style={{ color: "var(--wedding-accent)" }} />
-                      <h3 className="font-serif text-2xl font-bold mb-2" style={{ color: "var(--wedding-text)" }}>
-                        Welcome Back!
-                      </h3>
-                      <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
-                        We found an existing RSVP for <strong>{foundGuest.name}</strong>
-                      </p>
-                    </div>
+        {/* Guest Confirmation Popup */}
+        <AnimatePresence>
+          {showGuestConfirmPopup && foundGuest && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowGuestConfirmPopup(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="max-w-md w-full rounded-xl p-6 shadow-2xl"
+                style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+              >
+                <div className="text-center mb-4">
+                  <Heart className="mx-auto mb-3" size={40} style={{ color: "var(--wedding-accent)" }} />
+                  <h3 className="font-serif text-2xl font-bold mb-2" style={{ color: "var(--wedding-text)" }}>
+                    Welcome Back!
+                  </h3>
+                  <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
+                    We found an existing RSVP for <strong>{foundGuest.name}</strong>
+                  </p>
+                </div>
 
-                    <div className="bg-background/50 rounded-lg p-4 mb-4 space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
-                      <p><strong>Current Status:</strong> {foundGuest.rsvpStatus === "confirmed" ? "✓ Confirmed" : "✗ Declined"}</p>
-                      {foundGuest.foodPreference && (
-                        <p><strong>Food Preference:</strong> {foundGuest.foodPreference}</p>
-                      )}
-                      {foundGuest.eventsAttending && (
-                        <p><strong>Events:</strong> {foundGuest.eventsAttending.split(",").length} selected</p>
-                      )}
-                    </div>
-
-                    <p className="text-xs mb-4 text-center" style={{ color: "var(--wedding-muted)" }}>
-                      Would you like to update your events and food preferences?
+                <div className="bg-background/50 rounded-lg p-4 mb-4 space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
+                  <p><strong>Current Status:</strong> {foundGuest.rsvpStatus === "confirmed" ? "✓ Confirmed" : "✗ Declined"}</p>
+                  {foundGuest.foodPreference && (
+                    <p><strong>Food Preference:</strong> {foundGuest.foodPreference}</p>
+                  )}
+                  {Array.isArray(foundGuest.eventsAttending) && (
+                    <p>
+                      <strong>Events:</strong>{" "}
+                      {foundGuest.eventsAttending.length} selected
                     </p>
+                  )}
+                  {/* {foundGuest.eventsAttending && (
+                        <p><strong>Events:</strong> {foundGuest.eventsAttending.split(",").length} selected</p>
+                      )} */}
+                </div>
 
-                    <div className="flex gap-3">
-                      <button
-                        onClick={continueAsNewGuest}
-                        className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-                        style={{
-                          background: "transparent",
-                          color: "var(--wedding-text)",
-                          border: "1px solid var(--wedding-border)",
-                        }}
-                      >
-                        Continue as New
-                      </button>
-                      <button
-                        onClick={confirmExistingGuest}
-                        className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-                        style={{
-                          background: "var(--wedding-accent)",
-                          color: "#fff",
-                        }}
-                      >
-                        Update RSVP
-                      </button>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                <p className="text-xs mb-4 text-center" style={{ color: "var(--wedding-muted)" }}>
+                  Would you like to update your events and food preferences?
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={continueAsNewGuest}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: "transparent",
+                      color: "var(--wedding-text)",
+                      border: "1px solid var(--wedding-border)",
+                    }}
+                  >
+                    Continue as New
+                  </button>
+                  <button
+                    onClick={confirmExistingGuest}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: "var(--wedding-accent)",
+                      color: "#fff",
+                    }}
+                  >
+                    Update RSVP
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );

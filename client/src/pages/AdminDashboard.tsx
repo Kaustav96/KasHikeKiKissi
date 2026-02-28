@@ -37,42 +37,65 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/config"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchOnWindowFocus: true, // Auto-refresh every 5 seconds
   });
 
-  const { data: guests = [] } = useQuery<Guest[]>({
+  type GuestsResponse = {
+    data: Guest[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+
+  const { data } = useQuery<GuestsResponse>({
     queryKey: ["/api/admin/guests"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    // refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
+
+  const guests = data?.data ?? [];
+  // const { data: guests = [] } = useQuery<Guest[]>({
+  //   queryKey: ["/api/admin/guests"],
+  //   queryFn: getQueryFn({ on401: "returnNull" }),
+  //   enabled: !!admin,
+  //   refetchInterval: 5000, // Auto-refresh every 5 seconds
+  // });
 
   const { data: events = [] } = useQuery<WeddingEvent[]>({
     queryKey: ["/api/admin/events"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchOnWindowFocus: true,
   });
 
   const { data: stories = [] } = useQuery<StoryMilestone[]>({
     queryKey: ["/api/admin/stories"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchOnWindowFocus: true,
   });
 
   const { data: venues = [] } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchOnWindowFocus: true,
   });
 
   const { data: faqs = [] } = useQuery<Faq[]>({
     queryKey: ["/api/admin/faqs"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchOnWindowFocus: true,
   });
 
   if (authLoading) {
@@ -151,7 +174,7 @@ export default function AdminDashboard() {
                 { name: "venueMapUrl", label: "Map URL", type: "text" },
                 { name: "dressCode", label: "Dress Code", type: "text" },
                 { name: "side", label: "Side (groom/bride/both)", type: "text" },
-                { name: "isMainEvent", label: "Is Main Event", type: "radio", options: [{value: "true", label: "True"}, {value: "false", label: "False"}] },
+                { name: "isMainEvent", label: "Is Main Event", type: "radio", options: [{ value: "true", label: "True" }, { value: "false", label: "False" }] },
                 { name: "sortOrder", label: "Sort Order", type: "number" },
                 { name: "howToReach", label: "How to Reach", type: "textarea" },
                 { name: "accommodation", label: "Accommodation", type: "textarea" },
@@ -318,24 +341,30 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
 
   // Calculate counts for each side
   const sideCounts = [
-    { value: "groom", label: "Groom", count: guests.filter(g => {
-      if (g.rsvpStatus === "declined") return false;
-      if (eventFilter && !g.eventsAttending.includes(eventFilter)) return false;
-      if (foodFilter && g.foodPreference !== foodFilter) return false;
-      return g.side === "groom";
-    }).length },
-    { value: "bride", label: "Bride", count: guests.filter(g => {
-      if (g.rsvpStatus === "declined") return false;
-      if (eventFilter && !g.eventsAttending.includes(eventFilter)) return false;
-      if (foodFilter && g.foodPreference !== foodFilter) return false;
-      return g.side === "bride";
-    }).length },
-    { value: "both", label: "Both", count: guests.filter(g => {
-      if (g.rsvpStatus === "declined") return false;
-      if (eventFilter && !g.eventsAttending.includes(eventFilter)) return false;
-      if (foodFilter && g.foodPreference !== foodFilter) return false;
-      return g.side === "both";
-    }).length },
+    {
+      value: "groom", label: "Groom", count: guests.filter(g => {
+        if (g.rsvpStatus === "declined") return false;
+        if (eventFilter && !g.eventsAttending.includes(eventFilter)) return false;
+        if (foodFilter && g.foodPreference !== foodFilter) return false;
+        return g.side === "groom";
+      }).length
+    },
+    {
+      value: "bride", label: "Bride", count: guests.filter(g => {
+        if (g.rsvpStatus === "declined") return false;
+        if (eventFilter && !g.eventsAttending.includes(eventFilter)) return false;
+        if (foodFilter && g.foodPreference !== foodFilter) return false;
+        return g.side === "bride";
+      }).length
+    },
+    {
+      value: "both", label: "Both", count: guests.filter(g => {
+        if (g.rsvpStatus === "declined") return false;
+        if (eventFilter && !g.eventsAttending.includes(eventFilter)) return false;
+        if (foodFilter && g.foodPreference !== foodFilter) return false;
+        return g.side === "both";
+      }).length
+    },
   ];
 
   // Calculate total guests from filtered confirmed guests
@@ -480,7 +509,7 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
           </thead>
           <tbody>
             {filteredGuests.map((g) => {
-              const guestEventIds = g.eventsAttending.split(",").filter(Boolean);
+              const guestEventIds = Array.isArray(g.eventsAttending) ? g.eventsAttending : [];
               const guestEventNames = guestEventIds.map(id => eventMap.get(id) || "").filter(Boolean);
 
               return (
@@ -492,11 +521,10 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
                     </span>
                   </td>
                   <td className="py-2 pr-2 sm:pr-4">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" :
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" :
                       g.rsvpStatus === "declined" ? "bg-red-100 text-red-800" :
-                      "bg-yellow-100 text-yellow-800"
-                    }`}>
+                        "bg-yellow-100 text-yellow-800"
+                      }`}>
                       {g.rsvpStatus}
                     </span>
                   </td>
@@ -810,36 +838,77 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
 
   useEffect(() => {
     if (config) {
+      const hasDate = !!config.weddingDate;
+
       setForm({
-        weddingDate: config.weddingDate ? new Date(config.weddingDate).toISOString().slice(0, 16) : "",
-        dateToBeDecided: true, // Always default to TBD checked
-        dateConfirmed: false, // Always default to unchecked
-        coupleStory: config.coupleStory,
-        upiId: config.upiId || "",
-        backgroundMusicUrl: config.backgroundMusicUrl || "",
-        groomMusicUrls: Array.isArray(config.groomMusicUrls) ? config.groomMusicUrls : [],
-        brideMusicUrls: Array.isArray(config.brideMusicUrls) ? config.brideMusicUrls : [],
+        weddingDate: hasDate
+          ? new Date(config.weddingDate!).toISOString().slice(0, 16)
+          : "",
+        dateToBeDecided: !hasDate,
+        dateConfirmed: config.dateConfirmed ?? false,
+        coupleStory: config.coupleStory ?? "",
+        upiId: config.upiId ?? "",
+        backgroundMusicUrl: config.backgroundMusicUrl ?? "",
+        groomMusicUrls: Array.isArray(config.groomMusicUrls)
+          ? config.groomMusicUrls
+          : [],
+        brideMusicUrls: Array.isArray(config.brideMusicUrls)
+          ? config.brideMusicUrls
+          : [],
       });
     }
   }, [config]);
+  // useEffect(() => {
+  //   if (config) {
+  //     setForm({
+  //       weddingDate: config.weddingDate ? new Date(config.weddingDate).toISOString().slice(0, 16) : "",
+  //       dateToBeDecided: true, // Always default to TBD checked
+  //       dateConfirmed: false, // Always default to unchecked
+  //       coupleStory: config.coupleStory,
+  //       upiId: config.upiId || "",
+  //       backgroundMusicUrl: config.backgroundMusicUrl || "",
+  //       groomMusicUrls: Array.isArray(config.groomMusicUrls) ? config.groomMusicUrls : [],
+  //       brideMusicUrls: Array.isArray(config.brideMusicUrls) ? config.brideMusicUrls : [],
+  //     });
+  //   }
+  // }, [config]);
 
   const saveMutation = useMutation({
     mutationFn: (data: any) => {
-      const payload: any = { ...data };
-      // Only include date if not "to be decided"
-      if (!data.dateToBeDecided && payload.weddingDate) {
-        payload.weddingDate = new Date(payload.weddingDate).toISOString();
+      const payload: any = {
+        coupleStory: data.coupleStory,
+        upiId: data.upiId,
+        backgroundMusicUrl: data.backgroundMusicUrl ?? "",
+        groomMusicUrls: data.groomMusicUrls ?? [],
+        brideMusicUrls: data.brideMusicUrls ?? [],
+        dateConfirmed: data.dateConfirmed ?? false,
+      };
+
+      if (!data.dateToBeDecided && data.weddingDate) {
+        payload.weddingDate = new Date(data.weddingDate).toISOString();
       } else {
-        delete payload.weddingDate;
-        payload.dateConfirmed = false; // If date is TBD, can't be confirmed
+        payload.weddingDate = null; // <-- IMPORTANT
+        payload.dateConfirmed = false;
       }
-      // Remove dateToBeDecided from payload (not in DB)
-      delete payload.dateToBeDecided;
-      // Ensure music arrays are properly sent
-      payload.groomMusicUrls = Array.isArray(data.groomMusicUrls) ? data.groomMusicUrls.filter(Boolean) : [];
-      payload.brideMusicUrls = Array.isArray(data.brideMusicUrls) ? data.brideMusicUrls.filter(Boolean) : [];
+
       return apiRequest("PATCH", "/api/admin/config", payload);
     },
+    // mutationFn: (data: any) => {
+    //   const payload: any = { ...data };
+    //   // Only include date if not "to be decided"
+    //   if (!data.dateToBeDecided && payload.weddingDate) {
+    //     payload.weddingDate = new Date(payload.weddingDate).toISOString();
+    //   } else {
+    //     delete payload.weddingDate;
+    //     payload.dateConfirmed = false; // If date is TBD, can't be confirmed
+    //   }
+    //   // Remove dateToBeDecided from payload (not in DB)
+    //   delete payload.dateToBeDecided;
+    //   // Ensure music arrays are properly sent
+    //   payload.groomMusicUrls = Array.isArray(data.groomMusicUrls) ? data.groomMusicUrls.filter(Boolean) : [];
+    //   payload.brideMusicUrls = Array.isArray(data.brideMusicUrls) ? data.brideMusicUrls.filter(Boolean) : [];
+    //   return apiRequest("PATCH", "/api/admin/config", payload);
+    // },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/admin/config"] });
       qc.invalidateQueries({ queryKey: ["/api/config"] });

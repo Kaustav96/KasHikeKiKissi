@@ -181,3 +181,13 @@ export async function seedDatabase(): Promise<void> {
 
   console.log("[Seed] Database seeding complete.");
 }
+
+seedDatabase()
+  .then(() => {
+    console.log("[Seed] Done.");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("[Seed] Failed:", err);
+    process.exit(1);
+  });
