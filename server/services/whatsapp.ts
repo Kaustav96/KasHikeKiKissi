@@ -160,10 +160,23 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
       console.log(`[WhatsApp] Sent ${messageType} to ${guestName} (${phone}). ID: ${messageId}`);
       return;
     } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
-      console.error(
-        `[WhatsApp] Attempt ${attempt + 1}/${MAX_RETRY_COUNT} failed for ${guestName}: ${lastError}`
-      );
+      // Enhanced error logging for debugging
+      if (axios.isAxiosError(error) && error.response) {
+        const errorData = error.response.data;
+        lastError = `${error.response.status} - ${JSON.stringify(errorData)}`;
+        console.error(
+          `[WhatsApp] Attempt ${attempt + 1}/${MAX_RETRY_COUNT} failed for ${guestName} (${phone}):`,
+          `\n  Status: ${error.response.status}`,
+          `\n  Error: ${JSON.stringify(errorData, null, 2)}`,
+          `\n  Template: ${templateName}`,
+          `\n  Language: ${languageCode}`
+        );
+      } else {
+        lastError = error instanceof Error ? error.message : String(error);
+        console.error(
+          `[WhatsApp] Attempt ${attempt + 1}/${MAX_RETRY_COUNT} failed for ${guestName}: ${lastError}`
+        );
+      }
 
       if (attempt < MAX_RETRY_COUNT - 1) {
         await sleep(RETRY_DELAY_MS * (attempt + 1));
