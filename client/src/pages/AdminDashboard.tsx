@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -37,7 +37,9 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/config"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchOnWindowFocus: true, // Auto-refresh every 5 seconds
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
+    refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   type GuestsResponse = {
@@ -54,8 +56,9 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/guests"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    // refetchInterval: 5000,
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   const guests = data?.data ?? [];
@@ -70,32 +73,36 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/events"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   const { data: stories = [] } = useQuery<StoryMilestone[]>({
     queryKey: ["/api/admin/stories"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   const { data: venues = [] } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   const { data: faqs = [] } = useQuery<Faq[]>({
     queryKey: ["/api/admin/faqs"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    // refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
     refetchOnWindowFocus: true,
+    staleTime: 5000,
   });
 
   if (authLoading) {
@@ -825,38 +832,66 @@ function CrudTab({
 }
 
 function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; qc: any; toast: any }) {
-  const [form, setForm] = useState({
-    weddingDate: "",
-    dateToBeDecided: true,
-    dateConfirmed: false,
-    coupleStory: "",
-    upiId: "",
-    backgroundMusicUrl: "",
-    groomMusicUrls: [] as string[],
-    brideMusicUrls: [] as string[],
+  const [form, setForm] = useState(() => {
+    if (!config) {
+      return {
+        weddingDate: "",
+        dateToBeDecided: true,
+        coupleStory: "",
+        upiId: "",
+        backgroundMusicUrl: "",
+        groomMusicUrls: [] as string[],
+        brideMusicUrls: [] as string[],
+      };
+    }
+
+    const hasWeddingDate = !!config.weddingDate;
+    return {
+      weddingDate: hasWeddingDate
+        ? new Date(config.weddingDate!).toISOString().slice(0, 16)
+        : "",
+      dateToBeDecided: !hasWeddingDate,
+      coupleStory: config.coupleStory ?? "",
+      upiId: config.upiId ?? "",
+      backgroundMusicUrl: config.backgroundMusicUrl ?? "",
+      groomMusicUrls: Array.isArray(config.groomMusicUrls)
+        ? config.groomMusicUrls
+        : [],
+      brideMusicUrls: Array.isArray(config.brideMusicUrls)
+        ? config.brideMusicUrls
+        : [],
+    };
   });
 
+  // Track config version to reinitialize only when config actually changes (after save)
+  // Not when component remounts (switching tabs)
+  const lastConfigVersion = useRef<string>("");
   useEffect(() => {
-    if (config) {
-      const hasDate = !!config.weddingDate;
+    if (!config) return;
 
-      setForm({
-        weddingDate: hasDate
-          ? new Date(config.weddingDate!).toISOString().slice(0, 16)
-          : "",
-        dateToBeDecided: !hasDate,
-        dateConfirmed: config.dateConfirmed ?? false,
-        coupleStory: config.coupleStory ?? "",
-        upiId: config.upiId ?? "",
-        backgroundMusicUrl: config.backgroundMusicUrl ?? "",
-        groomMusicUrls: Array.isArray(config.groomMusicUrls)
-          ? config.groomMusicUrls
-          : [],
-        brideMusicUrls: Array.isArray(config.brideMusicUrls)
-          ? config.brideMusicUrls
-          : [],
-      });
-    }
+    // Create a version key from config id + updatedAt timestamp
+    const configVersion = `${config.id}-${config.updatedAt}`;
+
+    // Skip if this is the same config we already initialized with
+    if (configVersion === lastConfigVersion.current) return;
+
+    const hasWeddingDate = !!config.weddingDate;
+    setForm({
+      weddingDate: hasWeddingDate
+        ? new Date(config.weddingDate!).toISOString().slice(0, 16)
+        : "",
+      dateToBeDecided: !hasWeddingDate,
+      coupleStory: config.coupleStory ?? "",
+      upiId: config.upiId ?? "",
+      backgroundMusicUrl: config.backgroundMusicUrl ?? "",
+      groomMusicUrls: Array.isArray(config.groomMusicUrls)
+        ? config.groomMusicUrls
+        : [],
+      brideMusicUrls: Array.isArray(config.brideMusicUrls)
+        ? config.brideMusicUrls
+        : [],
+    });
+    lastConfigVersion.current = configVersion;
   }, [config]);
   // useEffect(() => {
   //   if (config) {
@@ -879,16 +914,18 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
         coupleStory: data.coupleStory,
         upiId: data.upiId,
         backgroundMusicUrl: data.backgroundMusicUrl ?? "",
-        groomMusicUrls: data.groomMusicUrls ?? [],
-        brideMusicUrls: data.brideMusicUrls ?? [],
-        dateConfirmed: data.dateConfirmed ?? false,
+        groomMusicUrls: Array.isArray(data.groomMusicUrls)
+          ? data.groomMusicUrls.filter((url: string) => url && url.trim())
+          : [],
+        brideMusicUrls: Array.isArray(data.brideMusicUrls)
+          ? data.brideMusicUrls.filter((url: string) => url && url.trim())
+          : [],
       };
 
-      if (!data.dateToBeDecided && data.weddingDate) {
+      if (!data.dateToBeDecided && data.weddingDate?.trim()) {
         payload.weddingDate = new Date(data.weddingDate).toISOString();
       } else {
-        payload.weddingDate = null; // <-- IMPORTANT
-        payload.dateConfirmed = false;
+        payload.weddingDate = null;
       }
 
       return apiRequest("PATCH", "/api/admin/config", payload);
@@ -909,9 +946,9 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
     //   payload.brideMusicUrls = Array.isArray(data.brideMusicUrls) ? data.brideMusicUrls.filter(Boolean) : [];
     //   return apiRequest("PATCH", "/api/admin/config", payload);
     // },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/admin/config"] });
-      qc.invalidateQueries({ queryKey: ["/api/config"] });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["/api/admin/config"] });
+      await qc.invalidateQueries({ queryKey: ["public-home"] });
       toast({ title: "Config saved" });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -926,19 +963,20 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
             type="checkbox"
             checked={form.dateToBeDecided}
             onChange={(e) => {
-              if (e.target.checked) {
-                setForm({ ...form, dateToBeDecided: true, dateConfirmed: false, weddingDate: "" });
-              } else {
-                setForm({ ...form, dateToBeDecided: false });
-              }
+              const checked = e.target.checked;
+              setForm(prev => ({
+                ...prev,
+                dateToBeDecided: checked,
+                weddingDate: checked ? "" : prev.weddingDate
+              }));
             }}
           />
-          Date To Be Decided
+          Date To Be Decided (Hide countdown, show TBD message)
         </label>
         {!form.dateToBeDecided && (
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Wedding Date</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Wedding Date (Shows countdown when set)</label>
               <input
                 type="datetime-local"
                 value={form.weddingDate}
@@ -947,14 +985,6 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
                 data-testid="input-wedding-date"
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-foreground" data-testid="config-date-confirmed">
-              <input
-                type="checkbox"
-                checked={form.dateConfirmed}
-                onChange={(e) => setForm({ ...form, dateConfirmed: e.target.checked })}
-              />
-              Date Confirmed (Show countdown instead of TBD)
-            </label>
           </div>
         )}
         <div>

@@ -24,23 +24,46 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+// export const getQueryFn: <T>(options: {
+//   on401: UnauthorizedBehavior;
+// }) => QueryFunction<T> =
+// ({ on401: unauthorizedBehavior }) =>
+// async ({ queryKey }) => {
+//   const res = await fetch(queryKey.join("/") as string, {
+//     credentials: "include",
+//   });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
+//   if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+//     return null;
+//   }
 
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+//   await throwIfResNotOk(res);
+//   return await res.json();
+// };
+export const getQueryFn =
+  <T>({ on401 }: { on401: UnauthorizedBehavior }): QueryFunction<T> =>
+    async ({ queryKey }) => {
+      let url: string;
 
+      // If queryKey is string
+      if (typeof queryKey[0] === "string") {
+        url = queryKey[0];
+      } else {
+        throw new Error("Invalid queryKey");
+      }
+
+      const res = await fetch(url, {
+        credentials: "include",
+      });
+
+      if (on401 === "returnNull" && res.status === 401) {
+        return null as T;
+      }
+
+      await throwIfResNotOk(res);
+
+      return res.json();
+    };
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

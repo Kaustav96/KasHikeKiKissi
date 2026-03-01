@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink, Loader2, Check } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
@@ -32,7 +32,7 @@ function GoldDivider() {
   );
 }
 
-function HeroSection({ config }: { config: WeddingConfig }) {
+function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDateConfirmed: boolean }) {
   return (
     <section
       id="hero"
@@ -106,7 +106,7 @@ function HeroSection({ config }: { config: WeddingConfig }) {
         <GoldDivider />
 
         <div className="mt-8">
-          {config.weddingDate && config.dateConfirmed ? (
+          {config.weddingDate ? (
             <>
               <p
                 className="font-serif text-lg sm:text-xl mb-6"
@@ -1232,106 +1232,156 @@ function FooterSection() {
 
 export default function Home() {
   const { sealOpened, setSealOpened } = useSeal();
-  const { setMusicUrl, fadeIn, play, stop, setOnTrackEnd } = useMusic();
+  const { setMusicUrl, fadeIn, stop, setOnTrackEnd } = useMusic();
   const { setSide, side } = useWeddingTheme();
+
   const [sideSelected, setSideSelected] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const currentPlaylistRef = useRef<string[]>([]);
 
-  const { data: config, isLoading: configLoading } = useQuery<WeddingConfig>({
-    queryKey: ["/api/config"],
-    queryFn: getQueryFn({ on401: "throw" }),
+  /* ================= SINGLE PUBLIC QUERY ================= */
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["public-home", side],
+    queryFn: async () => {
+      const res = await apiRequest(
+        "GET",
+        `/api/public/home?side=${side}`
+      );
+      return res.json();
+    },
+    staleTime: 5 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
-  const { data: events = [] } = useQuery<WeddingEvent[]>({
+  const config = data?.config;
+  const isDateConfirmed = !!config?.weddingDate;
+  const events = data?.events ?? [];
+  const milestones = data?.stories ?? [];
+  const venueList = data?.venues ?? [];
+  const faqList = data?.faqs ?? [];
+
+  /* ================= FETCH ALL EVENTS FOR RSVP FORM ================= */
+
+  const { data: allEventsData } = useQuery({
     queryKey: ["/api/events"],
-    queryFn: getQueryFn({ on401: "throw" }),
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/events");
+      return res.json();
+    },
+    staleTime: 5 * 1000,
   });
 
-  const { data: milestones = [] } = useQuery<StoryMilestone[]>({
-    queryKey: ["/api/stories"],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
+  const allEvents = allEventsData ?? [];
 
-  const { data: venueList = [] } = useQuery<Venue[]>({
-    queryKey: ["/api/venues"],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
+  /* ================= MUSIC SETUP ================= */
 
-  const { data: faqList = [] } = useQuery<Faq[]>({
-    queryKey: ["/api/faqs"],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
+  const playlist = useMemo(() => {
+    if (!config) return [];
 
-  // Set music URL based on current theme side and switch when theme changes
-  useEffect(() => {
-    if (!config) return;
-
-    let playlist: string[] = [];
-
-    // Build playlist based on current side
-    if (side === 'groom' && config.groomMusicUrls && Array.isArray(config.groomMusicUrls) && config.groomMusicUrls.length > 0) {
-      playlist = config.groomMusicUrls.filter(Boolean); // Filter out empty strings
-    } else if (side === 'bride' && config.brideMusicUrls && Array.isArray(config.brideMusicUrls) && config.brideMusicUrls.length > 0) {
-      playlist = config.brideMusicUrls.filter(Boolean);
-    } else if (config.backgroundMusicUrl) {
-      playlist = [config.backgroundMusicUrl];
+    if (side === "groom" && config.groomMusicUrls?.length) {
+      return config.groomMusicUrls.filter(Boolean);
     }
 
-    // Update playlist reference and reset to first track
+    if (side === "bride" && config.brideMusicUrls?.length) {
+      return config.brideMusicUrls.filter(Boolean);
+    }
+
+    if (config.backgroundMusicUrl) {
+      return [config.backgroundMusicUrl];
+    }
+
+    return [];
+    // if (!config) return;
+
+    // let playlist: string[] = [];
+
+    // if (side === "groom" && config.groomMusicUrls?.length) {
+    //   playlist = config.groomMusicUrls.filter(Boolean);
+    // } else if (side === "bride" && config.brideMusicUrls?.length) {
+    //   playlist = config.brideMusicUrls.filter(Boolean);
+    // } else if (config.backgroundMusicUrl) {
+    //   playlist = [config.backgroundMusicUrl];
+    // }
+
+    // currentPlaylistRef.current = playlist;
+    // setCurrentTrackIndex(0);
+
+    // if (playlist.length > 0) {
+    //   stop();
+    //   setMusicUrl(playlist[0]);
+
+    //   if (sealOpened) {
+    //     setTimeout(() => fadeIn(), 300);
+    //   }
+    // }
+  }, [config, side]);
+  /* ================= APPLY PLAYLIST WHEN IT CHANGES ================= */
+
+  useEffect(() => {
+    if (!playlist.length) return;
+
     currentPlaylistRef.current = playlist;
     setCurrentTrackIndex(0);
 
-    if (playlist.length > 0) {
-      stop(); // Stop current music to switch tracks
-      setMusicUrl(playlist[0]);
-      // Auto-play the new track if seal is already opened
-      if (sealOpened) {
-        setTimeout(() => fadeIn(), 300); // Small delay for smooth transition
-      }
-    }
-  }, [config, side, setMusicUrl, stop, fadeIn, sealOpened]);
+    stop();
+    setMusicUrl(playlist[0]);
 
-  // Setup audio ended event to play next track in playlist
+    if (sealOpened) {
+      fadeIn();
+    }
+  }, [playlist, sealOpened, stop, setMusicUrl, fadeIn]);
+
+  /* ================= AUTO NEXT TRACK ================= */
+
   useEffect(() => {
     const handleEnded = () => {
       const playlist = currentPlaylistRef.current;
-      if (playlist.length <= 1) return; // Don't advance if single track or empty
+      if (playlist.length <= 1) return;
 
-      // Move to next track
-      const nextIndex = (currentTrackIndex + 1) % playlist.length;
-      setCurrentTrackIndex(nextIndex);
-      setMusicUrl(playlist[nextIndex]);
+    //   const nextIndex = (currentTrackIndex + 1) % playlist.length;
+    //   setCurrentTrackIndex(nextIndex);
+    //   setMusicUrl(playlist[nextIndex]);
 
-      // Continue playing
-      setTimeout(() => fadeIn(), 100);
+    //   setTimeout(() => fadeIn(), 100);
+    // };
+
+    // setOnTrackEnd(handleEnded);
+    // return () => setOnTrackEnd(null);
+    setCurrentTrackIndex((prev) => {
+        const next = (prev + 1) % playlist.length;
+        setMusicUrl(playlist[next]);
+        fadeIn();
+        return next;
+      });
     };
 
     setOnTrackEnd(handleEnded);
     return () => setOnTrackEnd(null);
-  }, [currentTrackIndex, setMusicUrl, fadeIn, setOnTrackEnd]);
+  }, [ setMusicUrl, fadeIn, setOnTrackEnd]);
 
-  // Increment view count once on mount
+  /* ================= VIEW COUNT ================= */
+
   useEffect(() => {
-    const hasIncremented = sessionStorage.getItem('view_counted');
+    const hasIncremented = sessionStorage.getItem("view_counted");
     if (!hasIncremented) {
-      apiRequest('POST', '/api/increment-view')
-        .catch(err => console.error('Failed to increment view count:', err));
-      sessionStorage.setItem('view_counted', 'true');
+      apiRequest("POST", "/api/increment-view").catch(() => {});
+      sessionStorage.setItem("view_counted", "true");
     }
   }, []);
 
-  // Start music when seal opens
-  useEffect(() => {
-    if (sealOpened && config?.backgroundMusicUrl) {
-      // Small delay to ensure audio context is ready
-      setTimeout(() => {
-        fadeIn();
-      }, 500);
-    }
-  }, [sealOpened, config?.backgroundMusicUrl, fadeIn]);
+  /* ================= START MUSIC WHEN SEAL OPENS ================= */
 
-  if (configLoading) {
+  useEffect(() => {
+    if (sealOpened && playlist.length > 0) {
+      setTimeout(() => fadeIn(), 500);
+    }
+  }, [sealOpened, playlist, fadeIn]);
+
+  /* ================= CONDITIONAL RENDERS ================= */
+
+  if (isLoading) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -1344,24 +1394,27 @@ export default function Home() {
 
   if (!config) return null;
 
-  // Show side selection landing first
   if (!sideSelected) {
     return (
       <SideSelectionLanding
-        onSelectSide={(side) => {
-          setSide(side);
+        onSelectSide={(selectedSide) => {
+          setSide(selectedSide);
           setSideSelected(true);
         }}
       />
     );
   }
 
+  /* ================= MAIN RENDER ================= */
+
   return (
     <>
       {!sealOpened && (
         <WaxSealIntro onSealOpen={() => setSealOpened(true)} />
       )}
+
       <Header />
+
       <ViewingSideOverlay
         onBackToSelection={() => {
           stop();
@@ -1372,16 +1425,18 @@ export default function Home() {
           setSide(newSide);
         }}
       />
+
       <main>
-        <HeroSection config={config} />
+        <HeroSection config={config} isDateConfirmed={isDateConfirmed} />
         <StorySection milestones={milestones} />
         <EventsSection events={events} />
         <VenueSection venueList={venueList} />
-        <RsvpSection events={events} />
+        <RsvpSection events={allEvents} />
         <WardrobePlannerSection />
         <FaqsSection faqList={faqList} />
         <FooterSection />
       </main>
+
       <FloatingContact />
     </>
   );

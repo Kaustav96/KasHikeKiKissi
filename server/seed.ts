@@ -21,7 +21,6 @@ export async function seedDatabase(): Promise<void> {
   if (!existingConfig) {
     await storage.upsertWeddingConfig({
       weddingDate: null, // Default to TBD
-      dateConfirmed: false, // Default to not confirmed
       venueName: "The Grand Pavilion",
       venueAddress: "12 Marigold Lane, Kolkata, West Bengal 700001",
       venueMapUrl: "https://maps.google.com/?q=Kolkata+West+Bengal",

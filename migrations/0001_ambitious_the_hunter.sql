@@ -1,0 +1,1 @@
+ALTER TABLE "wedding_config" DROP COLUMN "date_confirmed";

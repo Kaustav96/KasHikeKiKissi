@@ -8,6 +8,13 @@
       "when": 1772314365852,
       "tag": "0000_pretty_lord_tyger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772363261059,
+      "tag": "0001_ambitious_the_hunter",
+      "breakpoints": true
     }
   ]
 }

@@ -22,7 +22,6 @@ export const weddingConfig = pgTable("wedding_config", {
     .default(sql`gen_random_uuid()`),
 
   weddingDate: timestamp("wedding_date"),
-  dateConfirmed: boolean("date_confirmed").notNull().default(false),
 
   venueName: text("venue_name").notNull().default("To Be Announced"),
   venueAddress: text("venue_address").notNull().default(""),

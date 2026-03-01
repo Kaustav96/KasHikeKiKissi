@@ -3,12 +3,13 @@ import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage";
 import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth";
-import { rsvpSubmitSchema, publicRsvpSchema, guests, weddingConfig } from "../shared/schema.js";
+import { rsvpSubmitSchema, publicRsvpSchema, guests, weddingConfig, weddingEvents, faqs, storyMilestones, venues } from "../shared/schema.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, or, eq, sql } from "drizzle-orm";
 import { db } from "./db.js";
+import { config } from "process";
 
 /* =========================================================
    Utilities
@@ -64,33 +65,12 @@ export async function registerRoutes(
 ): Promise<Server> {
   app.use(cookieParser());
 
-  /* ================= PUBLIC ================= */
+  /* =========================================================
+     ================= PUBLIC CORE =================
+  ========================================================= */
 
-  app.post("/api/increment-view", async (_req, res) => {
-    try {
-      await db
-        .update(weddingConfig)
-        .set({
-          viewCount: sql`${weddingConfig.viewCount} + 1`,
-          updatedAt: new Date(),
-        });
+  /* ================= PUBLIC Config ================= */
 
-      res.json({ success: true });
-
-    } catch (error) {
-      console.error("Error incrementing view count:", error);
-      res.status(500).json({ error: "Failed to increment view count" });
-    }
-  });
-  app.get("/api/guests/by-name", async (req, res) => {
-    const name = req.query.name as string;
-    if (!name) return res.status(400).json({ error: "Name is required" });
-
-    const guest = await storage.getGuestByName(name);
-    if (!guest) return res.status(404).json({ error: "Guest not found" });
-
-    res.json(guest);
-  });
   app.get("/api/config", async (_req, res) => {
     const config = await storage.getWeddingConfig();
     if (!config) return res.json(null);
@@ -99,8 +79,47 @@ export async function registerRoutes(
     res.json(safe);
   });
 
-  app.get("/api/events", async (_req, res) => {
-    res.json(await storage.getWeddingEvents());
+  app.post("/api/increment-view", async (_req, res) => {
+    try {
+      const [updated] = await db
+        .update(weddingConfig)
+        .set({
+          viewCount: sql`${weddingConfig.viewCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .returning({ viewCount: weddingConfig.viewCount });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Config not found" });
+      }
+
+      res.json({ viewCount: updated.viewCount });
+
+    } catch (error) {
+      console.error("Error incrementing view count:", error);
+      res.status(500).json({ error: "Failed to increment view count" });
+    }
+  });
+  /* ================= PUBLIC Events ================= */
+
+  app.get("/api/events", async (req, res) => {
+    const side = req.query.side as string | undefined;
+
+    const filters = [];
+
+    if (side) {
+      filters.push(
+        sql`${weddingEvents.side} = ${side} OR ${weddingEvents.side} = 'both'`
+      );
+    }
+
+    const events = await db
+      .select()
+      .from(weddingEvents)
+      .where(filters.length ? and(...filters) : undefined)
+      .orderBy(weddingEvents.sortOrder);
+
+    res.json(events);
   });
   app.get("/api/events/:id/calendar", async (req, res) => {
     try {
@@ -171,26 +190,189 @@ export async function registerRoutes(
       "END:VCALENDAR",
     ].join("\r\n");
   }
-
-  app.get("/api/stories", async (_req, res) => {
-    res.json(await storage.getStoryMilestones());
-  });
-
-  app.get("/api/venues", async (_req, res) => {
-    res.json(await storage.getVenues());
-  });
-
-  app.get("/api/faqs", async (_req, res) => {
-    res.json(await storage.getFaqs());
-  });
-
   app.get("/api/invite/:slug", async (req, res) => {
     const guest = await storage.getGuestBySlug(req.params.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
 
     res.json(guest);
   });
+  /* ================= PUBLIC HOME (BATCHED) ================= */
 
+  type HomeCacheEntry = {
+    data: any;
+    timestamp: number;
+  };
+
+  const homeCache = new Map<string, HomeCacheEntry>();
+  const HOME_CACHE_TTL = 5 * 1000; // 5 seconds for instant updates
+
+  app.get("/api/public/home", async (req, res) => {
+    try {
+      const side = (req.query.side as string) || "both";
+      const cacheKey = `home_${side}`;
+      const now = Date.now();
+
+      const cached = homeCache.get(cacheKey);
+      if (cached && now - cached.timestamp < HOME_CACHE_TTL) {
+        return res.json(cached.data);
+      }
+
+      const rawConfig = await storage.getWeddingConfig();
+      if (!rawConfig) {
+        return res.status(404).json({ error: "Config not found" });
+      }
+
+      const safeConfig = { ...rawConfig };
+      delete (safeConfig as any).adminPasswordHash;
+
+      // Events (side filtered)
+      let whereCondition;
+
+      if (side !== "both") {
+        whereCondition = or(
+          eq(weddingEvents.side, side),
+          eq(weddingEvents.side, "both")
+        );
+      }
+      const events = await db
+        .select({
+          id: weddingEvents.id,
+          title: weddingEvents.title,
+          description: weddingEvents.description,
+          startTime: weddingEvents.startTime,
+          endTime: weddingEvents.endTime,
+          venueName: weddingEvents.venueName,
+          venueAddress: weddingEvents.venueAddress,
+          venueMapUrl: weddingEvents.venueMapUrl,
+          isMainEvent: weddingEvents.isMainEvent,
+          dressCode: weddingEvents.dressCode,
+          howToReach: weddingEvents.howToReach,
+          accommodation: weddingEvents.accommodation,
+          distanceInfo: weddingEvents.distanceInfo,
+          contactPerson: weddingEvents.contactPerson,
+          side: weddingEvents.side,
+          sortOrder: weddingEvents.sortOrder,
+        })
+        .from(weddingEvents)
+        .where(whereCondition)
+        .orderBy(weddingEvents.sortOrder);
+
+      const stories = await db
+        .select({
+          id: storyMilestones.id,
+          title: storyMilestones.title,
+          date: storyMilestones.date,
+          description: storyMilestones.description,
+          imageUrl: storyMilestones.imageUrl,
+          sortOrder: storyMilestones.sortOrder,
+        })
+        .from(storyMilestones)
+        .orderBy(storyMilestones.sortOrder);
+
+      const venuesData = await db
+        .select({
+          id: venues.id,
+          name: venues.name,
+          address: venues.address,
+          description: venues.description,
+          mapUrl: venues.mapUrl,
+          mapEmbedUrl: venues.mapEmbedUrl,
+          directions: venues.directions,
+          accommodation: venues.accommodation,
+          contactInfo: venues.contactInfo,
+          imageUrl: venues.imageUrl,
+          sortOrder: venues.sortOrder,
+        })
+        .from(venues)
+        .orderBy(venues.sortOrder);
+
+      const faqList = await db
+        .select({
+          id: faqs.id,
+          question: faqs.question,
+          answer: faqs.answer,
+          category: faqs.category,
+        })
+        .from(faqs)
+        .orderBy(faqs.sortOrder);
+
+      const result = {
+        config: safeConfig,
+        events,
+        stories,
+        venues: venuesData,
+        faqs: faqList,
+      };
+      homeCache.set(cacheKey, { data: result, timestamp: now });
+      res.setHeader("Cache-Control", "public, max-age=60");
+
+      res.json(result);
+    } catch (err) {
+      console.error("Public home fetch error FULL:", err);
+      return res.status(500).json({
+        error: "Failed to load homepage data",
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  });
+
+  /* ================= PUBLIC Stories ================= */
+
+  app.get("/api/stories", async (_req, res) => {
+    const stories = await db
+      .select()
+      .from(storyMilestones)
+      .orderBy(storyMilestones.sortOrder);
+
+    res.json(stories);
+  });
+
+  /* ================= PUBLIC Venues ================= */
+
+  app.get("/api/venues", async (_req, res) => {
+    const venuesList = await db
+      .select()
+      .from(venues)
+      .orderBy(venues.sortOrder);
+
+    res.json(venuesList);
+  });
+  /* ================= PUBLIC FAQ ================= */
+
+  let faqCache: any[] | null = null;
+  let faqCacheTime = 0;
+  const FAQ_CACHE_TTL = 60 * 1000; // 1 minute
+
+  app.get("/api/faqs", async (_req, res) => {
+    try {
+      const now = Date.now();
+
+      // Serve from cache if fresh
+      if (faqCache && now - faqCacheTime < FAQ_CACHE_TTL) {
+        return res.json(faqCache);
+      }
+
+      const faqList = await db
+        .select({
+          id: faqs.id,
+          question: faqs.question,
+          answer: faqs.answer,
+          category: faqs.category,
+        })
+        .from(faqs)
+        .orderBy(faqs.sortOrder);
+
+      faqCache = faqList;
+      faqCacheTime = now;
+
+      res.setHeader("Cache-Control", "public, max-age=60");
+      res.json(faqList);
+
+    } catch (err) {
+      console.error("Public FAQ fetch error:", err);
+      res.status(500).json({ error: "Failed to fetch FAQs" });
+    }
+  });
   /* ================= RSVP ================= */
 
   app.post("/api/rsvp", async (req, res) => {
@@ -294,8 +476,9 @@ export async function registerRoutes(
       isNew: true,
     });
   });
-
-  /* ================= ADMIN ================= */
+  /* =========================================================
+       ================= ADMIN AUTH =================
+    ========================================================= */
 
   app.post("/api/admin/login", async (req, res) => {
     const schema = z.object({
@@ -323,10 +506,13 @@ export async function registerRoutes(
   app.get("/api/admin/me", requireAdmin, (req, res) => {
     res.json({ admin: (req as any).admin });
   });
+
+  /* =========================================================
+       ================= ADMIN Config =================
+    ========================================================= */
   app.patch("/api/admin/config", requireAdmin, async (req, res) => {
     const schema = z.object({
       weddingDate: z.string().datetime().nullable().optional(),
-      dateConfirmed: z.boolean().optional(),
       venueName: z.string().max(200).optional(),
       venueAddress: z.string().max(500).optional(),
       venueMapUrl: z.string().url().optional().or(z.literal("")),
@@ -358,9 +544,6 @@ export async function registerRoutes(
           data.weddingDate === null ? null : new Date(data.weddingDate);
       }
 
-      if (data.dateConfirmed !== undefined)
-        updateData.dateConfirmed = data.dateConfirmed;
-
       if (data.coupleStory !== undefined)
         updateData.coupleStory = data.coupleStory;
 
@@ -382,12 +565,18 @@ export async function registerRoutes(
         .where(eq(weddingConfig.id, existing.id))
         .returning();
 
+      // Clear home cache so changes appear instantly
+      homeCache.clear();
+
       res.json(updated);
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Failed to save config" });
     }
   });
+  /* =========================================================
+     ================= ADMIN Events =================
+  ========================================================= */
   app.get("/api/admin/events", requireAdmin, async (_req, res) => {
     const events = await storage.getWeddingEvents();
     res.json(events);
@@ -428,6 +617,7 @@ export async function registerRoutes(
       venueMapUrl: parsed.data.venueMapUrl || "",
     });
     res.status(201).json(event);
+    homeCache.clear(); // Invalidate home cache to reflect new event on homepage
   });
 
   app.patch("/api/admin/events/:id", requireAdmin, async (req, res) => {
@@ -464,16 +654,17 @@ export async function registerRoutes(
     const updated = await storage.updateWeddingEvent(String(req.params.id), updateData as any);
     if (!updated) return res.status(404).json({ error: "Event not found" });
     res.json(updated);
+    homeCache.clear(); // Invalidate home cache to reflect event updates on homepage
   });
 
   app.delete("/api/admin/events/:id", requireAdmin, async (req, res) => {
     await storage.deleteWeddingEvent(String(req.params.id));
     res.json({ success: true });
+    homeCache.clear(); // Invalidate home cache to reflect event deletions on homepage
   });
-  app.delete("/api/admin/guests/:id", requireAdmin, async (req, res) => {
-    await storage.deleteGuest(String(req.params.id));
-    res.json({ success: true });
-  });
+  /* =========================================================
+     ================= ADMIN Stories =================
+  ========================================================= */
   app.get("/api/admin/stories", requireAdmin, async (_req, res) => {
     const stories = await storage.getStoryMilestones();
     res.json(stories);
@@ -560,16 +751,16 @@ export async function registerRoutes(
       }
 
       res.json(updated);
+      homeCache.clear(); // Invalidate home cache to reflect story updates on homepage
 
     } catch (err) {
       console.error("Update story error:", err);
       res.status(500).json({ error: "Failed to update story milestone" });
     }
   });
-  app.delete("/api/admin/stories/:id", requireAdmin, async (req, res) => {
-    await storage.deleteStoryMilestone(String(req.params.id));
-    res.json({ success: true });
-  });
+  /* =========================================================
+     ================= ADMIN Venues =================
+  ========================================================= */
   app.get("/api/admin/venues", requireAdmin, async (_req, res) => {
     try {
       const venueList = await storage.getVenues();
@@ -668,7 +859,7 @@ export async function registerRoutes(
       }
 
       res.json(updated);
-
+      homeCache.clear(); // Invalidate home cache to reflect venue updates on homepage
     } catch (err) {
       console.error("Update venue error:", err);
       res.status(500).json({ error: "Failed to update venue" });
@@ -678,10 +869,155 @@ export async function registerRoutes(
     await storage.deleteVenue(String(req.params.id));
     res.json({ success: true });
   });
+  /* =========================================================
+     ================= ADMIN FAQS =================
+  ========================================================= */
+  app.get("/api/admin/faqs", requireAdmin, async (_req, res) => {
+    try {
+      const faqList = await db
+        .select({
+          id: faqs.id,
+          question: faqs.question,
+          answer: faqs.answer,
+          category: faqs.category,
+          sortOrder: faqs.sortOrder,
+        })
+        .from(faqs)
+        .orderBy(faqs.sortOrder);
+
+      res.json(faqList);
+
+    } catch (err) {
+      console.error("Fetch FAQs error:", err);
+      res.status(500).json({ error: "Failed to fetch FAQs" });
+    }
+  });
+
+  app.post("/api/admin/faqs", requireAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        question: z.string().trim().min(1).max(500),
+        answer: z.string().trim().min(1).max(2000),
+        category: z.string().trim().max(100).default("general"),
+        sortOrder: z.coerce.number().int().default(0),
+      });
+
+      const parsed = schema.safeParse(req.body);
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "Invalid data",
+          details: parsed.error.flatten(),
+        });
+      }
+
+      const [created] = await db
+        .insert(faqs)
+        .values(parsed.data)
+        .returning({
+          id: faqs.id,
+          question: faqs.question,
+          answer: faqs.answer,
+          category: faqs.category,
+          sortOrder: faqs.sortOrder,
+        });
+
+      res.status(201).json(created);
+
+    } catch (err) {
+      console.error("Create FAQ error:", err);
+      res.status(500).json({ error: "Failed to create FAQ" });
+    }
+  });
+
+  app.patch("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        question: z.string().trim().min(1).max(500).optional(),
+        answer: z.string().trim().min(1).max(2000).optional(),
+        category: z.string().trim().max(100).optional(),
+        sortOrder: z.coerce.number().int().optional(),
+      });
+
+      const parsed = schema.safeParse(req.body);
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "Invalid data",
+          details: parsed.error.flatten(),
+        });
+      }
+
+      // Prevent empty update
+      if (Object.keys(parsed.data).length === 0) {
+        return res.status(400).json({ error: "No fields provided to update" });
+      }
+
+      const [updated] = await db
+        .update(faqs)
+        .set(parsed.data)
+        .where(eq(faqs.id, String(req.params.id)))
+        .returning({
+          id: faqs.id,
+          question: faqs.question,
+          answer: faqs.answer,
+          category: faqs.category,
+          sortOrder: faqs.sortOrder,
+        });
+
+      if (!updated) {
+        return res.status(404).json({ error: "FAQ not found" });
+      }
+
+      res.json(updated);
+      homeCache.clear(); // Invalidate home cache to reflect FAQ updates on homepage
+
+    } catch (err) {
+      console.error("Update FAQ error:", err);
+      res.status(500).json({ error: "Failed to update FAQ" });
+    }
+  });
+
   app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
-    await storage.deleteFaq(String(req.params.id));
+    try {
+      const deleted = await db
+        .delete(faqs)
+        .where(eq(faqs.id, String(req.params.id)));
+
+      res.json({ success: true });
+
+    } catch (err) {
+      console.error("Delete FAQ error:", err);
+      res.status(500).json({ error: "Failed to delete FAQ" });
+    }
+  });
+
+  app.delete("/api/admin/stories/:id", requireAdmin, async (req, res) => {
+    await storage.deleteStoryMilestone(String(req.params.id));
     res.json({ success: true });
   });
+  app.get("/api/guests/by-name", async (req, res) => {
+    const name = req.query.name as string;
+    if (!name) return res.status(400).json({ error: "Name is required" });
+
+    const guest = await storage.getGuestByName(name);
+    if (!guest) return res.status(404).json({ error: "Guest not found" });
+
+    res.json(guest);
+  });
+
+
+  /* =========================================================
+     ================= ADMIN Guests =================
+  ========================================================= */
+  app.delete("/api/admin/guests/:id", requireAdmin, async (req, res) => {
+    await storage.deleteGuest(String(req.params.id));
+    res.json({ success: true });
+  });
+  // app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+  //   await storage.deleteFaq(String(req.params.id));
+  //   res.json({ success: true });
+  // });
 
   /* ================= ADMIN GUEST LIST (PAGINATED) ================= */
 
@@ -735,20 +1071,18 @@ export async function registerRoutes(
     try {
       const filters = [];
 
-      // RSVP filter (optional now, not hardcoded)
-      if (req.query.rsvp) {
-        filters.push(eq(guests.rsvpStatus, String(req.query.rsvp)));
-      }
+      const rsvpStatus = req.query.rsvp
+        ? String(req.query.rsvp)
+        : "confirmed";
 
-      if (req.query.side) {
+      filters.push(eq(guests.rsvpStatus, rsvpStatus));
+
+      if (req.query.side)
         filters.push(eq(guests.side, String(req.query.side)));
-      }
 
-      if (req.query.food) {
+      if (req.query.food)
         filters.push(eq(guests.foodPreference, String(req.query.food)));
-      }
 
-      // JSONB event filter (correct operator for jsonb array)
       if (req.query.event) {
         filters.push(
           sql`${guests.eventsAttending} @> ${JSON.stringify([
@@ -757,15 +1091,37 @@ export async function registerRoutes(
         );
       }
 
-      const whereClause = filters.length > 0 ? and(...filters) : undefined;
-
       const guestList = await db
-        .select()
+        .select({
+          name: guests.name,
+          side: guests.side,
+          rsvpStatus: guests.rsvpStatus,
+          adultsCount: guests.adultsCount,
+          childrenCount: guests.childrenCount,
+          foodPreference: guests.foodPreference,
+          eventsAttending: guests.eventsAttending,
+          dietaryRequirements: guests.dietaryRequirements,
+          tableNumber: guests.tableNumber,
+          message: guests.message,
+          inviteSlug: guests.inviteSlug,
+        })
         .from(guests)
-        .where(whereClause);
+        .where(and(...filters))
+        .orderBy(guests.tableNumber, guests.name);
 
-      const events = await storage.getWeddingEvents();
+      const events = await db
+        .select({
+          id: weddingEvents.id,
+          title: weddingEvents.title,
+        })
+        .from(weddingEvents);
+
       const eventMap = new Map(events.map((e) => [e.id, e.title]));
+
+      const escapeCsv = (value: any) =>
+        `"${String(value ?? "")
+          .replace(/"/g, '""')
+          .replace(/\n/g, " ")}"`;
 
       const headers = [
         "Name",
@@ -781,19 +1137,64 @@ export async function registerRoutes(
         "Invite Slug",
       ];
 
-      const escapeCsv = (value: any) =>
-        `"${String(value ?? "")
-          .replace(/"/g, '""')
-          .replace(/\n/g, " ")}"`;
+      const date = new Date().toISOString().split("T")[0];
+      const clean = (val: string) =>
+        val
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9\-]/g, "");
 
-      const rows = guestList.map((g) => {
+      const fileNameParts = ["guests"];
+
+      // RSVP (always present)
+      fileNameParts.push(clean(rsvpStatus));
+
+      // Side filter
+      if (req.query.side) {
+        fileNameParts.push(clean(String(req.query.side)));
+      }
+
+      // Food filter
+      if (req.query.food) {
+        fileNameParts.push(clean(String(req.query.food)));
+      }
+
+      // Event filter
+      if (req.query.event) {
+        const eventId = String(req.query.event);
+        const eventTitle = eventMap.get(eventId);
+
+        if (eventTitle) {
+          fileNameParts.push(clean(eventTitle));
+        }
+      }
+
+      const date1 = new Date().toISOString().split("T")[0];
+
+      const fileName = `${fileNameParts.join("_")}_${date1}.csv`;
+      const finalName = fileName.length > 120
+        ? fileName.slice(0, 120)
+        : fileName;
+      // const fileName = `guests_${rsvpStatus}_${date}.csv`;
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${finalName}"`
+      );
+
+      // Stream header
+      res.write(headers.map(escapeCsv).join(",") + "\n");
+
+      // Stream rows
+      for (const g of guestList) {
         const eventNames = Array.isArray(g.eventsAttending)
           ? g.eventsAttending
             .map((id: string) => eventMap.get(id) || id)
             .join(", ")
           : "";
 
-        return [
+        const row = [
           g.name,
           g.side,
           g.rsvpStatus,
@@ -805,59 +1206,36 @@ export async function registerRoutes(
           g.tableNumber ?? "",
           g.message,
           g.inviteSlug,
-        ].map(escapeCsv);
-      });
+        ];
 
-      const csv = [
-        headers.map(escapeCsv).join(","),
-        ...rows.map((r) => r.join(",")),
-      ].join("\n");
-
-      // ---------- Dynamic Filename ----------
-      const clean = (val: string) =>
-        val.toLowerCase().replace(/\s+/g, "-");
-
-      let fileNameParts = ["guests"];
-
-      if (req.query.rsvp)
-        fileNameParts.push(clean(String(req.query.rsvp)));
-      if (req.query.side)
-        fileNameParts.push(clean(String(req.query.side)));
-      if (req.query.food)
-        fileNameParts.push(clean(String(req.query.food)));
-      if (req.query.event) {
-        const eventId = String(req.query.event);
-        const eventTitle = eventMap.get(eventId);
-
-        if (eventTitle) {
-          const cleanEventName = eventTitle
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9\-]/g, ""); // remove special characters
-
-          fileNameParts.push(cleanEventName);
-        }
+        res.write(row.map(escapeCsv).join(",") + "\n");
       }
 
-
-      const date = new Date().toISOString().split("T")[0];
-
-      const fileName = `${fileNameParts.join("_")}_${date}.csv`;
-
-      // ---------- Headers ----------
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${fileName}"`
-      );
-
-      res.send(csv);
+      res.end();
 
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Export failed" });
     }
   });
+  // app.get("/api/events", async (_req, res) => {
+  //   res.json(await storage.getWeddingEvents());
+  // });
+
+
+  // app.get("/api/stories", async (_req, res) => {
+  //   res.json(await storage.getStoryMilestones());
+  // });
+
+  // app.get("/api/venues", async (_req, res) => {
+  //   res.json(await storage.getVenues());
+  // });
+
+  // app.get("/api/faqs", async (_req, res) => {
+  //   res.json(await storage.getFaqs());
+  // });
+
+
 
   return httpServer;
 }
@@ -1546,46 +1924,46 @@ export async function registerRoutes(
 //     res.json({ success: true });
 //   });
 
-//   app.get("/api/admin/faqs", requireAdmin, async (_req, res) => {
-//     const faqList = await storage.getFaqs();
-//     res.json(faqList);
+// app.get("/api/admin/faqs", requireAdmin, async (_req, res) => {
+//   const faqList = await storage.getFaqs();
+//   res.json(faqList);
+// });
+
+// app.post("/api/admin/faqs", requireAdmin, async (req, res) => {
+//   const schema = z.object({
+//     question: z.string().min(1).max(500),
+//     answer: z.string().min(1).max(2000),
+//     category: z.string().max(100).default("general"),
+//     sortOrder: z.number().int().default(0),
 //   });
 
-//   app.post("/api/admin/faqs", requireAdmin, async (req, res) => {
-//     const schema = z.object({
-//       question: z.string().min(1).max(500),
-//       answer: z.string().min(1).max(2000),
-//       category: z.string().max(100).default("general"),
-//       sortOrder: z.number().int().default(0),
-//     });
+//   const parsed = schema.safeParse(req.body);
+//   if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
-//     const parsed = schema.safeParse(req.body);
-//     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+//   const faq = await storage.createFaq(parsed.data);
+//   res.status(201).json(faq);
+// });
 
-//     const faq = await storage.createFaq(parsed.data);
-//     res.status(201).json(faq);
+// app.patch("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+//   const schema = z.object({
+//     question: z.string().min(1).max(500).optional(),
+//     answer: z.string().min(1).max(2000).optional(),
+//     category: z.string().max(100).optional(),
+//     sortOrder: z.number().int().optional(),
 //   });
 
-//   app.patch("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
-//     const schema = z.object({
-//       question: z.string().min(1).max(500).optional(),
-//       answer: z.string().min(1).max(2000).optional(),
-//       category: z.string().max(100).optional(),
-//       sortOrder: z.number().int().optional(),
-//     });
+//   const parsed = schema.safeParse(req.body);
+//   if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
-//     const parsed = schema.safeParse(req.body);
-//     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
+//   const updated = await storage.updateFaq(String(req.params.id), parsed.data);
+//   if (!updated) return res.status(404).json({ error: "FAQ not found" });
+//   res.json(updated);
+// });
 
-//     const updated = await storage.updateFaq(String(req.params.id), parsed.data);
-//     if (!updated) return res.status(404).json({ error: "FAQ not found" });
-//     res.json(updated);
-//   });
-
-//   app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
-//     await storage.deleteFaq(String(req.params.id));
-//     res.json({ success: true });
-//   });
+// app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
+//   await storage.deleteFaq(String(req.params.id));
+//   res.json({ success: true });
+// });
 
 //   return httpServer;
 // }

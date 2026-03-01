@@ -21,6 +21,15 @@ export default function WaxSealIntro({ onSealOpen }: WaxSealIntroProps) {
     };
   }, []);
 
+  // Start music when seal appears (on mount)
+  useEffect(() => {
+    // Small delay to ensure music is loaded, then attempt autoplay
+    const timer = setTimeout(() => {
+      fadeIn();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [fadeIn]);
+
   const handleSealClick = useCallback(() => {
     if (phase !== "idle") return;
 
