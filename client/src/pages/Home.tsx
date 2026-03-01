@@ -552,8 +552,9 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
   const [submitted, setSubmitted] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState<string>("");
   const [checkingName, setCheckingName] = useState(false);
-  const [foundGuest, setFoundGuest] = useState<any>(null);
-  const [showGuestConfirmPopup, setShowGuestConfirmPopup] = useState(false);
+  const [foundGuests, setFoundGuests] = useState<any[]>([]);
+  const [selectedGuest, setSelectedGuest] = useState<any>(null);
+  const [showGuestSelectionPopup, setShowGuestSelectionPopup] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const form = useForm<PublicRsvpForm>({
@@ -584,65 +585,72 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
     try {
       const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
       if (res.ok) {
-        const guest = await res.json();
-        // Found existing guest - show confirmation popup
-        setFoundGuest(guest);
-        setShowGuestConfirmPopup(true);
+        const guestList = await res.json();
+        // Show selection popup if any guests found (even if just 1)
+        if (Array.isArray(guestList) && guestList.length > 0) {
+          setFoundGuests(guestList);
+          setShowGuestSelectionPopup(true);
+        } else {
+          // No guests found - continue with normal flow
+          setFoundGuests([]);
+        }
       } else {
         // Name not in database - continue with normal flow
-        setFoundGuest(null);
+        setFoundGuests([]);
       }
     } catch (err) {
       console.error("Error checking guest:", err);
-      setFoundGuest(null);
+      setFoundGuests([]);
     } finally {
       setCheckingName(false);
     }
   };
 
-  const confirmExistingGuest = () => {
-    if (!foundGuest) return;
+  const selectAndConfirmGuest = (guest: any) => {
+    if (!guest) return;
 
     // Switch side if guest is on different side
-    if (foundGuest.side && foundGuest.side !== side && foundGuest.side !== "both") {
-      setSide(foundGuest.side);
+    if (guest.side && guest.side !== side && guest.side !== "both") {
+      setSide(guest.side);
     }
 
     // Pre-fill form with existing data
     setIsUpdating(true);
-    form.setValue("name", foundGuest.name);
-    form.setValue("rsvpStatus", foundGuest.rsvpStatus);
-    form.setValue("adultsCount", foundGuest.adultsCount || 1);
-    form.setValue("childrenCount", foundGuest.childrenCount || 0);
-    form.setValue("foodPreference", foundGuest.foodPreference || "");
+    setSelectedGuest(guest);
+    form.setValue("name", guest.name);
+    form.setValue("rsvpStatus", guest.rsvpStatus);
+    form.setValue("adultsCount", guest.adultsCount || 1);
+    form.setValue("childrenCount", guest.childrenCount || 0);
+    form.setValue("foodPreference", guest.foodPreference || "");
     form.setValue(
       "eventsAttending",
-      Array.isArray(foundGuest.eventsAttending)
-        ? foundGuest.eventsAttending
+      Array.isArray(guest.eventsAttending)
+        ? guest.eventsAttending
         : []
     );
-    form.setValue("dietaryRequirements", foundGuest.dietaryRequirements || "");
-    form.setValue("message", foundGuest.message || "");
+    form.setValue("dietaryRequirements", guest.dietaryRequirements || "");
+    form.setValue("message", guest.message || "");
 
-    setShowGuestConfirmPopup(false);
+    setShowGuestSelectionPopup(false);
 
     toast({
       title: "Welcome back!",
-      description: "You can update your events and food preferences below.",
+      description: "You can update your name, events and food preferences below.",
     });
   };
 
   const continueAsNewGuest = () => {
-    setFoundGuest(null);
-    setShowGuestConfirmPopup(false);
+    setFoundGuests([]);
+    setSelectedGuest(null);
+    setShowGuestSelectionPopup(false);
     // Keep the name but allow new RSVP
   };
 
   const rsvpMutation = useMutation({
     mutationFn: async (data: PublicRsvpForm) => {
       // If updating existing guest, use their ID
-      if (isUpdating && foundGuest) {
-        const res = await apiRequest("POST", "/api/rsvp", { ...data, slug: foundGuest.inviteSlug });
+      if (isUpdating && selectedGuest) {
+        const res = await apiRequest("POST", "/api/rsvp", { ...data, slug: selectedGuest.inviteSlug });
         return res.json();
       } else {
         const res = await apiRequest("POST", "/api/rsvp/public", data);
@@ -667,7 +675,8 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
 
       // Reset all states
       setIsUpdating(false);
-      setFoundGuest(null);
+      setFoundGuests([]);
+      setSelectedGuest(null);
 
       // Reset form to defaults - no pre-selected RSVP status
       form.reset({
@@ -758,7 +767,6 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                     {...form.register("name")}
                     onBlur={(e) => checkExistingGuest(e.target.value)}
                     placeholder="Full Name"
-                    disabled={isUpdating}
                     className="w-full px-4 py-2.5 rounded-lg text-sm"
                     style={{
                       background: "var(--wedding-bg)",
@@ -774,7 +782,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                   )}
                   {isUpdating && (
                     <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#22c55e" }}>
-                      <Check size={12} /> Updating your existing RSVP
+                      <Check size={12} /> Updating existing RSVP
                     </p>
                   )}
                   {form.formState.errors.name && (
@@ -899,22 +907,22 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
           )}
         </motion.form>
 
-        {/* Guest Confirmation Popup */}
+        {/* Guest Selection Popup */}
         <AnimatePresence>
-          {showGuestConfirmPopup && foundGuest && (
+          {showGuestSelectionPopup && foundGuests.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowGuestConfirmPopup(false)}
+              onClick={() => setShowGuestSelectionPopup(false)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="max-w-md w-full rounded-xl p-6 shadow-2xl"
+                className="max-w-md w-full rounded-xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto"
                 style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
               >
                 <div className="text-center mb-4">
@@ -923,53 +931,95 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                     Welcome Back!
                   </h3>
                   <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
-                    We found an existing RSVP for <strong>{foundGuest.name}</strong>
+                    {foundGuests.length === 1
+                      ? "We found an existing RSVP matching your name"
+                      : `We found ${foundGuests.length} existing RSVPs matching your name`}
                   </p>
                 </div>
 
-                <div className="bg-background/50 rounded-lg p-4 mb-4 space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
-                  <p><strong>Current Status:</strong> {foundGuest.rsvpStatus === "confirmed" ? "✓ Confirmed" : "✗ Declined"}</p>
-                  {foundGuest.foodPreference && (
-                    <p><strong>Food Preference:</strong> {foundGuest.foodPreference}</p>
-                  )}
-                  {Array.isArray(foundGuest.eventsAttending) && (
-                    <p>
-                      <strong>Events:</strong>{" "}
-                      {foundGuest.eventsAttending.length} selected
-                    </p>
-                  )}
-                  {/* {foundGuest.eventsAttending && (
-                        <p><strong>Events:</strong> {foundGuest.eventsAttending.split(",").length} selected</p>
-                      )} */}
+                <div className="space-y-3 mb-4">
+                  {foundGuests.map((guest) => {
+                    // Get event names from IDs
+                    const guestEventNames = Array.isArray(guest.eventsAttending)
+                      ? guest.eventsAttending
+                          .map((eventId: string) => events.find((ev) => ev.id === eventId)?.title)
+                          .filter(Boolean)
+                      : [];
+
+                    return (
+                      <button
+                        key={guest.id}
+                        onClick={() => selectAndConfirmGuest(guest)}
+                        className="w-full text-left rounded-lg p-4 transition-all hover:scale-[1.02]"
+                        style={{
+                          background: "var(--wedding-bg)",
+                          border: "1px solid var(--wedding-border)",
+                        }}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm" style={{ color: "var(--wedding-text)" }}>
+                              {guest.name}
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: "var(--wedding-muted)" }}>
+                              {guest.rsvpStatus === "confirmed" ? "✓ Confirmed" : "✗ Declined"}
+                            </p>
+                          </div>
+                          <div
+                            className="px-2 py-1 rounded text-[10px] uppercase tracking-wide flex-shrink-0"
+                            style={{
+                              background: guest.side === "groom"
+                                ? "rgba(185, 151, 91, 0.2)"
+                                : guest.side === "bride"
+                                ? "rgba(198, 167, 94, 0.2)"
+                                : "rgba(200, 200, 200, 0.2)",
+                              color: "var(--wedding-accent)"
+                            }}
+                          >
+                            {guest.side === "groom" ? "Groom" : guest.side === "bride" ? "Bride" : "Both"}
+                          </div>
+                        </div>
+
+                        {guestEventNames.length > 0 && (
+                          <div className="text-xs mt-2" style={{ color: "var(--wedding-muted)" }}>
+                            <p className="font-medium mb-1" style={{ color: "var(--wedding-accent)" }}>Events Attending:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {guestEventNames.map((eventName: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 rounded font-medium"
+                                  style={{
+                                    background: "var(--wedding-accent)",
+                                    color: "#ffffff",
+                                    fontSize: "11px"
+                                  }}
+                                >
+                                  {eventName}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <p className="text-xs mb-4 text-center" style={{ color: "var(--wedding-muted)" }}>
-                  Would you like to update your events and food preferences?
+                  Select your name to update your RSVP, or continue as a new guest
                 </p>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={continueAsNewGuest}
-                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-                    style={{
-                      background: "transparent",
-                      color: "var(--wedding-text)",
-                      border: "1px solid var(--wedding-border)",
-                    }}
-                  >
-                    Continue as New
-                  </button>
-                  <button
-                    onClick={confirmExistingGuest}
-                    className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-all"
-                    style={{
-                      background: "var(--wedding-accent)",
-                      color: "#fff",
-                    }}
-                  >
-                    Update RSVP
-                  </button>
-                </div>
+                <button
+                  onClick={continueAsNewGuest}
+                  className="w-full py-2.5 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    background: "transparent",
+                    color: "var(--wedding-text)",
+                    border: "1px solid var(--wedding-border)",
+                  }}
+                >
+                  Continue as New Guest
+                </button>
               </motion.div>
             </motion.div>
           )}
@@ -1281,11 +1331,15 @@ export default function Home() {
     if (!config) return [];
 
     if (side === "groom" && config.groomMusicUrls?.length) {
-      return config.groomMusicUrls.filter(Boolean);
+      return config.groomMusicUrls.filter(Boolean).map((track: any) =>
+        typeof track === 'object' ? track.url : track
+      ).filter(Boolean);
     }
 
     if (side === "bride" && config.brideMusicUrls?.length) {
-      return config.brideMusicUrls.filter(Boolean);
+      return config.brideMusicUrls.filter(Boolean).map((track: any) =>
+        typeof track === 'object' ? track.url : track
+      ).filter(Boolean);
     }
 
     if (config.backgroundMusicUrl) {

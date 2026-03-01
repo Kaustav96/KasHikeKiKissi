@@ -34,12 +34,12 @@ export const weddingConfig = pgTable("wedding_config", {
   backgroundMusicUrl: text("background_music_url").notNull().default(""),
 
   groomMusicUrls: jsonb("groom_music_urls")
-    .$type<string[]>()
+    .$type<{ name: string; url: string }[]>()
     .notNull()
     .default(sql`'[]'::jsonb`),
 
   brideMusicUrls: jsonb("bride_music_urls")
-    .$type<string[]>()
+    .$type<{ name: string; url: string }[]>()
     .notNull()
     .default(sql`'[]'::jsonb`),
 

@@ -26,7 +26,7 @@ import {
 } from "../shared/schema.js";
 
 import { db } from "./db";
-import { eq, desc, asc, like, and, sql } from "drizzle-orm";
+import { eq, desc, asc, like, ilike, and, sql } from "drizzle-orm";
 
 /* =========================================================
    Interface
@@ -147,10 +147,21 @@ export class DatabaseStorage implements IStorage {
     const [guest] = await db
       .select()
       .from(guests)
-      .where(like(guests.name, `%${name}%`))
+      .where(ilike(guests.name, `%${name}%`))
       .limit(1);
 
     return guest;
+  }
+
+  async searchGuestsByName(name: string): Promise<Guest[]> {
+    const guestList = await db
+      .select()
+      .from(guests)
+      .where(ilike(guests.name, `%${name}%`))
+      .orderBy(guests.name)
+      .limit(20);
+
+    return guestList;
   }
 
   async createGuest(guest: InsertGuest): Promise<Guest> {

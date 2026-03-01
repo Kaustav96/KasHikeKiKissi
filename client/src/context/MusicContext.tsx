@@ -106,6 +106,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   const setMusicUrl = useCallback((url: string) => {
     if (audioRef.current && url && audioRef.current.src !== url) {
+      // Validate URL before setting
+      if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+        console.error('Invalid music URL format:', url);
+        return;
+      }
       audioRef.current.src = url;
       audioRef.current.load();
     }
@@ -134,7 +139,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           if (vol >= 0.6) clearInterval(interval);
         }, 100);
       }).catch((error) => {
-        console.log('Audio playback failed:', error);
+        console.error('Audio playback failed:', error.name, error.message);
+        console.error('Audio source:', audio.src);
         // On iOS, this might fail if not from direct user interaction
       });
     }

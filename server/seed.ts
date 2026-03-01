@@ -9,12 +9,20 @@ function slugify(name: string): string {
 
 export async function seedDatabase(): Promise<void> {
   console.log("[Seed] Checking database...");
+  console.log("[Seed] Database URL:", process.env.DATABASE_URL?.replace(/:\/\/[^:]+:[^@]+@/, "://****:****@"));
 
-  const existingAdmin = await storage.getUserByUsername("admin");
-  if (!existingAdmin) {
-    const hash = await bcrypt.hash("wedding2025", 12);
-    await storage.createUser({ username: "admin", password: hash });
-    console.log("[Seed] Created admin user (username: admin, password: wedding2025)");
+  try {
+    const existingAdmin = await storage.getUserByUsername("admin");
+    if (!existingAdmin) {
+      const hash = await bcrypt.hash("wedding2025", 12);
+      await storage.createUser({ username: "admin", password: hash });
+      console.log("[Seed] Created admin user (username: admin, password: wedding2025)");
+    } else {
+      console.log("[Seed] Admin user already exists");
+    }
+  } catch (err) {
+    console.error("[Seed] Error checking/creating admin:", err);
+    throw err;
   }
 
   const existingConfig = await storage.getWeddingConfig();

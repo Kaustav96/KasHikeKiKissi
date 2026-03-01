@@ -519,8 +519,8 @@ export async function registerRoutes(
       coupleStory: z.string().max(5000).optional(),
       upiId: z.string().max(200).optional(),
       backgroundMusicUrl: z.string().optional().or(z.literal("")),
-      groomMusicUrls: z.array(z.string()).optional(),
-      brideMusicUrls: z.array(z.string()).optional(),
+      groomMusicUrls: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
+      brideMusicUrls: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
     });
     try {
       const parsed = schema.safeParse(req.body);
@@ -1000,10 +1000,8 @@ export async function registerRoutes(
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "Name is required" });
 
-    const guest = await storage.getGuestByName(name);
-    if (!guest) return res.status(404).json({ error: "Guest not found" });
-
-    res.json(guest);
+    const guestList = await storage.searchGuestsByName(name);
+    res.json(guestList);
   });
 
 

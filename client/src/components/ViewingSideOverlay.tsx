@@ -17,7 +17,7 @@ export default function ViewingSideOverlay({ onBackToSelection, onSideChange }: 
 
   return (
     <div
-      className="fixed bottom-6 left-6 z-50"
+      className="fixed bottom-6 left-6 z-[60] touch-manipulation"
       data-testid="viewing-side-overlay"
     >
       <div
@@ -26,9 +26,11 @@ export default function ViewingSideOverlay({ onBackToSelection, onSideChange }: 
           background: "var(--wedding-card-bg)",
           borderColor: accentColor,
           minWidth: isHovered ? "220px" : "200px",
+          pointerEvents: "auto",
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onTouchStart={() => setIsHovered(true)}
       >
         {/* Viewing Label */}
         <span className="text-[10px] tracking-wider uppercase" style={{ color: mutedColor }}>
