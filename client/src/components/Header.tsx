@@ -1,31 +1,68 @@
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+
+function scrollToSection(id: string) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth" });
+    // Remove hash from URL without adding to history
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+}
 
 export default function Header() {
   const { side } = useWeddingTheme();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const isAdmin = location.startsWith("/admin");
   if (isAdmin) return null;
 
-  const sections = ["story", "events", "venue", "rsvp", "wardrobe", "faqs"];
+  const sections = [
+    { id: "find-invite", label: "Find Invite" },
+    { id: "events", label: "Events" },
+    { id: "venue", label: "Venue" },
+    { id: "wardrobe", label: "Wardrobe" },
+    { id: "story", label: "Our Story" },
+    { id: "rsvp", label: "RSVP" },
+    { id: "faqs", label: "FAQ" },
+  ];
+
+  const handleNavClick = (id: string) => {
+    scrollToSection(id);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b"
+      className="fixed top-0 left-0 right-0 z-50 border-b"
       style={{
-        background: "rgba(26, 15, 10, 0.95)",
+        background: "var(--wedding-card-bg)",
         borderColor: "var(--wedding-border)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        boxShadow: scrolled ? "0 2px 20px rgba(46,43,39,0.07)" : "none",
+        opacity: scrolled ? 1 : 0,
+        pointerEvents: scrolled ? "auto" : "none",
+        transform: scrolled ? "translateY(0)" : "translateY(-100%)",
+        transition: "opacity 0.4s ease, transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease",
       }}
       data-testid="header"
     >
       <div className="max-w-6xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
         <Link
           href="/"
-          onClick={() => window.history.replaceState(null, '', '/')}
+          onClick={() => window.history.replaceState(null, "", "/")}
           data-testid="header-logo"
         >
           <span
@@ -37,17 +74,17 @@ export default function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-4 lg:gap-6" data-testid="header-nav">
-          {sections.map((section) => (
-            <a
-              key={section}
-              href={`/#${section}`}
-              className="text-xs tracking-[0.15em] uppercase transition-colors hover:opacity-80"
-              style={{ color: "var(--wedding-text)" }}
-              data-testid={`nav-${section}`}
+        <nav className="hidden md:flex items-center gap-4 lg:gap-5" data-testid="header-nav">
+          {sections.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => handleNavClick(id)}
+              className="text-xs tracking-[0.15em] uppercase transition-opacity hover:opacity-70 cursor-pointer"
+              style={{ color: "var(--wedding-text)", background: "none", border: "none", padding: 0 }}
+              data-testid={`nav-${id}`}
             >
-              {section === "faqs" ? "FAQ" : section}
-            </a>
+              {label}
+            </button>
           ))}
         </nav>
 
@@ -69,25 +106,35 @@ export default function Header() {
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <nav
-          className="md:hidden border-t shadow-lg"
+          className="md:hidden border-t"
           style={{
-            background: "rgba(26, 15, 10, 0.98)",
+            background: "var(--wedding-card-bg)",
             borderColor: "var(--wedding-border)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            boxShadow: "0 8px 24px rgba(46,43,39,0.10)",
           }}
           data-testid="mobile-menu"
         >
-          <div className="px-4 py-3 space-y-3">
-            {sections.map((section) => (
-              <a
-                key={section}
-                href={`/#${section}`}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm tracking-[0.15em] uppercase transition-colors hover:opacity-80 py-2"
-                style={{ color: "var(--wedding-text)" }}
-                data-testid={`mobile-nav-${section}`}
+          <div className="px-4 py-3 space-y-1">
+            {sections.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => handleNavClick(id)}
+                className="flex items-center gap-3 text-xs tracking-[0.18em] uppercase py-3 px-2 rounded-lg w-full text-left transition-colors border-b"
+                style={{
+                  color: "var(--wedding-text)",
+                  borderColor: "var(--wedding-border)",
+                  background: "none",
+                }}
+                data-testid={`mobile-nav-${id}`}
               >
-                {section === "faqs" ? "FAQ" : section}
-              </a>
+                <span
+                  className="w-1 h-1 rounded-full flex-shrink-0"
+                  style={{ background: "var(--wedding-accent)" }}
+                />
+                {label}
+              </button>
             ))}
           </div>
         </nav>
@@ -95,3 +142,4 @@ export default function Header() {
     </header>
   );
 }
+

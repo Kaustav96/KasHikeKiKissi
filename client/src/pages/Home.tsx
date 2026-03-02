@@ -2,17 +2,21 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink, Loader2, Check } from "lucide-react";
+import {
+  MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink,
+  Loader2, Check, Search, User, Phone, Navigation, Plane, Train, Car,
+  BedDouble, Info, BookOpen, Sparkles, Shirt, Sun, Music, Crown, Building,
+  X as XIcon, Users,
+} from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
-import WaxSealIntro from "@/components/WaxSealIntro";
+import CrestIntro from "@/components/CrestIntro";
 import Header from "@/components/Header";
 import SideSelectionLanding from "@/components/SideSelectionLanding";
 import ViewingSideOverlay from "@/components/ViewingSideOverlay";
-import { useSeal } from "@/context/SealContext";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -22,17 +26,23 @@ import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "..
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-function GoldDivider() {
+function SimpleDivider() {
   return (
-    <div className="flex items-center justify-center gap-4 py-2">
-      <div className="gold-divider flex-1 max-w-[80px]" />
-      <KHCrest size={40} />
-      <div className="gold-divider flex-1 max-w-[80px]" />
+    <div className="flex items-center justify-center gap-3 py-2 my-1">
+      <div className="h-px w-16" style={{ background: "var(--wedding-border)" }} />
+      <div className="w-1 h-1 rounded-full" style={{ background: "var(--wedding-muted)", opacity: 0.5 }} />
+      <div className="w-1 h-1 rounded-full" style={{ background: "var(--wedding-muted)", opacity: 0.5 }} />
+      <div className="w-1 h-1 rounded-full" style={{ background: "var(--wedding-muted)", opacity: 0.5 }} />
+      <div className="h-px w-16" style={{ background: "var(--wedding-border)" }} />
     </div>
   );
 }
 
 function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDateConfirmed: boolean }) {
+  const { side } = useWeddingTheme();
+  // Groom side: dark antique gold; Bride side: accent color (unchanged)
+  const nameColor = side === "groom" ? "#8B6914" : "var(--wedding-accent)";
+  const ampColor = side === "groom" ? "#A1122F" : "#C6A75E";
   return (
     <section
       id="hero"
@@ -41,75 +51,128 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
       data-testid="hero-section"
     >
       {/* Mandala ornaments on sides */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-20 pointer-events-none">
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-15 pointer-events-none">
         <MandalaHalfOrnament side="left" />
       </div>
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-20 pointer-events-none">
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-15 pointer-events-none">
         <MandalaHalfOrnament side="right" />
       </div>
 
+      {/* Radial glow behind names */}
       <div
-        className="absolute inset-0 opacity-5"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 70% 50% at 50% 45%, rgba(185,151,91,0.09) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Subtle circle pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.035]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
       />
 
       <motion.div
-        className="text-center z-10 px-4 relative"
+        className="text-center z-10 px-4 relative max-w-3xl mx-auto"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 0.3 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
       >
         {/* Central medallion above names */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-8">
           <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ duration: 1, delay: 0.5, type: "spring" }}
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
           >
-            <GoldMedallion size={100} />
+            <GoldMedallion size={90} />
           </motion.div>
         </div>
 
-        <p
-          className="text-xs sm:text-sm tracking-[0.3em] uppercase mb-4"
+        <motion.p
+          className="text-[11px] sm:text-xs tracking-[0.45em] uppercase mb-6 font-medium"
           style={{ color: "var(--wedding-muted)" }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
         >
           The Wedding Celebration of
-        </p>
+        </motion.p>
 
-        <h1
-          className="font-serif text-5xl sm:text-7xl lg:text-8xl font-bold mb-2"
-          style={{ color: "var(--wedding-text)" }}
+        <motion.h1
+          className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-none mb-2"
+          style={{ color: nameColor }}
           data-testid="hero-title"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
           Himasree
-        </h1>
-        <div className="flex items-center justify-center gap-4 my-3">
-          <div className="gold-divider w-16" />
-          <span
-            className="font-serif text-2xl italic"
-            style={{ color: "var(--wedding-accent)" }}
+        </motion.h1>
+
+        {/* Animated thin gold divider */}
+        <div className="flex items-center justify-center gap-5 my-4">
+          <motion.div
+            className="h-px flex-1 max-w-[100px]"
+            style={{ background: "linear-gradient(to right, transparent, var(--wedding-accent))" }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.85, duration: 0.6, ease: "easeOut" }}
+          />
+          <motion.span
+            className="font-serif text-3xl sm:text-4xl italic"
+            style={{ color: ampColor }}
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
           >
             &amp;
-          </span>
-          <div className="gold-divider w-16" />
+          </motion.span>
+          <motion.div
+            className="h-px flex-1 max-w-[100px]"
+            style={{ background: "linear-gradient(to left, transparent, var(--wedding-accent))" }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.85, duration: 0.6, ease: "easeOut" }}
+          />
         </div>
-        <h1
-          className="font-serif text-5xl sm:text-7xl lg:text-8xl font-bold mb-8"
-          style={{ color: "var(--wedding-text)" }}
+
+        <motion.h1
+          className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-none mb-10"
+          style={{ color: nameColor }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
           Kaustav
-        </h1>
+        </motion.h1>
 
-        <GoldDivider />
+        {/* Glass-style date + countdown block */}
+        <motion.div
+          className="relative rounded-2xl px-6 py-6 sm:px-10 sm:py-8 mx-auto max-w-lg"
+          style={{
+            background: "rgba(255,255,255,0.5)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            border: "1px solid rgba(185,151,91,0.22)",
+            boxShadow: "0 4px 24px rgba(46,43,39,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {/* Shimmer top line */}
+          <div
+            className="absolute top-0 left-8 right-8 h-px rounded-full"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(185,151,91,0.5), transparent)" }}
+          />
 
-        <div className="mt-8">
           {config.weddingDate ? (
             <>
               <p
-                className="font-serif text-lg sm:text-xl mb-6"
+                className="font-serif text-base sm:text-lg mb-5 tracking-wide"
                 style={{ color: "var(--wedding-text)" }}
               >
                 {new Date(config.weddingDate).toLocaleDateString("en-IN", {
@@ -130,31 +193,31 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
               Date TBD
             </p>
           )}
-        </div>
 
-        {config.venueName && (
-          <motion.p
-            className="mt-8 flex items-center justify-center gap-2 text-sm"
-            style={{ color: "var(--wedding-muted)" }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-          >
-            <MapPin size={14} />
-            {config.venueName}, Kolkata
-          </motion.p>
-        )}
+          {config.venueName && (
+            <p
+              className="mt-5 flex items-center justify-center gap-2 text-xs tracking-wider uppercase"
+              style={{ color: "var(--wedding-muted)" }}
+            >
+              <MapPin size={12} />
+              {config.venueName}, Kolkata
+            </p>
+          )}
+        </motion.div>
       </motion.div>
 
-      <motion.div
-        className="absolute bottom-8 animate-bounce"
-        style={{ color: "var(--wedding-accent)" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
+      {/* Gentle float chevron — click to scroll down */}
+      <motion.button
+        className="absolute bottom-8 cursor-pointer flex items-center justify-center"
+        style={{ color: "var(--wedding-accent)", opacity: 0.6, background: "none", border: "none", padding: 8 }}
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 0.6, y: [0, 6, 0] }}
+        transition={{ delay: 2, duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        onClick={() => window.scrollBy({ top: window.innerHeight * 0.65, behavior: "smooth" })}
+        aria-label="Scroll down"
       >
-        <ChevronDown size={24} />
-      </motion.div>
+        <ChevronDown size={22} />
+      </motion.button>
     </section>
   );
 }
@@ -163,106 +226,132 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
   if (milestones.length === 0) return null;
 
   return (
-    <section id="story" className="wedding-section relative overflow-hidden" style={{ background: "var(--wedding-bg)" }} data-testid="story-section">
-      {/* Decorative mandala ornaments */}
-      <div className="absolute top-20 left-0 w-48 md:w-64 opacity-10 pointer-events-none">
+    <section id="story" className="py-16 sm:py-20 px-4 sm:px-8 relative overflow-hidden" style={{ background: "var(--wedding-alt-bg)" }} data-testid="story-section">
+      <div className="absolute top-0 left-0 w-32 md:w-48 opacity-8 pointer-events-none">
         <MandalaHalfOrnament side="left" />
       </div>
-      <div className="absolute bottom-20 right-0 w-48 md:w-64 opacity-10 pointer-events-none">
+      <div className="absolute bottom-0 right-0 w-32 md:w-48 opacity-8 pointer-events-none">
         <MandalaHalfOrnament side="right" />
       </div>
 
       <div className="max-w-4xl mx-auto">
+        {/* Section header with icon */}
         <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 20 }}
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <BookOpen size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            How It All Began
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Our Story
           </h2>
-          <GoldDivider />
+          <SimpleDivider />
         </motion.div>
 
-        <div className="relative">
-          {/* Central ornate timeline */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 hidden sm:block ornate-divider" />
+        {/* Compact 2-column grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          {milestones.map((milestone, idx) => (
+            <motion.div
+              key={milestone.id}
+              className="relative rounded-2xl overflow-hidden"
+              style={{
+                background: "var(--wedding-card-bg)",
+                border: "1px solid var(--wedding-border)",
+                boxShadow: "0 2px 16px rgba(46,43,39,0.05)",
+              }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.45, delay: idx * 0.06, ease: [0.16, 1, 0.3, 1] }}
+              data-testid={`story-milestone-${milestone.id}`}
+            >
+              {/* Gold accent top bar */}
+              <div className="h-[3px]" style={{
+                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
+              }} />
 
-          {milestones.map((milestone, idx) => {
-            const isLeft = idx % 2 === 0;
-            return (
-              <motion.div
-                key={milestone.id}
-                className={`flex items-start gap-8 mb-12 sm:mb-16 ${isLeft ? "sm:flex-row" : "sm:flex-row-reverse"} flex-col sm:flex-row`}
-                initial={{ opacity: 0, x: isLeft ? -30 : 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                data-testid={`story-milestone-${milestone.id}`}
-              >
-                <div className={`flex-1 ${isLeft ? "sm:text-right" : "sm:text-left"}`}>
-                  <div className="royal-panel rounded-lg p-6">
-                    {milestone.imageUrl && (
-                      <img
-                        src={milestone.imageUrl}
-                        alt={milestone.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4 border border-[var(--wedding-border)]"
-                        loading="lazy"
-                      />
-                    )}
-                    <h3 className="font-serif text-xl font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                      {milestone.title}
-                    </h3>
-                    <p className="text-xs tracking-[0.15em] uppercase mb-3" style={{ color: "var(--wedding-accent)" }}>
-                      {milestone.date}
-                    </p>
-                    <ThinGoldDivider className="my-3" />
-                    <p className="text-sm leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                      {milestone.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="hidden sm:flex flex-col items-center z-10">
-                  <div
-                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center"
+              <div className="px-5 py-4">
+                {/* Index + date row */}
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className="text-[9px] font-bold tabular-nums tracking-[0.2em]"
+                    style={{ color: "var(--wedding-accent)", opacity: 0.55 }}
+                  >
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] tracking-[0.18em] uppercase"
                     style={{
-                      borderColor: "var(--wedding-accent)",
-                      background: "var(--wedding-bg)",
-                      boxShadow: "0 0 20px rgba(212, 175, 55, 0.3)"
+                      background: "rgba(176,132,72,0.09)",
+                      border: "1px solid rgba(176,132,72,0.22)",
+                      color: "var(--wedding-accent)",
                     }}
                   >
-                    <div className="w-2 h-2 rounded-full bg-[var(--wedding-accent)]" />
-                  </div>
+                    {milestone.date}
+                  </span>
                 </div>
-                <div className="flex-1 hidden sm:block" />
-              </motion.div>
-            );
-          })}
+
+                {/* Title */}
+                <h3 className="font-serif text-base sm:text-lg font-semibold mb-1.5 leading-tight" style={{ color: "var(--wedding-text)" }}>
+                  {milestone.title}
+                </h3>
+
+                {/* Thin divider */}
+                <div className="h-px mb-2.5" style={{ background: "var(--wedding-border)" }} />
+
+                {/* Description — 3 lines max */}
+                <p
+                  className="text-xs sm:text-sm leading-[1.75]"
+                  style={{
+                    color: "var(--wedding-muted)",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {milestone.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
+
+
+function getEventIcon(title: string) {
+  const t = title.toLowerCase();
+  if (t.includes("haldi")) return Sun;
+  if (t.includes("sangeet") || t.includes("music")) return Music;
+  if (t.includes("reception")) return Sparkles;
+  if (t.includes("engagement")) return Heart;
+  return Crown;
+}
+
 function EventsSection({ events }: { events: WeddingEvent[] }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const { side } = useWeddingTheme();
 
-  // Filter events based on current theme side
-  const filteredEvents = events.filter(event => {
-    if (!event.side || event.side === 'both') return true;
-    return event.side === side;
-  });
+  // Show all events (no side filter) so nothing is hidden
+  const filteredEvents = events;
 
   if (filteredEvents.length === 0) return null;
 
   const dateMap = new Map<string, WeddingEvent[]>();
   filteredEvents.forEach((ev) => {
     const dateStr = new Date(ev.startTime).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      year: "numeric", month: "short", day: "numeric",
     });
     if (!dateMap.has(dateStr)) dateMap.set(dateStr, []);
     dateMap.get(dateStr)!.push(ev);
@@ -272,8 +361,10 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
   const active = selectedDate || dates[0] || null;
   const activeEvents = active ? dateMap.get(active) || [] : [];
 
+  const sideName = side === "groom" ? "Kaustav's" : "Himasree's";
+
   return (
-    <section id="events" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="events-section">
+    <section id="events" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="events-section">
       <div className="max-w-5xl mx-auto">
         <motion.div
           className="text-center mb-12"
@@ -281,132 +372,169 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <Calendar size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            Ceremony Schedule
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-2 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Wedding Events
           </h2>
-          <GoldDivider />
+          <p className="text-xs tracking-[0.15em] uppercase mb-4" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
+            Events for {sideName} side
+          </p>
+          <SimpleDivider />
         </motion.div>
 
-        <div className="flex gap-3 overflow-x-auto pb-4 mb-8 justify-center flex-wrap" data-testid="event-date-timeline">
-          {dates.map((date) => (
-            <button
-              key={date}
-              onClick={() => setSelectedDate(date)}
-              className="px-5 py-3 rounded-lg font-serif text-sm whitespace-nowrap transition-all flex-shrink-0"
-              style={{
-                background: active === date ? "var(--wedding-accent)" : "var(--wedding-card-bg)",
-                color: active === date ? "#fff" : "var(--wedding-text)",
-                border: `1px solid ${active === date ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
-              }}
-              data-testid={`event-date-${date}`}
-            >
-              <Calendar size={14} className="inline mr-2" />
-              {date}
-            </button>
-          ))}
-        </div>
+        {/* Date tab pills */}
+        {dates.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-8 justify-center flex-wrap" data-testid="event-date-timeline">
+            {dates.map((date) => (
+              <button
+                key={date}
+                onClick={() => setSelectedDate(date)}
+                className="px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 transition-all"
+                style={{
+                  background: active === date ? "var(--wedding-accent)" : "rgba(255,255,255,0.6)",
+                  color: active === date ? "#fff" : "var(--wedding-text)",
+                  border: `1px solid ${active === date ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
+                  boxShadow: active === date ? "0 2px 12px rgba(185,151,91,0.20)" : "none",
+                }}
+                data-testid={`event-date-${date}`}
+              >
+                <Calendar size={11} />
+                {date}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {activeEvents.map((event, idx) => (
-            <motion.div
-              key={event.id}
-              className="royal-card rounded-xl p-6 sm:p-8 relative"
-              style={{
-                border: event.isMainEvent
-                  ? "2px solid var(--wedding-accent)"
-                  : "1px solid var(--wedding-border)",
-              }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              data-testid={`event-card-${event.id}`}
-            >
-              <RoyalFrame>
+        <div className="grid gap-5 md:grid-cols-2">
+          {activeEvents.map((event, idx) => {
+            const EventIcon = getEventIcon(event.title);
+            return (
+              <motion.div
+                key={event.id}
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: "var(--wedding-card-bg)",
+                  border: event.isMainEvent ? "2px solid var(--wedding-accent)" : "1px solid var(--wedding-border)",
+                  boxShadow: event.isMainEvent
+                    ? "0 4px 24px rgba(176,132,72,0.14)"
+                    : "0 2px 12px rgba(46,43,39,0.05)",
+                }}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                data-testid={`event-card-${event.id}`}
+              >
+                {/* Top accent bar */}
                 {event.isMainEvent && (
-                  <div className="flex justify-center mb-4">
-                    <span
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] tracking-[0.2em] uppercase"
-                      style={{ background: "var(--wedding-accent)", color: "#fff" }}
-                    >
-                      Main Event
-                    </span>
-                  </div>
+                  <div className="h-[3px]" style={{
+                    background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
+                  }} />
                 )}
-                <h3 className="font-serif text-xl font-semibold mb-3 text-center" style={{ color: "var(--wedding-text)" }}>
-                  {event.title}
-                </h3>
-                <ThinGoldDivider className="mb-4" />
-                <p className="text-sm mb-4 leading-relaxed text-center" style={{ color: "var(--wedding-muted)" }}>
-                  {event.description}
-                </p>
-                <div className="space-y-2 text-sm" style={{ color: "var(--wedding-text)" }}>
-                  <p className="flex items-center gap-2">
-                    <Clock size={14} style={{ color: "var(--wedding-accent)" }} />
-                    {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                    {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <MapPin size={14} style={{ color: "var(--wedding-accent)" }} />
-                    {event.venueName}
-                  </p>
-                  {event.dressCode && (
-                    <p className="text-xs mt-2" style={{ color: "var(--wedding-muted)" }}>
-                      Dress Code: {event.dressCode}
+
+                <div className="p-5 sm:p-6">
+                  {/* Icon + title */}
+                  <div className="flex items-start gap-4 mb-4">
+                    <div
+                      className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+                      style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+                    >
+                      <EventIcon size={18} style={{ color: "var(--wedding-accent)" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        {event.isMainEvent && (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] tracking-[0.2em] uppercase"
+                            style={{ background: "var(--wedding-accent)", color: "#fff" }}
+                          >
+                            Main Event
+                          </span>
+                        )}
+                        {event.side && event.side !== "both" && (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] tracking-[0.2em] uppercase"
+                            style={{
+                              background: event.side === "bride" ? "rgba(139,0,0,0.12)" : "rgba(176,132,72,0.15)",
+                              color: event.side === "bride" ? "#8B0000" : "var(--wedding-accent)",
+                              border: `1px solid ${event.side === "bride" ? "rgba(139,0,0,0.25)" : "var(--wedding-border)"}`,
+                            }}
+                          >
+                            {event.side === "bride" ? "Bride's" : "Groom's"} side
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-serif text-lg font-semibold leading-tight" style={{ color: "var(--wedding-text)" }}>
+                        {event.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <ThinGoldDivider className="mb-4" />
+
+                  {event.description && (
+                    <p className="text-sm mb-4 leading-[1.7]" style={{ color: "var(--wedding-muted)" }}>
+                      {event.description}
                     </p>
                   )}
-                </div>
 
-                {(event.howToReach || event.accommodation || event.distanceInfo || event.contactPerson) && (
-                  <details className="mt-4">
-                    <summary
-                      className="text-xs tracking-wide uppercase cursor-pointer flex items-center gap-1"
-                      style={{ color: "var(--wedding-accent)" }}
-                    >
-                      <ChevronRight size={12} />
-                      More Details
-                    </summary>
-                    <div className="mt-3 space-y-2 text-xs" style={{ color: "var(--wedding-muted)" }}>
-                      {event.howToReach && <p><strong>How to Reach:</strong> {event.howToReach}</p>}
-                      {event.accommodation && <p><strong>Accommodation:</strong> {event.accommodation}</p>}
-                      {event.distanceInfo && <p><strong>Distance:</strong> {event.distanceInfo}</p>}
-                      {event.contactPerson && <p><strong>Contact:</strong> {event.contactPerson}</p>}
+                  {/* Info rows */}
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <Clock size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
+                      <span style={{ color: "var(--wedding-text)" }}>
+                        {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                        {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
+                      </span>
                     </div>
-                  </details>
-                )}
+                    {event.venueName && (
+                      <div className="flex items-center gap-2.5">
+                        <MapPin size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
+                        <span style={{ color: "var(--wedding-text)" }}>{event.venueName}</span>
+                      </div>
+                    )}
+                    {event.dressCode && (
+                      <div className="flex items-center gap-2.5">
+                        <Shirt size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
+                        <span className="text-xs" style={{ color: "var(--wedding-muted)" }}>Dress Code: {event.dressCode}</span>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="mt-4 flex gap-2">
-                  <a
-                    href={`/api/events/${event.id}/calendar`}
-                    className="text-xs px-3 py-1.5 rounded transition-colors"
-                    style={{
-                      border: "1px solid var(--wedding-border)",
-                      color: "var(--wedding-accent)",
-                    }}
-                    data-testid={`download-ics-${event.id}`}
-                  >
-                    <Calendar size={12} className="inline mr-1" />
-                    Add to Calendar
-                  </a>
-                  {event.venueMapUrl && (
+                  {/* Action buttons */}
+                  <div className="flex gap-2 flex-wrap">
                     <a
-                      href={event.venueMapUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs px-3 py-1.5 rounded transition-colors"
-                      style={{
-                        border: "1px solid var(--wedding-border)",
-                        color: "var(--wedding-accent)",
-                      }}
-                      data-testid={`map-link-${event.id}`}
+                      href={`/api/events/${event.id}/calendar`}
+                      className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                      style={{ border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
+                      data-testid={`download-ics-${event.id}`}
                     >
-                      <ExternalLink size={12} className="inline mr-1" />
-                      View Map
+                      <Calendar size={11} />
+                      Add to Calendar
                     </a>
-                  )}
+                    {event.venueMapUrl && (
+                      <a
+                        href={event.venueMapUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={{ border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
+                        data-testid={`map-link-${event.id}`}
+                      >
+                        <ExternalLink size={11} />
+                        View Map
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </RoyalFrame>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -414,96 +542,236 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
 }
 
 function VenueSection({ venueList }: { venueList: Venue[] }) {
-  if (venueList.length === 0) return null;
+  const [activeVenueIdx, setActiveVenueIdx] = useState(0);
+  const [activeSubSection, setActiveSubSection] = useState<"map" | "stay" | "reach">("map");
+
+  const venueLabels = ["Wedding", "Reception"];
+  const venueCities = ["Siliguri", "Faridabad"];
+  const activeVenue = venueList[activeVenueIdx] ?? null;
+
+  const travelModes = [
+    { icon: Plane, label: "By Air" },
+    { icon: Train, label: "By Train" },
+    { icon: Car, label: "By Road" },
+    { icon: Navigation, label: "By Cab" },
+  ];
+
+  const subTabs: { id: "map" | "stay" | "reach"; label: string; icon: typeof MapPin }[] = [
+    { id: "map", label: "Venue Map", icon: MapPin },
+    { id: "stay", label: "Accommodation", icon: BedDouble },
+    { id: "reach", label: "How to Reach", icon: Navigation },
+  ];
 
   return (
-    <section id="venue" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="venue-section">
-      <div className="max-w-4xl mx-auto">
+    <section id="venue" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="venue-section">
+      <div className="max-w-3xl mx-auto">
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
-            Venue & Travel
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <Building size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            Getting There
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
+            Venue &amp; Travel
           </h2>
-          <GoldDivider />
+          <SimpleDivider />
         </motion.div>
 
-        {venueList.map((venue) => (
-          <motion.div
-            key={venue.id}
-            className="rounded-xl p-6 sm:p-8 mb-8"
-            style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            data-testid={`venue-card-${venue.id}`}
-          >
-            <h3 className="font-serif text-2xl font-semibold mb-2" style={{ color: "var(--wedding-text)" }}>
-              {venue.name}
-            </h3>
-            <p className="flex items-center gap-2 text-sm mb-4" style={{ color: "var(--wedding-muted)" }}>
-              <MapPin size={14} /> {venue.address}
-            </p>
-            {venue.description && (
-              <p className="text-sm mb-6 leading-relaxed" style={{ color: "var(--wedding-text)" }}>{venue.description}</p>
-            )}
+        {/* ── Venue Tab Switcher (Wedding / Reception) ── */}
+        <div className="flex gap-3 justify-center mb-6 flex-wrap">
+          {[0, 1].map((i) => (
+            <button
+              key={i}
+              onClick={() => { setActiveVenueIdx(i); setActiveSubSection("map"); }}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: activeVenueIdx === i ? "var(--wedding-accent)" : "var(--wedding-card-bg)",
+                color: activeVenueIdx === i ? "#fff" : "var(--wedding-text)",
+                border: `1px solid ${activeVenueIdx === i ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
+                boxShadow: activeVenueIdx === i ? "0 3px 16px rgba(176,132,72,0.22)" : "none",
+              }}
+              data-testid={`venue-tab-${i}`}
+            >
+              <MapPin size={14} />
+              {venueLabels[i]}
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: activeVenueIdx === i ? "rgba(255,255,255,0.2)" : "rgba(176,132,72,0.10)",
+                  color: activeVenueIdx === i ? "#fff" : "var(--wedding-accent)",
+                }}
+              >
+                {venueCities[i]}
+              </span>
+            </button>
+          ))}
+        </div>
 
-            {venue.mapEmbedUrl && (
-              <div className="rounded-lg overflow-hidden mb-6 aspect-video">
-                <iframe
-                  src={venue.mapEmbedUrl}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  title={`Map - ${venue.name}`}
-                />
+        {/* ── Sub-Section Tab Buttons ── */}
+        <div className="flex gap-2 justify-center mb-7 flex-wrap">
+          {subTabs.map(({ id, label, icon: SubIcon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveSubSection(id)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all"
+              style={{
+                background: activeSubSection === id ? "rgba(176,132,72,0.15)" : "var(--wedding-card-bg)",
+                color: activeSubSection === id ? "var(--wedding-accent)" : "var(--wedding-muted)",
+                border: `1px solid ${activeSubSection === id ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
+                fontWeight: activeSubSection === id ? 600 : 400,
+              }}
+              data-testid={`venue-sub-${id}`}
+            >
+              <SubIcon size={13} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Content Panel ── */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${activeVenueIdx}-${activeSubSection}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+          >
+            {activeVenue ? (
+              <div
+                className="rounded-2xl p-5 sm:p-6"
+                style={{
+                  background: "var(--wedding-card-bg)",
+                  border: "1px solid var(--wedding-border)",
+                  boxShadow: "0 4px 20px rgba(46,43,39,0.07)",
+                }}
+              >
+                {/* Venue name + address header */}
+                <div className="mb-4">
+                  <p className="font-serif text-lg font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
+                    {activeVenue.name}
+                  </p>
+                  <p className="text-sm flex items-start gap-2" style={{ color: "var(--wedding-muted)" }}>
+                    <MapPin size={13} className="mt-0.5 flex-shrink-0" style={{ color: "var(--wedding-accent)" }} />
+                    {activeVenue.address}
+                  </p>
+                </div>
+
+                <div className="h-px mb-4" style={{ background: "var(--wedding-border)" }} />
+
+                {/* ── Venue Map tab ── */}
+                {activeSubSection === "map" && (
+                  <div>
+                    {activeVenue.mapEmbedUrl && (
+                      <div className="rounded-xl overflow-hidden mb-4 border" style={{ borderColor: "var(--wedding-border)" }}>
+                        <iframe
+                          src={activeVenue.mapEmbedUrl}
+                          width="100%"
+                          height="240"
+                          style={{ border: 0, display: "block" }}
+                          allowFullScreen
+                          loading="lazy"
+                          title={`Map - ${activeVenue.name}`}
+                        />
+                      </div>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      {activeVenue.mapUrl && (
+                        <a
+                          href={activeVenue.mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-medium transition-opacity hover:opacity-85"
+                          style={{ background: "var(--wedding-accent)", color: "#fff" }}
+                        >
+                          <Navigation size={12} /> Get Directions
+                        </a>
+                      )}
+                      {activeVenue.contactInfo && (
+                        <a
+                          href={`tel:${activeVenue.contactInfo.replace(/\D/g, "")}`}
+                          className="inline-flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-medium transition-opacity hover:opacity-85"
+                          style={{ background: "var(--wedding-card-bg)", color: "var(--wedding-text)", border: "1px solid var(--wedding-border)" }}
+                        >
+                          <Phone size={12} /> Call for Help
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Accommodation tab ── */}
+                {activeSubSection === "stay" && (
+                  <div>
+                    {activeVenue.accommodation ? (
+                      <div
+                        className="rounded-xl p-4 text-sm leading-[1.8] whitespace-pre-line"
+                        style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
+                      >
+                        {activeVenue.accommodation}
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
+                        Accommodation details will be shared soon. Please contact us for suggestions.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── How to Reach tab ── */}
+                {activeSubSection === "reach" && (
+                  <div>
+                    <div className="flex gap-2 flex-wrap mb-4">
+                      {travelModes.map(({ icon: ModeIcon, label }) => (
+                        <div
+                          key={label}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                          style={{ background: "rgba(176,132,72,0.08)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
+                        >
+                          <ModeIcon size={12} style={{ color: "var(--wedding-accent)" }} />
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+                    {activeVenue.directions ? (
+                      <div
+                        className="rounded-xl p-4 text-sm leading-[1.85] whitespace-pre-line"
+                        style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
+                      >
+                        {activeVenue.directions}
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
+                        Travel details coming soon. Feel free to reach out for directions.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Placeholder when venue data not yet added to DB */
+              <div
+                className="rounded-2xl p-8 text-center"
+                style={{ background: "var(--wedding-card-bg)", border: "1px dashed var(--wedding-border)" }}
+              >
+                <Building size={28} className="mx-auto mb-3" style={{ color: "var(--wedding-muted)", opacity: 0.5 }} />
+                <p className="font-serif text-base mb-1" style={{ color: "var(--wedding-text)" }}>
+                  {venueLabels[activeVenueIdx]} Venue
+                </p>
+                <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                  Details for the {venueCities[activeVenueIdx]} venue will be announced shortly.
+                </p>
               </div>
             )}
-
-            <div className="grid sm:grid-cols-2 gap-6 text-sm">
-              {venue.directions && (
-                <div>
-                  <h4 className="font-semibold mb-2 text-xs tracking-[0.15em] uppercase" style={{ color: "var(--wedding-accent)" }}>
-                    Travel Directions
-                  </h4>
-                  <p className="leading-relaxed whitespace-pre-line" style={{ color: "var(--wedding-muted)" }}>{venue.directions}</p>
-                </div>
-              )}
-              {venue.accommodation && (
-                <div>
-                  <h4 className="font-semibold mb-2 text-xs tracking-[0.15em] uppercase" style={{ color: "var(--wedding-accent)" }}>
-                    Accommodation
-                  </h4>
-                  <p className="leading-relaxed whitespace-pre-line" style={{ color: "var(--wedding-muted)" }}>{venue.accommodation}</p>
-                </div>
-              )}
-            </div>
-
-            {venue.contactInfo && (
-              <p className="mt-4 text-xs" style={{ color: "var(--wedding-muted)" }}>
-                <strong>Contact:</strong> {venue.contactInfo}
-              </p>
-            )}
-
-            {venue.mapUrl && (
-              <a
-                href={venue.mapUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 mt-4 text-xs px-4 py-2 rounded"
-                style={{ background: "var(--wedding-accent)", color: "#fff" }}
-                data-testid={`venue-map-${venue.id}`}
-              >
-                <MapPin size={12} /> Open in Google Maps
-              </a>
-            )}
           </motion.div>
-        ))}
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -699,7 +967,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
   const rsvpStatus = form.watch("rsvpStatus");
 
   return (
-    <section id="rsvp" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="rsvp-section">
+    <section id="rsvp" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="rsvp-section">
       <div className="max-w-lg mx-auto">
         <motion.div
           className="text-center mb-10"
@@ -710,7 +978,7 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
             RSVP
           </h2>
-          <GoldDivider />
+          <SimpleDivider />
           <p className="text-sm mt-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
             We would be honoured to have you celebrate with us. Please let us know if you can make it.
           </p>
@@ -1029,121 +1297,469 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
   );
 }
 
-function WardrobePlannerSection() {
-  const events = [
-    {
-      name: "Haldi",
-      date: "Dec 12",
-      suggestions: {
-        men: ["Yellow kurta-pajama", "Light cotton fabrics", "Avoid heavy embellishments"],
-        women: ["Yellow or green saree/suit", "Traditional jewelry", "Comfortable footwear"]
-      }
-    },
-    {
-      name: "Engagement & Sangeet",
-      date: "Dec 12 Evening",
-      suggestions: {
-        men: ["Sherwani or Indo-western", "Bright colors welcome", "Statement accessories"],
-        women: ["Lehenga, Anarkali, or Saree", "Bold colors and designs", "Dance-friendly outfit"]
-      }
-    },
-    {
-      name: "Wedding Ceremony",
-      date: "Dec 13",
-      suggestions: {
-        men: ["Traditional dhoti-kurta or sherwani", "Cream, gold, or maroon", "Traditional jewelry"],
-        women: ["Traditional Bengali saree", "Red, maroon, or gold tones", "Heavy jewelry"]
-      }
-    },
-    {
-      name: "Wedding Reception",
-      date: "Dec 15",
-      suggestions: {
-        men: ["Formal sherwani or suit", "Elegant accessories", "Polished shoes"],
-        women: ["Designer saree or lehenga", "Statement jewelry", "Elegant clutch"]
-      }
-    }
-  ];
+function getWardrobeTip(title: string, dressCode: string | null | undefined): {
+  style: string; desc: string; tip: string; footwear: string;
+} {
+  const t = title.toLowerCase();
+  if (t.includes("haldi")) return {
+    style: "Sunlit Traditional",
+    desc: dressCode || "Bright yellows & greens — airy and full of life.",
+    tip: "A light Anarkali or comfortable Kurta set is perfect. Choose breathable cotton or linen fabrics — you'll be seated for a while.",
+    footwear: "Flats or Juttis — easy to remove for the rituals.",
+  };
+  if (t.includes("sangeet")) return {
+    style: "Festive Evening Glam",
+    desc: dressCode || "Bold, shimmery, and made for dancing all night.",
+    tip: "A vibrant Lehenga, Indo-western fusion, or a sharply-cut Sherwani works beautifully. Make sure you can move freely!",
+    footwear: "Block heels or Mojari — stylish yet stable on the dance floor.",
+  };
+  if (t.includes("engagement")) return {
+    style: "Festive & Celebratory",
+    desc: dressCode || "Bright, cheerful attire for a joyous occasion.",
+    tip: "Opt for vibrant Indian formals. Semi-formal Indian wear works well — think Lehenga, co-ord sets, or a smart Kurta.",
+    footwear: "Block heels, Juttis, or dress flats.",
+  };
+  if (t.includes("reception")) return {
+    style: "Black-tie Indian Elegance",
+    desc: dressCode || "Formal, richly embellished, and statement-worthy.",
+    tip: "A designer saree, embellished Lehenga, or a formal Sherwani with accessories. This is the evening to truly shine.",
+    footwear: "Embellished heels or Nagra shoes — polished and formal.",
+  };
+  if (t.includes("vidai")) return {
+    style: "Elegant & Emotional",
+    desc: dressCode || "Grace and tradition for a touching farewell.",
+    tip: "Traditional attire befitting a meaningful ceremony. Subtle, elegant colours are preferred over very bright ones.",
+    footwear: "Comfortable flats or traditional footwear.",
+  };
+  if (t.includes("wedding") || t.includes("ceremony") || t.includes("biye")) return {
+    style: "Elegant Traditional Wear",
+    desc: dressCode || "Modest and comfortable for the holy ceremony.",
+    tip: "Traditional attire — silk saree with heavy border, or a dhoti-kurta. Expect long rituals while seated; comfort is key.",
+    footwear: "Comfortable flats or Juttis — rituals require removing footwear.",
+  };
+  return {
+    style: dressCode ?? "Smart Indian Formals",
+    desc: dressCode ?? "Dress elegantly for the occasion.",
+    tip: `Follow the dress code: ${dressCode ?? "Indian formals"}. When in doubt, err on the side of traditional.`,
+    footwear: "Comfortable footwear appropriate for the event.",
+  };
+}
+
+function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
+  const [activeTip, setActiveTip] = useState<number | null>(null);
+
+  const wardrobeItems = events.map((ev) => {
+    const { style, desc, tip, footwear } = getWardrobeTip(ev.title, ev.dressCode);
+    const date = new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+    return {
+      id: ev.id,
+      event: ev.title,
+      date,
+      icon: getEventIcon(ev.title),
+      style,
+      desc,
+      tip,
+      footwear,
+    };
+  });
 
   return (
-    <section id="wardrobe" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="wardrobe-section">
+    <section id="wardrobe" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="wardrobe-section">
       <div className="max-w-4xl mx-auto">
         <motion.div
-          className="text-center mb-12"
+          className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <Shirt size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            Dress to Impress
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Wardrobe Planner
           </h2>
-          <GoldDivider />
-          <p className="text-sm mt-4" style={{ color: "var(--wedding-muted)" }}>
-            Dress code suggestions for each event to help you plan your wardrobe
+          <SimpleDivider />
+          <p className="text-xs mt-4" style={{ color: "var(--wedding-muted)" }}>
+            Tap the <Info size={11} className="inline mx-0.5" style={{ color: "var(--wedding-accent)" }} /> for squad style tips
           </p>
         </motion.div>
 
-        <div className="grid gap-6">
-          {events.map((event, idx) => (
-            <motion.div
-              key={event.name}
-              className="p-6 rounded-xl"
-              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-serif text-xl font-semibold" style={{ color: "var(--wedding-text)" }}>
-                    {event.name}
-                  </h3>
-                  <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>{event.date}</p>
-                </div>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "var(--wedding-accent)", opacity: 0.2 }}>
-                  <span className="text-lg" style={{ color: "var(--wedding-accent)" }}>👔</span>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {wardrobeItems.map((item, idx) => {
+            const ItemIcon = item.icon;
+            const isOpen = activeTip === idx;
+            return (
+              <motion.div
+                key={item.id}
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: "var(--wedding-card-bg)",
+                  border: "1px solid var(--wedding-border)",
+                  boxShadow: isOpen ? "0 4px 20px rgba(46,43,39,0.08)" : "0 1px 6px rgba(46,43,39,0.04)",
+                }}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.07 }}
+              >
+                {/* Card header row */}
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  {/* Event icon */}
+                  <div
+                    className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
+                    style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+                  >
+                    <ItemIcon size={16} style={{ color: "var(--wedding-accent)" }} />
+                  </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--wedding-accent)" }}>For Men</h4>
-                  <ul className="space-y-1">
-                    {event.suggestions.men.map((item, i) => (
-                      <li key={i} className="text-xs flex items-start gap-2" style={{ color: "var(--wedding-muted)" }}>
-                        <span style={{ color: "var(--wedding-accent)" }}>•</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] tracking-[0.15em] uppercase" style={{ color: "var(--wedding-accent)", opacity: 0.7 }}>
+                      {item.event} · {item.date}
+                    </p>
+                    <p className="font-serif text-sm font-semibold truncate" style={{ color: "var(--wedding-text)" }}>
+                      {item.style}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: "var(--wedding-muted)" }}>
+                      {item.desc}
+                    </p>
+                  </div>
+
+                  {/* Info button */}
+                  <button
+                    onClick={() => setActiveTip(isOpen ? null : idx)}
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all"
+                    style={{
+                      background: isOpen ? "var(--wedding-accent)" : "rgba(176,132,72,0.10)",
+                      border: "1px solid var(--wedding-border)",
+                      color: isOpen ? "#fff" : "var(--wedding-accent)",
+                    }}
+                    aria-label="Show style tip"
+                  >
+                    <Info size={13} />
+                  </button>
                 </div>
-                <div>
-                  <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--wedding-accent)" }}>For Women</h4>
-                  <ul className="space-y-1">
-                    {event.suggestions.women.map((item, i) => (
-                      <li key={i} className="text-xs flex items-start gap-2" style={{ color: "var(--wedding-muted)" }}>
-                        <span style={{ color: "var(--wedding-accent)" }}>•</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+
+                {/* Expanded tip panel */}
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="px-4 pt-0 pb-4 text-xs space-y-3"
+                        style={{ borderTop: "1px solid var(--wedding-border)" }}
+                      >
+                        <div className="pt-3">
+                          <p className="font-semibold mb-1 flex items-center gap-1.5" style={{ color: "var(--wedding-accent)" }}>
+                            <Users size={11} /> Squad Style Tip
+                          </p>
+                          <p className="leading-[1.75]" style={{ color: "var(--wedding-muted)" }}>{item.tip}</p>
+                        </div>
+                        <div
+                          className="rounded-lg px-3 py-2"
+                          style={{ background: "rgba(176,132,72,0.06)", border: "1px solid rgba(176,132,72,0.15)" }}
+                        >
+                          <p className="font-semibold mb-0.5 flex items-center gap-1.5" style={{ color: "var(--wedding-accent)" }}>
+                            <Navigation size={11} /> Recommended Footwear
+                          </p>
+                          <p style={{ color: "var(--wedding-muted)" }}>{item.footwear}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
 
+        <motion.p
+          className="text-center text-xs mt-6"
+          style={{ color: "var(--wedding-muted)", opacity: 0.65 }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 0.65 }}
+          viewport={{ once: true }}
+        >
+          These are friendly suggestions — wear what makes you comfortable and confident!
+        </motion.p>
+      </div>
+    </section>
+  );
+}
+
+function FindByInviteSection() {
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<any[] | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
+
+  const handleSearch = async () => {
+    const name = query.trim();
+    if (name.length < 2) return;
+    setSearching(true);
+    setResults(null);
+    setSelectedGuest(null);
+    try {
+      const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+      } else {
+        setResults([]);
+      }
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const notFound = results !== null && results.length === 0;
+  const found = results !== null && results.length > 0;
+
+  return (
+    <section id="find-invite" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="find-invite-section">
+      <div className="max-w-lg mx-auto">
         <motion.div
-          className="mt-8 p-4 rounded-lg text-center"
-          style={{ background: "rgba(212, 175, 55, 0.1)", border: "1px solid var(--wedding-border)" }}
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <Search size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            Check Your Invite
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
+            Find Your Invitation
+          </h2>
+          <SimpleDivider />
+          <p className="text-sm mt-4 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+            Search your name to see your guest invite status
+          </p>
+        </motion.div>
+
+        {/* Search input */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative flex gap-2 mb-4"
+        >
+          <div className="flex-1 relative">
+            <Search
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{ color: "var(--wedding-accent)", opacity: 0.55 }}
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="Enter your full name..."
+              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
+              style={{
+                background: "var(--wedding-card-bg)",
+                border: "1px solid var(--wedding-border)",
+                color: "var(--wedding-text)",
+              }}
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={searching || query.trim().length < 2}
+            className="px-5 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
+            style={{ background: "var(--wedding-accent)", color: "#fff" }}
+          >
+            {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            Search
+          </button>
+        </motion.div>
+
+        {/* Results */}
+        <AnimatePresence mode="wait">
+          {notFound && (
+            <motion.div
+              key="not-found"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="rounded-xl p-5 text-center"
+              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+            >
+              <User size={28} className="mx-auto mb-3" style={{ color: "var(--wedding-accent)", opacity: 0.4 }} />
+              <p className="font-serif text-base font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
+                We couldn't find your name in our guest list.
+              </p>
+              <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                Please contact us if you believe this is an error.
+              </p>
+            </motion.div>
+          )}
+
+          {found && !selectedGuest && (
+            <motion.div
+              key="found-list"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="space-y-2"
+            >
+              <p className="text-xs text-center mb-3" style={{ color: "var(--wedding-muted)" }}>
+                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to see your invite
+              </p>
+              {results!.map((guest) => (
+                <button
+                  key={guest.id}
+                  onClick={() => setSelectedGuest(guest)}
+                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:scale-[1.01]"
+                  style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: "rgba(176,132,72,0.10)", color: "var(--wedding-accent)" }}
+                  >
+                    <User size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm" style={{ color: "var(--wedding-text)" }}>{guest.name}</p>
+                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                      {guest.rsvpStatus === "confirmed" ? "✓ RSVP Confirmed" : guest.rsvpStatus === "declined" ? "✗ Declined" : "RSVP Pending"}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
+                </button>
+              ))}
+            </motion.div>
+          )}
+
+          {selectedGuest && (
+            <motion.div
+              key="guest-detail"
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              className="rounded-2xl overflow-hidden"
+              style={{ background: "var(--wedding-card-bg)", border: "2px solid var(--wedding-accent)", boxShadow: "0 8px 40px rgba(176,132,72,0.18)" }}
+            >
+              {/* Gold top bar */}
+              <div className="h-[4px]" style={{
+                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
+              }} />
+
+              <div className="p-6 sm:p-8 text-center">
+                {/* Icon */}
+                <div
+                  className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
+                  style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+                >
+                  <Heart size={28} style={{ color: "var(--wedding-accent)" }} />
+                </div>
+
+                <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{ color: "var(--wedding-accent)", opacity: 0.7 }}>
+                  You're on the list!
+                </p>
+                <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3 leading-tight" style={{ color: "var(--wedding-text)" }}>
+                  Hello, {selectedGuest.name.split(" ")[0]}!
+                </h3>
+
+                <ThinGoldDivider className="mb-4" />
+
+                <p className="text-sm leading-[1.75] mb-5" style={{ color: "var(--wedding-muted)" }}>
+                  We can't wait to celebrate with you at our wedding.{" "}
+                  {selectedGuest.rsvpStatus === "confirmed"
+                    ? "Your RSVP is confirmed — we're so excited to see you!"
+                    : selectedGuest.rsvpStatus === "declined"
+                    ? "We see you've declined, but you're always welcome to reach out."
+                    : "Your invite is ready — please complete your RSVP below."}
+                </p>
+
+                {/* Guest details card */}
+                <div
+                  className="rounded-xl px-4 py-4 mb-5 text-left space-y-2"
+                  style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)" }}
+                >
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <User size={12} style={{ color: "var(--wedding-accent)" }} />
+                    <span style={{ color: "var(--wedding-muted)" }}>{selectedGuest.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <Users size={12} style={{ color: "var(--wedding-accent)" }} />
+                    <span style={{ color: "var(--wedding-muted)" }}>
+                      {selectedGuest.adultsCount ?? 1} Adult{(selectedGuest.adultsCount ?? 1) > 1 ? "s" : ""}
+                      {selectedGuest.childrenCount > 0 ? `, ${selectedGuest.childrenCount} Child${selectedGuest.childrenCount > 1 ? "ren" : ""}` : ""}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <Check size={12} style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-accent)" }} />
+                    <span className="capitalize" style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-muted)" }}>
+                      {selectedGuest.rsvpStatus === "confirmed" ? "RSVP Confirmed" : selectedGuest.rsvpStatus === "declined" ? "Declined" : "RSVP Pending"}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { setSelectedGuest(null); setQuery(""); setResults(null); }}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-all"
+                  style={{ background: "transparent", color: "var(--wedding-accent)", border: "1px solid var(--wedding-border)" }}
+                >
+                  Search for Another Guest
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom contact links */}
+        <motion.div
+          className="mt-6 text-center space-y-3"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-            💡 These are suggestions to help you prepare. Feel free to wear what makes you comfortable and confident!
-          </p>
+          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>Can't find your name?</p>
+          <div className="flex flex-wrap justify-center gap-2 text-xs">
+            <a
+              href="tel:+919876543210"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
+              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
+            >
+              <Phone size={11} /> Contact Kaustav (Groom Side)
+            </a>
+            <a
+              href="tel:+919876543211"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
+              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
+            >
+              <Phone size={11} /> Contact Himasree (Bride Side)
+            </a>
+          </div>
+          <button
+            onClick={() => {
+              const el = document.getElementById("rsvp");
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                history.replaceState(null, "", window.location.pathname);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg transition-opacity hover:opacity-80"
+            style={{ background: "none", border: "none", color: "var(--wedding-accent)", borderBottom: "1px solid var(--wedding-accent)", cursor: "pointer" }}
+          >
+            Skip to RSVP <ChevronRight size={11} />
+          </button>
         </motion.div>
       </div>
     </section>
@@ -1154,7 +1770,7 @@ function FaqsSection({ faqList }: { faqList: Faq[] }) {
   if (faqList.length === 0) return null;
 
   return (
-    <section id="faqs" className="wedding-section" style={{ background: "var(--wedding-bg)" }} data-testid="faqs-section">
+    <section id="faqs" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="faqs-section">
       <div className="max-w-3xl mx-auto">
         <motion.div
           className="text-center mb-12"
@@ -1165,7 +1781,7 @@ function FaqsSection({ faqList }: { faqList: Faq[] }) {
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
             Frequently Asked Questions
           </h2>
-          <GoldDivider />
+          <SimpleDivider />
         </motion.div>
 
         <Accordion type="single" collapsible className="space-y-3">
@@ -1195,99 +1811,63 @@ function FooterSection() {
   return (
     <footer
       className="relative overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, var(--wedding-bg) 0%, var(--wedding-card-bg) 100%)",
-      }}
+      style={{ background: "var(--wedding-bg)" }}
       data-testid="footer"
     >
-      {/* Ornamental top border */}
+      {/* Top gold line */}
       <div className="h-px" style={{
         background: "linear-gradient(90deg, transparent 0%, var(--wedding-accent) 50%, transparent 100%)",
-        opacity: 0.3
+        opacity: 0.35
       }} />
 
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        {/* Crest & Divider */}
-        <div className="text-center mb-8">
-          <div className="opacity-70">
-            <KHCrest size={80} className="mx-auto mb-6" />
-          </div>
-          <ThinGoldDivider className="mb-6" />
-        </div>
-
-        {/* Main Content */}
-        <div className="text-center space-y-3 mb-8">
-          <h3 className="font-serif text-2xl tracking-wide" style={{ color: "var(--wedding-text)" }}>
-            Kaustav & Himasree
-          </h3>
-          <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
-            December 13, 2026 • Kolkata, West Bengal
-          </p>
-        </div>
-
-        {/* Decorative Separator */}
-        <div className="flex items-center justify-center gap-4 mb-8">
-          <div className="w-20 h-px" style={{ background: "var(--wedding-accent)", opacity: 0.3 }} />
-          <Heart size={16} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
-          <div className="w-20 h-px" style={{ background: "var(--wedding-accent)", opacity: 0.3 }} />
-        </div>
-
-        {/* Color Palette Display */}
-        <div className="flex justify-center gap-3 mb-8">
-          <div
-            className="w-12 h-12 rounded-full border-2 shadow-sm"
-            style={{
-              background: "var(--wedding-bg)",
-              borderColor: "var(--wedding-border)"
-            }}
-            title="Background"
-          />
-          <div
-            className="w-12 h-12 rounded-full border-2 shadow-sm"
-            style={{
-              background: "var(--wedding-accent)",
-              borderColor: "var(--wedding-accent)"
-            }}
-            title="Accent"
-          />
-          <div
-            className="w-12 h-12 rounded-full border-2 shadow-sm"
-            style={{
-              background: "var(--wedding-text)",
-              borderColor: "var(--wedding-text)"
-            }}
-            title="Text"
+      <div className="max-w-md mx-auto px-4 py-12 text-center">
+        {/* Golden heart icon */}
+        <div className="flex justify-center mb-5">
+          <Heart
+            size={32}
+            fill="var(--wedding-accent)"
+            style={{ color: "var(--wedding-accent)", filter: "drop-shadow(0 2px 8px rgba(176,132,72,0.35))" }}
           />
         </div>
 
-        {/* Footer Text */}
-        <div className="text-center space-y-2">
-          <p className="text-xs tracking-widest uppercase" style={{ color: "var(--wedding-muted)", opacity: 0.7 }}>
-            Made with love and blessings
-          </p>
-          <p className="text-xs" style={{ color: "var(--wedding-muted)", opacity: 0.5 }}>
-            © 2026 — All rights reserved
-          </p>
-        </div>
+        {/* Names */}
+        <h3 className="font-serif text-2xl sm:text-3xl font-bold tracking-wide mb-2" style={{ color: "var(--wedding-text)" }}>
+          Himasree &amp; Kaustav
+        </h3>
+
+        <p className="text-xs tracking-[0.3em] uppercase mb-6" style={{ color: "var(--wedding-muted)", opacity: 0.7 }}>
+          December 2026 &middot; Kolkata
+        </p>
+
+        <div className="h-px mx-auto max-w-[80px] mb-6" style={{ background: "linear-gradient(90deg, transparent, var(--wedding-accent), transparent)" }} />
+
+        <p className="text-[11px] tracking-widest uppercase" style={{ color: "var(--wedding-muted)", opacity: 0.5 }}>
+          Made with love &amp; blessings &middot; © 2026
+        </p>
       </div>
-
-      {/* Bottom Ornamental Border */}
-      <div className="h-1" style={{
-        background: "linear-gradient(90deg, transparent 0%, var(--wedding-accent) 50%, transparent 100%)",
-        opacity: 0.2
-      }} />
     </footer>
   );
 }
 
 export default function Home() {
-  const { sealOpened, setSealOpened } = useSeal();
   const { setMusicUrl, fadeIn, stop, setOnTrackEnd } = useMusic();
   const { setSide, side } = useWeddingTheme();
 
+  const [showCrest, setShowCrest] = useState(true);
   const [sideSelected, setSideSelected] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const currentPlaylistRef = useRef<string[]>([]);
+
+  /* ================= CHECK SAVED SIDE PREFERENCE ================= */
+
+  useEffect(() => {
+    // Restore the theme so the crest/data loads with the right colours,
+    // but never skip the crest — it always plays on every load / refresh.
+    const savedSide = localStorage.getItem('wedding-side-preference');
+    if (savedSide === 'groom' || savedSide === 'bride') {
+      setSide(savedSide);
+    }
+  }, []);
 
   /* ================= SINGLE PUBLIC QUERY ================= */
 
@@ -1374,7 +1954,7 @@ export default function Home() {
   /* ================= APPLY PLAYLIST WHEN IT CHANGES ================= */
 
   useEffect(() => {
-    if (!playlist.length) return;
+    if (!playlist.length || !sideSelected) return;
 
     currentPlaylistRef.current = playlist;
     setCurrentTrackIndex(0);
@@ -1382,10 +1962,11 @@ export default function Home() {
     stop();
     setMusicUrl(playlist[0]);
 
-    if (sealOpened) {
+    // Fade in music 1 second after side selection
+    setTimeout(() => {
       fadeIn();
-    }
-  }, [playlist, sealOpened, stop, setMusicUrl, fadeIn]);
+    }, 1000);
+  }, [playlist, sideSelected, stop, setMusicUrl, fadeIn]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -1425,13 +2006,7 @@ export default function Home() {
     }
   }, []);
 
-  /* ================= START MUSIC WHEN SEAL OPENS ================= */
-
-  useEffect(() => {
-    if (sealOpened && playlist.length > 0) {
-      setTimeout(() => fadeIn(), 500);
-    }
-  }, [sealOpened, playlist, fadeIn]);
+  /* ================= MUSIC STARTS ON SIDE SELECTION ================= */
 
   /* ================= CONDITIONAL RENDERS ================= */
 
@@ -1448,50 +2023,66 @@ export default function Home() {
 
   if (!config) return null;
 
-  if (!sideSelected) {
-    return (
-      <SideSelectionLanding
-        onSelectSide={(selectedSide) => {
-          setSide(selectedSide);
-          setSideSelected(true);
-        }}
-      />
-    );
-  }
+  /* ================= ENTRANCE SEQUENCE + MAIN (AnimatePresence fade transitions) ================= */
 
-  /* ================= MAIN RENDER ================= */
+  const handleCrestFinish = () => {
+    setShowCrest(false);
+    const savedSide = localStorage.getItem('wedding-side-preference');
+    if (savedSide === 'groom' || savedSide === 'bride') {
+      setSideSelected(true);
+    }
+  };
 
   return (
-    <>
-      {!sealOpened && (
-        <WaxSealIntro onSealOpen={() => setSealOpened(true)} />
+    <AnimatePresence mode="wait">
+      {showCrest ? (
+        <CrestIntro key="crest" onFinish={handleCrestFinish} />
+      ) : !sideSelected ? (
+        <SideSelectionLanding
+          key="selection"
+          onSelectSide={(selectedSide) => {
+            setSide(selectedSide);
+            localStorage.setItem('wedding-side-preference', selectedSide);
+            setSideSelected(true);
+          }}
+        />
+      ) : (
+        <motion.div
+          key="main"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Header />
+
+          <ViewingSideOverlay
+            onBackToSelection={() => {
+              stop();
+              localStorage.removeItem('wedding-side-preference');
+              setShowCrest(false);
+              setSideSelected(false);
+            }}
+            onSideChange={(newSide) => {
+              setSide(newSide);
+              localStorage.setItem('wedding-side-preference', newSide);
+            }}
+          />
+
+          <main>
+            <HeroSection config={config} isDateConfirmed={isDateConfirmed} />
+            <FindByInviteSection />
+            <EventsSection events={events} />
+            <VenueSection venueList={venueList} />
+            <WardrobePlannerSection events={allEvents} />
+            <StorySection milestones={milestones} />
+            <RsvpSection events={allEvents} />
+            <FaqsSection faqList={faqList} />
+            <FooterSection />
+          </main>
+
+          <FloatingContact />
+        </motion.div>
       )}
-
-      <Header />
-
-      <ViewingSideOverlay
-        onBackToSelection={() => {
-          stop();
-          setSideSelected(false);
-          setSealOpened(false);
-        }}
-        onSideChange={(newSide) => {
-          setSide(newSide);
-        }}
-      />
-
-      <main>
-        <HeroSection config={config} isDateConfirmed={isDateConfirmed} />
-        <StorySection milestones={milestones} />
-        <EventsSection events={events} />
-        <VenueSection venueList={venueList} />
-        <RsvpSection events={allEvents} />
-        <WardrobePlannerSection />
-        <FaqsSection faqList={faqList} />
-        <FooterSection />
-      </main>
-
-      <FloatingContact />
-    </>
+    </AnimatePresence>
   );
 }
