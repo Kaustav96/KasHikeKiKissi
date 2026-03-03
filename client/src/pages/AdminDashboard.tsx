@@ -923,6 +923,104 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
   //   }
   // }, [config]);
 
+  // Upload state tracking
+  const [uploadingTrack, setUploadingTrack] = useState<{
+    type: 'background' | 'groom' | 'bride';
+    index: number;
+  } | null>(null);
+
+  // Direct browser-to-Cloudinary upload (bypasses Railway timeout)
+  const handleFileUpload = async (
+    file: File,
+    type: 'background' | 'groom' | 'bride',
+    index: number
+  ) => {
+    try {
+      setUploadingTrack({ type, index });
+
+      // Validate file size (40MB limit)
+      if (file.size > 40 * 1024 * 1024) {
+        throw new Error('File too large (max 40MB)');
+      }
+
+      // 1️⃣ Get signed upload params from backend
+      const sigResponse = await fetch('/api/admin/cloudinary-signature', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!sigResponse.ok) {
+        throw new Error('Failed to get upload signature');
+      }
+
+      const sigData = await sigResponse.json();
+
+      // 2️⃣ Upload directly to Cloudinary (bypasses Railway)
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', sigData.apiKey);
+      formData.append('timestamp', sigData.timestamp.toString());
+      formData.append('signature', sigData.signature);
+      formData.append('folder', 'wedding-audio');
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${sigData.cloudName}/video/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error('Cloudinary upload failed');
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      if (!uploadData.secure_url) {
+        throw new Error('No URL returned from Cloudinary');
+      }
+
+      // 3️⃣ Apply compression transformation to URL
+      const compressedUrl = uploadData.secure_url.replace(
+        '/upload/',
+        '/upload/f_mp3,br_128k/'
+      );
+
+      // 4️⃣ Update form with compressed URL
+      if (type === 'background') {
+        musicUrlsModified.current.background = true;
+        const updated = [...form.backgroundMusicUrl];
+        updated[index] = { ...updated[index], url: compressedUrl };
+        setForm({ ...form, backgroundMusicUrl: updated });
+      } else if (type === 'groom') {
+        musicUrlsModified.current.groom = true;
+        const updated = [...form.groomMusicUrls];
+        updated[index] = { ...updated[index], url: compressedUrl };
+        setForm({ ...form, groomMusicUrls: updated });
+      } else if (type === 'bride') {
+        musicUrlsModified.current.bride = true;
+        const updated = [...form.brideMusicUrls];
+        updated[index] = { ...updated[index], url: compressedUrl };
+        setForm({ ...form, brideMusicUrls: updated });
+      }
+
+      toast({
+        title: "Upload successful",
+        description: `File uploaded and compressed (${(file.size / 1024 / 1024).toFixed(1)}MB → ~${(file.size / 1024 / 1024 / 10).toFixed(1)}MB)`
+      });
+    } catch (error: any) {
+      console.error('[ERROR] File upload failed:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message || 'Failed to upload file',
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingTrack(null);
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: (data: any) => {
       const payload: any = {
@@ -1128,32 +1226,40 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
                         updated[idx] = { ...updated[idx], url: e.target.value };
                         setForm({ ...form, backgroundMusicUrl: updated });
                       }}
-                      placeholder="Music URL or upload file below"
+                      placeholder="Direct audio URL (e.g., https://res.cloudinary.com/...audio.mp3)"
                       className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
                     />
-                    <input
-                      type="file"
-                      accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          musicUrlsModified.current.background = true;
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const dataUrl = event.target?.result as string;
-                            const updated = [...form.backgroundMusicUrl];
-                            updated[idx] = {
-                              ...updated[idx],
-                              url: dataUrl,
-                              name: updated[idx].name || file.name.replace(/\.[^/.]+$/, "")
-                            };
-                            setForm({ ...form, backgroundMusicUrl: updated });
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="text-xs text-muted-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:text-xs file:bg-secondary file:text-secondary-foreground"
-                    />
+                    {track.url && track.url.includes('drive.google.com') && track.url.includes('/view') && (
+                      <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                        ⚠️ <strong>Wrong Google Drive link!</strong> This is a sharing link, not direct audio.
+                        <br/>
+                        Convert: <code className="text-[10px]">drive.google.com/file/d/FILE_ID/view</code>
+                        <br/>
+                        To: <code className="text-[10px]">drive.google.com/uc?export=download&id=FILE_ID</code>
+                        <br/>
+                        Or better: Use Cloudinary upload below (no rate limits).
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <label className="flex-1">
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          disabled={uploadingTrack?.type === 'background' && uploadingTrack?.index === idx}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file, 'background', idx);
+                          }}
+                          className="w-full text-xs"
+                        />
+                      </label>
+                      {uploadingTrack?.type === 'background' && uploadingTrack?.index === idx && (
+                        <span className="text-xs text-blue-600">Uploading...</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Upload audio file (auto-compressed to 128kbps MP3 via Cloudinary)
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1168,9 +1274,14 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
             >
               + Add Background Music Track
             </button>
-            <p className="text-[10px] text-muted-foreground">
-              ⚠️ Note: Background music will override theme-specific music. Clear background to use groom/bride playlists.
-            </p>
+            <div className="text-[10px] space-y-1">
+              <p className="text-muted-foreground">
+                ⚠️ Note: Background music will override theme-specific music. Clear background to use groom/bride playlists.
+              </p>
+              <p className="text-amber-600 bg-amber-50 p-2 rounded">
+                💡 <strong>Pro tip:</strong> Convert audio to MP3 128kbps (3-5MB max) for best performance. Large files will crash browsers.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1246,32 +1357,34 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
                           updated[idx] = { ...updated[idx], url: e.target.value };
                           setForm({ ...form, groomMusicUrls: updated });
                         }}
-                        placeholder="Music URL or upload file below"
+                        placeholder="Direct audio URL (e.g., https://res.cloudinary.com/...audio.mp3)"
                         className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
                       />
-                      <input
-                        type="file"
-                        accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            musicUrlsModified.current.groom = true;
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const dataUrl = event.target?.result as string;
-                              const updated = [...form.groomMusicUrls];
-                              updated[idx] = {
-                                ...updated[idx],
-                                url: dataUrl,
-                                name: updated[idx].name || file.name.replace(/\.[^/.]+$/, "")
-                              };
-                              setForm({ ...form, groomMusicUrls: updated });
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="text-xs text-muted-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:text-xs file:bg-secondary file:text-secondary-foreground"
-                      />
+                      {track.url && track.url.includes('drive.google.com') && track.url.includes('/view') && (
+                        <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                          ⚠️ Wrong link format! Convert to: drive.google.com/uc?export=download&id=FILE_ID
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1">
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            disabled={uploadingTrack?.type === 'groom' && uploadingTrack?.index === idx}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, 'groom', idx);
+                            }}
+                            className="w-full text-xs"
+                          />
+                        </label>
+                        {uploadingTrack?.type === 'groom' && uploadingTrack?.index === idx && (
+                          <span className="text-xs text-blue-600">Uploading...</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Upload audio file or paste URL above (auto-compressed via Cloudinary)
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1287,7 +1400,7 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
                 + Add Music Track
               </button>
               <p className="text-[10px] text-muted-foreground">
-                Music that plays when viewing groom's side
+                Music that plays when viewing groom's side. Use URL-based hosting for audio files.
               </p>
             </div>
           </div>
@@ -1364,32 +1477,34 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
                           updated[idx] = { ...updated[idx], url: e.target.value };
                           setForm({ ...form, brideMusicUrls: updated });
                         }}
-                        placeholder="Music URL or upload file below"
+                        placeholder="Direct audio URL (e.g., https://res.cloudinary.com/...audio.mp3)"
                         className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
                       />
-                      <input
-                        type="file"
-                        accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            musicUrlsModified.current.bride = true;
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const dataUrl = event.target?.result as string;
-                              const updated = [...form.brideMusicUrls];
-                              updated[idx] = {
-                                ...updated[idx],
-                                url: dataUrl,
-                                name: updated[idx].name || file.name.replace(/\.[^/.]+$/, "")
-                              };
-                              setForm({ ...form, brideMusicUrls: updated });
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                        className="text-xs text-muted-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:text-xs file:bg-secondary file:text-secondary-foreground"
-                      />
+                      {track.url && track.url.includes('drive.google.com') && track.url.includes('/view') && (
+                        <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                          ⚠️ Wrong link format! Convert to: drive.google.com/uc?export=download&id=FILE_ID
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1">
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            disabled={uploadingTrack?.type === 'bride' && uploadingTrack?.index === idx}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileUpload(file, 'bride', idx);
+                            }}
+                            className="w-full text-xs"
+                          />
+                        </label>
+                        {uploadingTrack?.type === 'bride' && uploadingTrack?.index === idx && (
+                          <span className="text-xs text-blue-600">Uploading...</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Upload audio file or paste URL above (auto-compressed via Cloudinary)
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1405,7 +1520,7 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
                 + Add Music Track
               </button>
               <p className="text-[10px] text-muted-foreground">
-                Music that plays when viewing bride's side
+                Music that plays when viewing bride's side. Use URL-based hosting for audio files.
               </p>
             </div>
           </div>

@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import { and, or, eq, sql } from "drizzle-orm";
 import { db } from "./db.js";
 import { config } from "process";
+import cloudinary from "./cloudinary";
 
 /* =========================================================
    Utilities
@@ -515,6 +516,35 @@ export async function registerRoutes(
   });
   app.get("/api/admin/me", requireAdmin, (req, res) => {
     res.json({ admin: (req as any).admin });
+  });
+
+  /* =========================================================
+       ================= ADMIN Cloudinary Signature =================
+    ========================================================= */
+  // Generate signed upload params for direct browser-to-Cloudinary uploads
+  // This eliminates Railway timeout and memory issues with large files
+  app.post("/api/admin/cloudinary-signature", requireAdmin, async (req, res) => {
+    try {
+      const timestamp = Math.round(new Date().getTime() / 1000);
+
+      const signature = cloudinary.utils.api_sign_request(
+        {
+          timestamp,
+          folder: "wedding-audio",
+        },
+        process.env.CLOUDINARY_API_SECRET!
+      );
+
+      res.json({
+        timestamp,
+        signature,
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        apiKey: process.env.CLOUDINARY_API_KEY,
+      });
+    } catch (error: any) {
+      console.error("[ERROR] Signature generation failed:", error.message);
+      res.status(500).json({ error: "Signature failed" });
+    }
   });
 
   /* =========================================================
