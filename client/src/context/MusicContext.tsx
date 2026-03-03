@@ -36,11 +36,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const wasPlayingRef = useRef(false); // Track if music was playing before pause
+  const wasPlayingRef = useRef(false);
+  const resumeTimeoutRef = useRef<number | null>(null);
   const onTrackEndRef = useRef<(() => void) | null>(null);
   const [isMuted, setIsMuted] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("music-muted") === "true";
+      try {
+        return localStorage.getItem("music-muted") === "true";
+      } catch {
+        return false;
+      }
     }
     return false;
   });
@@ -49,11 +54,16 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     const audio = new Audio();
     audio.loop = false; // Disable loop to allow track end detection
     audio.volume = 0;
-    audio.preload = "auto";
+    audio.preload = "metadata"; // Changed from 'auto' for large files - loads on demand
     // iOS Safari compatibility
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('webkit-playsinline', 'true');
     audioRef.current = audio;
+
+    // Debug: Log audio loading progress for large files
+    audio.addEventListener('loadstart', () => console.log('🎵 Audio loading started'));
+    audio.addEventListener('canplay', () => console.log('🎵 Audio can start playing'));
+    audio.addEventListener('error', (e) => console.error('❌ Audio error:', e));
 
     audio.addEventListener("pause", () => setIsPlaying(false));
     audio.addEventListener("play", () => setIsPlaying(true));
@@ -64,31 +74,53 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Pause music when tab/window loses focus or visibility
+    // Pause music when tab/window loses visibility with safeguards against infinite loops
     const handleVisibilityChange = () => {
-      if (document.hidden && audioRef.current && !audioRef.current.paused) {
-        wasPlayingRef.current = true; // Remember we were playing
+      // Check hasStartedRef dynamically instead of closure
+      if (!audioRef.current) return;
+
+      if (document.hidden && !audioRef.current.paused) {
+        console.log('🎵 Pausing music (tab hidden)');
+        wasPlayingRef.current = true;
         audioRef.current.pause();
-      } else if (!document.hidden && wasPlayingRef.current && audioRef.current) {
-        // Resume when tab becomes visible again
-        audioRef.current.play().catch(() => {});
-        wasPlayingRef.current = false;
+      } else if (!document.hidden && wasPlayingRef.current) {
+        console.log('🎵 Resuming music (tab visible)');
+        // Clear any pending resume timeouts
+        if (resumeTimeoutRef.current) {
+          clearTimeout(resumeTimeoutRef.current);
+        }
+        // Debounce resume to avoid rapid fire on iPad
+        resumeTimeoutRef.current = window.setTimeout(() => {
+          if (audioRef.current && wasPlayingRef.current && !document.hidden) {
+            audioRef.current.play().catch((e) => console.error('Resume play error:', e));
+            wasPlayingRef.current = false;
+          }
+        }, 300); // 300ms debounce
       }
     };
 
     const handleBlur = () => {
-      if (audioRef.current && !audioRef.current.paused) {
-        wasPlayingRef.current = true; // Remember we were playing
-        audioRef.current.pause();
-      }
+      if (!audioRef.current || audioRef.current.paused) return;
+      console.log('🎵 Pausing music (window blur)');
+      wasPlayingRef.current = true;
+      audioRef.current.pause();
     };
 
     const handleFocus = () => {
-      if (wasPlayingRef.current && audioRef.current) {
-        // Resume when window gets focus back
-        audioRef.current.play().catch(() => {});
-        wasPlayingRef.current = false;
+      if (!audioRef.current || !wasPlayingRef.current) return;
+      console.log('🎵 Resuming music (window focus)');
+
+      // Clear any pending resume
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
       }
+      // Debounce resume
+      resumeTimeoutRef.current = window.setTimeout(() => {
+        if (audioRef.current && wasPlayingRef.current) {
+          audioRef.current.play().catch((e) => console.error('Focus play error:', e));
+          wasPlayingRef.current = false;
+        }
+      }, 300);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -98,32 +130,41 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     return () => {
       audio.pause();
       audio.src = "";
+      if (resumeTimeoutRef.current) {
+        clearTimeout(resumeTimeoutRef.current);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, []); // Only run once on mount, use refs for dynamic checks
 
   const setMusicUrl = useCallback((url: string) => {
     try {
       if (audioRef.current && url && audioRef.current.src !== url) {
         // Validate URL before setting
         if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:') && !url.startsWith('/')) {
+          console.warn('⚠️ Invalid music URL format:', url);
           return;
         }
+        console.log('🎵 Setting music URL:', url);
         audioRef.current.src = url;
         audioRef.current.load();
       }
     } catch (error) {
-      // Silently handle audio loading errors on mobile
+      console.error('❌ Error setting music URL:', error);
     }
   }, []);
 
   const fadeIn = useCallback(() => {
     try {
       const audio = audioRef.current;
-      if (!audio || !audio.src || audio.src === window.location.href) return;
+      if (!audio || !audio.src || audio.src === window.location.href) {
+        console.log('🎵 FadeIn skipped: no audio or src');
+        return;
+      }
 
+      console.log('🎵 FadeIn starting:', audio.src);
       // Reset state for fresh start
       audio.volume = 0;
       audio.muted = isMuted;
@@ -134,6 +175,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
       if (playPromise !== undefined) {
         playPromise.then(() => {
+          console.log('✅ Music playing successfully');
           setIsPlaying(true);
           setHasStarted(true);
           let vol = 0;
@@ -146,28 +188,34 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             if (!audio.muted) audio.volume = vol;
             if (vol >= 0.6) clearInterval(interval);
           }, 100);
-        }).catch(() => {
-          // Silently handle playback failures (common on mobile)
+        }).catch((err) => {
+          console.error('❌ Music play failed:', err);
+          // Common on mobile without user interaction
         });
       }
     } catch (error) {
-      // Silently handle audio errors on mobile
+      console.error('❌ FadeIn error:', error);
     }
   }, [isMuted]);
 
   const play = useCallback(() => {
     try {
       const audio = audioRef.current;
-      if (!audio || !audio.src || audio.src === window.location.href) return;
+      if (!audio || !audio.src || audio.src === window.location.href) {
+        console.log('🎵 Play skipped: no audio or src');
+        return;
+      }
+      console.log('🎵 Playing music:', audio.src);
       audio.volume = 0.6;
       audio.play().then(() => {
+        console.log('✅ Music playing successfully');
         setIsPlaying(true);
         setHasStarted(true);
-      }).catch(() => {
-        // Silently handle playback failures
+      }).catch((err) => {
+        console.error('❌ Play failed:', err);
       });
     } catch (error) {
-      // Silently handle audio errors
+      console.error('❌ Play error:', error);
     }
   }, []);
 
@@ -190,12 +238,14 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      console.log('🎵 Toggle: Playing');
       audio.volume = 0.6;
       audio.play().then(() => {
         setIsPlaying(true);
         setHasStarted(true);
-      }).catch(() => {});
+      }).catch((err) => console.error('❌ Toggle play failed:', err));
     } else {
+      console.log('🎵 Toggle: Pausing');
       audio.pause();
       setIsPlaying(false);
     }
@@ -205,7 +255,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setIsMuted((prev) => {
       const next = !prev;
       if (audioRef.current) audioRef.current.muted = next;
-      localStorage.setItem("music-muted", String(next));
+      try {
+        localStorage.setItem("music-muted", String(next));
+      } catch {
+        // Ignore if localStorage is disabled
+      }
       return next;
     });
   }, []);
