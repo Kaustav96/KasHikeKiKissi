@@ -8,7 +8,7 @@ import {
   BedDouble, Info, BookOpen, Sparkles, Shirt, Sun, Music, Crown, Building,
   X as XIcon, Users,
 } from "lucide-react";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Link } from "wouter";
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
@@ -225,8 +225,24 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
 function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
   if (milestones.length === 0) return null;
 
+  const palettes = [
+    { bg: "linear-gradient(135deg, #2C1400 0%, #7B3800 45%, #CF8529 85%, #F5D890 100%)", glow: "rgba(207,133,41,0.5)", textLight: "#F5D890" },
+    { bg: "linear-gradient(135deg, #3B0A18 0%, #8B1A3A 45%, #C4547A 85%, #F8CEDC 100%)", glow: "rgba(196,84,122,0.5)", textLight: "#F8CEDC" },
+    { bg: "linear-gradient(135deg, #060E1E 0%, #0D2653 45%, #2663A6 85%, #8AB4E0 100%)", glow: "rgba(38,99,166,0.5)", textLight: "#B8D4F5" },
+    { bg: "linear-gradient(135deg, #081910 0%, #133C22 45%, #1E6B3C 85%, #8DD4AC 100%)", glow: "rgba(30,107,60,0.5)", textLight: "#B8EDD4" },
+    { bg: "linear-gradient(135deg, #130820 0%, #341466 45%, #6C2BBD 85%, #C09AEF 100%)", glow: "rgba(108,43,189,0.5)", textLight: "#DCC5F8" },
+    { bg: "linear-gradient(135deg, #2B0800 0%, #6B2200 45%, #C44B00 85%, #FFAA70 100%)", glow: "rgba(196,75,0,0.5)", textLight: "#FFD0A0" },
+  ];
+
+  const icons = [Sparkles, Heart, Crown, BookOpen, Music, Sun] as const;
+
   return (
-    <section id="story" className="py-16 sm:py-20 px-4 sm:px-8 relative overflow-hidden" style={{ background: "var(--wedding-alt-bg)" }} data-testid="story-section">
+    <section
+      id="story"
+      className="py-16 sm:py-24 px-4 sm:px-8 relative overflow-hidden"
+      style={{ background: "var(--wedding-alt-bg)" }}
+      data-testid="story-section"
+    >
       <div className="absolute top-0 left-0 w-32 md:w-48 opacity-8 pointer-events-none">
         <MandalaHalfOrnament side="left" />
       </div>
@@ -234,16 +250,18 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
         <MandalaHalfOrnament side="right" />
       </div>
 
-      <div className="max-w-4xl mx-auto">
-        {/* Section header with icon */}
+      <div className="max-w-5xl mx-auto">
+        {/* Section header */}
         <motion.div
-          className="text-center mb-10"
+          className="text-center mb-14"
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+          <div
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+          >
             <BookOpen size={18} style={{ color: "var(--wedding-accent)" }} />
           </div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
@@ -255,73 +273,127 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
           <SimpleDivider />
         </motion.div>
 
-        {/* Compact 2-column grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-          {milestones.map((milestone, idx) => (
-            <motion.div
-              key={milestone.id}
-              className="relative rounded-2xl overflow-hidden"
-              style={{
-                background: "var(--wedding-card-bg)",
-                border: "1px solid var(--wedding-border)",
-                boxShadow: "0 2px 16px rgba(46,43,39,0.05)",
-              }}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.45, delay: idx * 0.06, ease: [0.16, 1, 0.3, 1] }}
-              data-testid={`story-milestone-${milestone.id}`}
-            >
-              {/* Gold accent top bar */}
-              <div className="h-[3px]" style={{
-                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
-              }} />
+        {/* Timeline */}
+        <div className="relative">
+          {/* Vertical centre line — desktop only */}
+          <div
+            className="hidden sm:block absolute left-1/2 top-0 bottom-0 w-px pointer-events-none"
+            style={{
+              background: "linear-gradient(to bottom, transparent, var(--wedding-border) 8%, var(--wedding-border) 92%, transparent)",
+              transform: "translateX(-50%)",
+            }}
+          />
 
-              <div className="px-5 py-4">
-                {/* Index + date row */}
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className="text-[9px] font-bold tabular-nums tracking-[0.2em]"
-                    style={{ color: "var(--wedding-accent)", opacity: 0.55 }}
-                  >
-                    {String(idx + 1).padStart(2, "0")}
-                  </span>
-                  <span
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] tracking-[0.18em] uppercase"
+          <div className="space-y-10 sm:space-y-16">
+            {milestones.map((milestone, idx) => {
+              const palette = palettes[idx % palettes.length];
+              const IconComp = icons[idx % icons.length];
+              const isRight = idx % 2 === 1;
+
+              return (
+                <motion.div
+                  key={milestone.id}
+                  className={`flex flex-col gap-6 sm:items-start sm:gap-0 ${
+                    isRight ? "sm:flex-row-reverse" : "sm:flex-row"
+                  }`}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.6, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                  data-testid={`story-milestone-${milestone.id}`}
+                >
+                  {/* ── Illustration panel ── */}
+                  <div
+                    className="w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0"
                     style={{
-                      background: "rgba(176,132,72,0.09)",
-                      border: "1px solid rgba(176,132,72,0.22)",
-                      color: "var(--wedding-accent)",
+                      background: palette.bg,
+                      boxShadow: `0 12px 50px ${palette.glow}`,
+                      height: "220px",
                     }}
                   >
-                    {milestone.date}
-                  </span>
-                </div>
+                    {/* Radial centre glow */}
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `radial-gradient(ellipse 70% 70% at 50% 50%, ${palette.glow} 0%, transparent 68%)`,
+                      }}
+                    />
+                    {/* Concentric decorative rings */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div
+                        className="absolute rounded-full border"
+                        style={{ width: 160, height: 160, borderColor: "rgba(255,255,255,0.15)" }}
+                      />
+                      <div
+                        className="absolute rounded-full border"
+                        style={{ width: 100, height: 100, borderColor: "rgba(255,255,255,0.22)" }}
+                      />
+                    </div>
+                    {/* Central icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        className="rounded-full p-5"
+                        style={{
+                          background: "rgba(255,255,255,0.10)",
+                          border: "1px solid rgba(255,255,255,0.20)",
+                          backdropFilter: "blur(6px)",
+                        }}
+                        whileInView={{ scale: [0.7, 1.08, 1] }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.65, delay: idx * 0.07 + 0.25 }}
+                      >
+                        <IconComp size={32} style={{ color: palette.textLight }} />
+                      </motion.div>
+                    </div>
+                    {/* Bottom strip */}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 px-4 py-3"
+                      style={{ background: "linear-gradient(to top, rgba(0,0,0,0.60) 0%, transparent 100%)" }}
+                    >
+                      <p
+                        className="text-[9px] tracking-[0.38em] uppercase font-semibold"
+                        style={{ color: "rgba(255,255,255,0.60)" }}
+                      >
+                        Chapter {String(idx + 1).padStart(2, "0")}
+                      </p>
+                    </div>
+                  </div>
 
-                {/* Title */}
-                <h3 className="font-serif text-base sm:text-lg font-semibold mb-1.5 leading-tight" style={{ color: "var(--wedding-text)" }}>
-                  {milestone.title}
-                </h3>
+                  {/* ── Timeline dot (desktop only) ── */}
+                  <div className="hidden sm:flex flex-col items-center justify-start flex-shrink-0 w-10 pt-20">
+                    <div
+                      className="w-[14px] h-[14px] rounded-full"
+                      style={{
+                        background: "var(--wedding-accent)",
+                        boxShadow: "0 0 0 4px var(--wedding-alt-bg), 0 0 0 6px var(--wedding-border)",
+                      }}
+                    />
+                  </div>
 
-                {/* Thin divider */}
-                <div className="h-px mb-2.5" style={{ background: "var(--wedding-border)" }} />
-
-                {/* Description — 3 lines max */}
-                <p
-                  className="text-xs sm:text-sm leading-[1.75]"
-                  style={{
-                    color: "var(--wedding-muted)",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {milestone.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+                  {/* ── Text panel ── */}
+                  <div
+                    className={`w-full sm:flex-1 py-0 sm:py-6 ${
+                      isRight ? "sm:text-right" : "sm:text-left"
+                    }`}
+                  >
+                    <h3
+                      className="font-serif text-xl sm:text-2xl font-bold mb-3 leading-snug"
+                      style={{ color: "var(--wedding-text)" }}
+                    >
+                      {milestone.title}
+                    </h3>
+                    <div
+                      className={`h-[2px] w-10 mb-4 ${isRight ? "sm:ml-auto" : ""}`}
+                      style={{ background: "var(--wedding-accent)" }}
+                    />
+                    <p className="text-sm leading-[1.85]" style={{ color: "var(--wedding-muted)" }}>
+                      {milestone.description}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
@@ -778,7 +850,7 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
 }
 
 const publicRsvpFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(200),
+  name: z.string().min(3, "Name must be at least 3 characters").max(200),
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20),
   childrenCount: z.number().int().min(0).max(20),
@@ -814,7 +886,7 @@ const publicRsvpFormSchema = z.object({
 );
 type PublicRsvpForm = z.infer<typeof publicRsvpFormSchema>;
 
-function RsvpSection({ events }: { events: WeddingEvent[] }) {
+function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingEvent[]; prefillGuest?: any; onRsvpSuccess?: () => void }) {
   const { toast } = useToast();
   const { side, setSide } = useWeddingTheme();
   const [submitted, setSubmitted] = useState(false);
@@ -845,26 +917,96 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
     form.setValue("side", side as "groom" | "bride" | "both");
   }, [side, form]);
 
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log("State changed - isUpdating:", isUpdating, "selectedGuest:", selectedGuest?.name);
+  }, [isUpdating, selectedGuest]);
+
+  // Auto-prefill when guest is selected from "Find Your Invitation"
+  useEffect(() => {
+    if (!prefillGuest) return;
+    if (prefillGuest.side && prefillGuest.side !== side && prefillGuest.side !== "both") {
+      setSide(prefillGuest.side);
+    }
+    setSubmitted(false);
+
+    // Check if this is an existing guest (has rsvpStatus) or new name (no rsvpStatus)
+    const isExistingGuest = prefillGuest.rsvpStatus && prefillGuest.rsvpStatus !== null;
+
+    if (isExistingGuest) {
+      // Full prefill for existing guest
+      setIsUpdating(true);
+      setSelectedGuest(prefillGuest);
+      form.setValue("rsvpStatus", prefillGuest.rsvpStatus);
+      form.setValue("adultsCount", prefillGuest.adultsCount || 1);
+      form.setValue("childrenCount", prefillGuest.childrenCount || 0);
+      form.setValue("foodPreference", prefillGuest.foodPreference || "");
+      form.setValue("eventsAttending", Array.isArray(prefillGuest.eventsAttending) ? prefillGuest.eventsAttending : []);
+      form.setValue("dietaryRequirements", prefillGuest.dietaryRequirements || "");
+      form.setValue("message", prefillGuest.message || "");
+    }
+
+    // Always set the name (whether existing or new)
+    form.setValue("name", prefillGuest.name);
+  }, [prefillGuest]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Check for existing guest by name
   const checkExistingGuest = async (name: string) => {
-    if (!name || name.length < 3) return;
+    console.log("checkExistingGuest called with:", name);
+    if (!name || name.length < 3) {
+      console.log("Name too short (<3 chars), skipping check");
+      return;
+    }
 
     setCheckingName(true);
     try {
       const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
       if (res.ok) {
         const guestList = await res.json();
+        console.log("Found guests:", guestList);
         // Show selection popup if any guests found (even if just 1)
         if (Array.isArray(guestList) && guestList.length > 0) {
           setFoundGuests(guestList);
           setShowGuestSelectionPopup(true);
         } else {
-          // No guests found - continue with normal flow
+          // No guests found — if we were in update mode, exit it and reset fields
+          console.log("No guests found, clearing states if in update mode");
           setFoundGuests([]);
+          if (isUpdating) {
+            setIsUpdating(false);
+            setSelectedGuest(null);
+            form.reset({
+              name,                              // keep the name they just typed
+              rsvpStatus: undefined as any,
+              adultsCount: 1,
+              childrenCount: 0,
+              foodPreference: "" as any,
+              eventsAttending: [],
+              dietaryRequirements: "",
+              message: "",
+              side: side as "groom" | "bride" | "both",
+            });
+          }
         }
       } else {
-        // Name not in database - continue with normal flow
+        // Name not in database — same reset logic
+        console.log("API returned error, clearing states");
         setFoundGuests([]);
+        if (isUpdating) {
+          setIsUpdating(false);
+          setSelectedGuest(null);
+          form.reset({
+            name,
+            rsvpStatus: undefined as any,
+            adultsCount: 1,
+            childrenCount: 0,
+            foodPreference: "" as any,
+            eventsAttending: [],
+            dietaryRequirements: "",
+            message: "",
+            side: side as "groom" | "bride" | "both",
+          });
+        }
       }
     } catch (err) {
       console.error("Error checking guest:", err);
@@ -910,17 +1052,34 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
   const continueAsNewGuest = () => {
     setFoundGuests([]);
     setSelectedGuest(null);
+    setIsUpdating(false);
     setShowGuestSelectionPopup(false);
     // Keep the name but allow new RSVP
   };
 
   const rsvpMutation = useMutation({
     mutationFn: async (data: PublicRsvpForm) => {
-      // If updating existing guest, use their ID
+      console.log("=== RSVP MUTATION DEBUG ===");
+      console.log("isUpdating:", isUpdating);
+      console.log("selectedGuest:", selectedGuest);
+      console.log("Form data name:", data.name);
+
+      // If updating existing guest, use their ID - but verify name matches!
       if (isUpdating && selectedGuest) {
+        console.log("In UPDATE mode, checking name match...");
+        // Safety check: ensure the name being submitted matches the selected guest
+        if (data.name.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
+          // Name mismatch - treat as new guest instead
+          console.warn("⚠️ Name mismatch! Form:", data.name, "vs Selected:", selectedGuest.name);
+          console.log("Creating NEW guest instead of updating");
+          const res = await apiRequest("POST", "/api/rsvp/public", data);
+          return res.json();
+        }
+        console.log("✓ Name matches, updating existing guest:", selectedGuest.inviteSlug);
         const res = await apiRequest("POST", "/api/rsvp", { ...data, slug: selectedGuest.inviteSlug });
         return res.json();
       } else {
+        console.log("✓ Creating NEW guest (not in update mode)");
         const res = await apiRequest("POST", "/api/rsvp/public", data);
         return res.json();
       }
@@ -958,6 +1117,11 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
         message: "",
         side: side as "groom" | "bride" | "both",
       });
+
+      // Trigger search refresh if callback provided
+      if (onRsvpSuccess) {
+        onRsvpSuccess();
+      }
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -1033,6 +1197,25 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
                   <input
                     type="text"
                     {...form.register("name")}
+                    onChange={(e) => {
+                      const newName = e.target.value;
+                      form.setValue("name", newName);
+
+                      // AGGRESSIVE state clearing: if name doesn't match selected guest, clear everything
+                      if (selectedGuest && newName.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
+                        console.log("Name mismatch detected in onChange, clearing states");
+                        setIsUpdating(false);
+                        setSelectedGuest(null);
+                        setFoundGuests([]);
+                        // Keep rsvpStatus (form stays open), only clear detail fields
+                        form.setValue("adultsCount", 1);
+                        form.setValue("childrenCount", 0);
+                        form.setValue("foodPreference", "" as any);
+                        form.setValue("eventsAttending", []);
+                        form.setValue("dietaryRequirements", "");
+                        form.setValue("message", "");
+                      }
+                    }}
                     onBlur={(e) => checkExistingGuest(e.target.value)}
                     placeholder="Full Name"
                     className="w-full px-4 py-2.5 rounded-lg text-sm"
@@ -1183,7 +1366,12 @@ function RsvpSection({ events }: { events: WeddingEvent[] }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowGuestSelectionPopup(false)}
+              onClick={() => {
+                setShowGuestSelectionPopup(false);
+                setFoundGuests([]);
+                setIsUpdating(false);
+                setSelectedGuest(null);
+              }}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
@@ -1496,13 +1684,13 @@ function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
   );
 }
 
-function FindByInviteSection() {
+function FindByInviteSection({ onEditRsvp, onSubmitDirect, onSearchReady }: { onEditRsvp: (guest: any) => void; onSubmitDirect: (name: string) => void; onSearchReady: (searchFn: () => void, currentQuery: string) => void }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     const name = query.trim();
     if (name.length < 2) return;
     setSearching(true);
@@ -1521,7 +1709,13 @@ function FindByInviteSection() {
     } finally {
       setSearching(false);
     }
-  };
+  }, [query]);
+
+  // Expose search function to parent
+  useEffect(() => {
+    onSearchReady(handleSearch, query);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleSearch, query]);
 
   const notFound = results !== null && results.length === 0;
   const found = results !== null && results.length > 0;
@@ -1604,9 +1798,23 @@ function FindByInviteSection() {
               <p className="font-serif text-base font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
                 We couldn't find your name in our guest list.
               </p>
-              <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+              <p className="text-xs mb-4" style={{ color: "var(--wedding-muted)" }}>
                 Please contact us if you believe this is an error.
               </p>
+              <button
+                onClick={() => {
+                  onSubmitDirect(query.trim());
+                  const el = document.getElementById("rsvp");
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    history.replaceState(null, "", window.location.pathname);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg transition-opacity hover:opacity-80"
+                style={{ background: "var(--wedding-accent)", color: "#fff", border: "none", cursor: "pointer" }}
+              >
+                Submit RSVP Directly <ChevronRight size={11} />
+              </button>
             </motion.div>
           )}
 
@@ -1619,7 +1827,7 @@ function FindByInviteSection() {
               className="space-y-2"
             >
               <p className="text-xs text-center mb-3" style={{ color: "var(--wedding-muted)" }}>
-                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to see your invite
+                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to view &amp; edit your RSVP
               </p>
               {results!.map((guest) => (
                 <button
@@ -1639,6 +1847,9 @@ function FindByInviteSection() {
                     <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
                       {guest.rsvpStatus === "confirmed" ? "✓ RSVP Confirmed" : guest.rsvpStatus === "declined" ? "✗ Declined" : "RSVP Pending"}
                     </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
+                      Tap to view &amp; edit RSVP →
+                    </p>
                   </div>
                   <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
                 </button>
@@ -1652,13 +1863,23 @@ function FindByInviteSection() {
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
-              className="rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden relative"
               style={{ background: "var(--wedding-card-bg)", border: "2px solid var(--wedding-accent)", boxShadow: "0 8px 40px rgba(176,132,72,0.18)" }}
             >
               {/* Gold top bar */}
               <div className="h-[4px]" style={{
                 background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
               }} />
+
+              {/* Back / close corner button */}
+              <button
+                onClick={() => setSelectedGuest(null)}
+                className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-opacity hover:opacity-70"
+                style={{ background: "rgba(176,132,72,0.12)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
+                aria-label="Back to results"
+              >
+                <XIcon size={13} />
+              </button>
 
               <div className="p-6 sm:p-8 text-center">
                 {/* Icon */}
@@ -1712,9 +1933,16 @@ function FindByInviteSection() {
                 </div>
 
                 <button
+                  onClick={() => onEditRsvp(selectedGuest)}
+                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all mb-2"
+                  style={{ background: "var(--wedding-accent)", color: "#fff", border: "none" }}
+                >
+                  Edit My RSVP
+                </button>
+                <button
                   onClick={() => { setSelectedGuest(null); setQuery(""); setResults(null); }}
-                  className="w-full py-2.5 rounded-xl text-sm font-medium transition-all"
-                  style={{ background: "transparent", color: "var(--wedding-accent)", border: "1px solid var(--wedding-border)" }}
+                  className="w-full py-2 rounded-xl text-xs font-medium transition-all"
+                  style={{ background: "transparent", color: "var(--wedding-muted)", border: "1px solid var(--wedding-border)" }}
                 >
                   Search for Another Guest
                 </button>
@@ -1747,19 +1975,6 @@ function FindByInviteSection() {
               <Phone size={11} /> Contact Himasree (Bride Side)
             </a>
           </div>
-          <button
-            onClick={() => {
-              const el = document.getElementById("rsvp");
-              if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "start" });
-                history.replaceState(null, "", window.location.pathname);
-              }
-            }}
-            className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg transition-opacity hover:opacity-80"
-            style={{ background: "none", border: "none", color: "var(--wedding-accent)", borderBottom: "1px solid var(--wedding-accent)", cursor: "pointer" }}
-          >
-            Skip to RSVP <ChevronRight size={11} />
-          </button>
         </motion.div>
       </div>
     </section>
@@ -1831,7 +2046,7 @@ function FooterSection() {
         </div>
 
         {/* Names */}
-        <h3 className="font-serif text-2xl sm:text-3xl font-bold tracking-wide mb-2" style={{ color: "var(--wedding-text)" }}>
+        <h3 className="font-serif text-2xl sm:text-3xl font-bold tracking-wide mb-2" style={{ color: "var(--wedding-accent)" }}>
           Himasree &amp; Kaustav
         </h3>
 
@@ -1855,6 +2070,8 @@ export default function Home() {
 
   const [showCrest, setShowCrest] = useState(true);
   const [sideSelected, setSideSelected] = useState(false);
+  const [pendingRsvpGuest, setPendingRsvpGuest] = useState<any>(null);
+  const [searchTrigger, setSearchTrigger] = useState<{ fn: () => void; query: string } | null>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const currentPlaylistRef = useRef<string[]>([]);
 
@@ -2070,12 +2287,42 @@ export default function Home() {
 
           <main>
             <HeroSection config={config} isDateConfirmed={isDateConfirmed} />
-            <FindByInviteSection />
+            <FindByInviteSection
+              onEditRsvp={(guest) => {
+                setPendingRsvpGuest(guest);
+                setTimeout(() => {
+                  const el = document.getElementById("rsvp");
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    window.history.replaceState(null, "", window.location.pathname);
+                  }
+                }, 80);
+              }}
+              onSubmitDirect={(name) => {
+                // Pre-fill just the name, user will select Accept/Decline
+                setPendingRsvpGuest({ name, rsvpStatus: null });
+              }}
+              onSearchReady={(searchFn, currentQuery) => {
+                setSearchTrigger({ fn: searchFn, query: currentQuery });
+              }}
+            />
             <EventsSection events={events} />
             <VenueSection venueList={venueList} />
             <WardrobePlannerSection events={allEvents} />
             <StorySection milestones={milestones} />
-            <RsvpSection events={allEvents} />
+            <RsvpSection
+              events={allEvents}
+              prefillGuest={pendingRsvpGuest}
+              onRsvpSuccess={() => {
+                // Auto-refresh search if there's an active query
+                // Increased delay to 1.5s to ensure backend has processed changes (deletions, updates, etc.)
+                if (searchTrigger && searchTrigger.query.trim().length >= 2) {
+                  setTimeout(() => {
+                    searchTrigger.fn();
+                  }, 1500);
+                }
+              }}
+            />
             <FaqsSection faqList={faqList} />
             <FooterSection />
           </main>

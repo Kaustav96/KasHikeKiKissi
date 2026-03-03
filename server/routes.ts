@@ -426,10 +426,14 @@ export async function registerRoutes(
     }
 
     const data = parsed.data;
+    console.log("=== PUBLIC RSVP BACKEND ===");
+    console.log("Checking for existing guest with name:", data.name);
     const existing = await storage.getGuestByName(data.name);
+    console.log("Existing guest found:", existing ? existing.name : "NONE");
 
 
     if (existing) {
+      console.log("⚠️ UPDATING existing guest:", existing.name);
       const updated = await storage.updateGuest(existing.id, {
         rsvpStatus: data.rsvpStatus,
         adultsCount: data.adultsCount,
@@ -450,6 +454,7 @@ export async function registerRoutes(
       });
     }
 
+    console.log("✓ CREATING new guest:", data.name);
     const slug = generateSlug(data.name);
 
     const newGuest = await storage.createGuest({
@@ -999,6 +1004,9 @@ export async function registerRoutes(
   app.get("/api/guests/by-name", async (req, res) => {
     const name = req.query.name as string;
     if (!name) return res.status(400).json({ error: "Name is required" });
+    if (name.trim().length < 3) {
+      return res.status(400).json({ error: "Name must be at least 3 characters" });
+    }
 
     const guestList = await storage.searchGuestsByName(name);
     res.json(guestList);

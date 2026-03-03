@@ -148,7 +148,7 @@ export const rsvpSubmitSchema = z.object({
 });
 
 export const publicRsvpSchema = z.object({
-  name: z.string().min(1).max(200),
+  name: z.string().min(3, "Name must be at least 3 characters").max(200),
   rsvpStatus: z.enum(["confirmed", "declined"]),
   adultsCount: z.number().int().min(1).max(20).default(1),
   childrenCount: z.number().int().min(0).max(20).default(0),

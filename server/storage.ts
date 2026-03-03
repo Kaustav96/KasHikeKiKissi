@@ -147,7 +147,7 @@ export class DatabaseStorage implements IStorage {
     const [guest] = await db
       .select()
       .from(guests)
-      .where(ilike(guests.name, `%${name}%`))
+      .where(eq(guests.name, name))
       .limit(1);
 
     return guest;
