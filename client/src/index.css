@@ -169,16 +169,16 @@
 
 :root,
 [data-side="groom"] {
-  /* Richer warm parchment palette */
-  --wedding-bg: #EDE4D0;
-  --wedding-alt-bg: #F8F2E8;
-  --wedding-accent: #B08448;
-  --wedding-text: #1A1714;
-  --wedding-secondary: #8A6E3C;
-  --wedding-muted: #6B5A3E;
-  --wedding-hero-gradient: linear-gradient(160deg, #F5EDE2 0%, #EDE3CC 35%, #E4D5B5 65%, #D6C49A 100%);
-  --wedding-card-bg: rgba(248, 242, 232, 0.97);
-  --wedding-border: rgba(176, 132, 72, 0.26);
+  /* Option 3: Sage Green & Bronze - Earthy & Elegant */
+  --wedding-bg: #EDF0E8;
+  --wedding-alt-bg: #F7F9F5;
+  --wedding-accent: #A67C52;
+  --wedding-text: #2A3520;
+  --wedding-secondary: #6B8757;
+  --wedding-muted: #7A8A6B;
+  --wedding-hero-gradient: linear-gradient(160deg, #FAFCF7 0%, #EDF5E5 25%, #D4E6C5 55%, #B0D19A 85%, #8BB87A 100%);
+  --wedding-card-bg: rgba(247, 249, 245, 0.98);
+  --wedding-border: rgba(166, 124, 82, 0.35);
 }
 
 [data-side="bride"] {

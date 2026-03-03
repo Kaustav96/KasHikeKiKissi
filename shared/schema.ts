@@ -31,7 +31,11 @@ export const weddingConfig = pgTable("wedding_config", {
   adminPasswordHash: text("admin_password_hash").notNull().default(""),
 
   upiId: text("upi_id").notNull().default(""),
-  backgroundMusicUrl: text("background_music_url").notNull().default(""),
+
+  backgroundMusicUrl: jsonb("background_music_url")
+    .$type<{ name: string; url: string }[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
 
   groomMusicUrls: jsonb("groom_music_urls")
     .$type<{ name: string; url: string }[]>()

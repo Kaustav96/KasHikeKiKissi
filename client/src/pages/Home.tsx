@@ -4,9 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink,
-  Loader2, Check, Search, User, Phone, Navigation, Plane, Train, Car,
+  Loader2, Check, Search, User, Phone, Mail, Navigation, Plane, Train, Car,
   BedDouble, Info, BookOpen, Sparkles, Shirt, Sun, Music, Crown, Building,
-  X as XIcon, Users,
+  X as XIcon, Users, Film, Camera, Cake, TreePine, Laugh, Mountain,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Link } from "wouter";
@@ -20,9 +20,10 @@ import ViewingSideOverlay from "@/components/ViewingSideOverlay";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FloatingContact from "@/components/FloatingContact";
 import { MandalaHalfOrnament, GoldMedallion, ThinGoldDivider, RoyalFrame } from "@/components/RoyalOrnaments";
-import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue, Faq } from "../../../shared/schema.js";
+import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue } from "../../../shared/schema.js";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -225,16 +226,61 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
 function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
   if (milestones.length === 0) return null;
 
-  const palettes = [
-    { bg: "linear-gradient(135deg, #2C1400 0%, #7B3800 45%, #CF8529 85%, #F5D890 100%)", glow: "rgba(207,133,41,0.5)", textLight: "#F5D890" },
-    { bg: "linear-gradient(135deg, #3B0A18 0%, #8B1A3A 45%, #C4547A 85%, #F8CEDC 100%)", glow: "rgba(196,84,122,0.5)", textLight: "#F8CEDC" },
-    { bg: "linear-gradient(135deg, #060E1E 0%, #0D2653 45%, #2663A6 85%, #8AB4E0 100%)", glow: "rgba(38,99,166,0.5)", textLight: "#B8D4F5" },
-    { bg: "linear-gradient(135deg, #081910 0%, #133C22 45%, #1E6B3C 85%, #8DD4AC 100%)", glow: "rgba(30,107,60,0.5)", textLight: "#B8EDD4" },
-    { bg: "linear-gradient(135deg, #130820 0%, #341466 45%, #6C2BBD 85%, #C09AEF 100%)", glow: "rgba(108,43,189,0.5)", textLight: "#DCC5F8" },
-    { bg: "linear-gradient(135deg, #2B0800 0%, #6B2200 45%, #C44B00 85%, #FFAA70 100%)", glow: "rgba(196,75,0,0.5)", textLight: "#FFD0A0" },
-  ];
+  const [selectedMilestone, setSelectedMilestone] = useState<StoryMilestone | null>(null);
 
-  const icons = [Sparkles, Heart, Crown, BookOpen, Music, Sun] as const;
+  // Function to get icon and palette based on milestone title
+  const getMilestoneVisuals = (title: string, index: number) => {
+    const t = title.toLowerCase();
+
+    // Icon mapping based on milestone content
+    let icon = Sparkles; // default
+    if (t.includes('beginning')) icon = Heart;
+    else if (t.includes('movie')) icon = Film;
+    else if (t.includes('photo')) icon = Camera;
+    else if (t.includes('birthday') || t.includes('isha')) icon = Cake;
+    else if (t.includes('christmas')) icon = TreePine;
+    else if (t.includes('comedy') || t.includes('laughter')) icon = Laugh;
+    else if (t.includes('flight')) icon = Plane;
+    else if (t.includes('siliguri') || t.includes('families') || t.includes('blessed')) icon = Mountain;
+
+    // Color palette mapping for better thematic match
+    let palette;
+    if (t.includes('beginning')) {
+      // Romantic pink/rose for beginning
+      palette = { bg: "linear-gradient(135deg, #3B0A18 0%, #8B1A3A 45%, #C4547A 85%, #F8CEDC 100%)", glow: "rgba(196,84,122,0.5)", textLight: "#F8CEDC" };
+    } else if (t.includes('movie')) {
+      // Dark purple/cinema vibes
+      palette = { bg: "linear-gradient(135deg, #130820 0%, #341466 45%, #6C2BBD 85%, #C09AEF 100%)", glow: "rgba(108,43,189,0.5)", textLight: "#DCC5F8" };
+    } else if (t.includes('photo')) {
+      // Blue for memories/photos
+      palette = { bg: "linear-gradient(135deg, #060E1E 0%, #0D2653 45%, #2663A6 85%, #8AB4E0 100%)", glow: "rgba(38,99,166,0.5)", textLight: "#B8D4F5" };
+    } else if (t.includes('birthday') || t.includes('isha')) {
+      // Warm gold/spiritual
+      palette = { bg: "linear-gradient(135deg, #2C1400 0%, #7B3800 45%, #CF8529 85%, #F5D890 100%)", glow: "rgba(207,133,41,0.5)", textLight: "#F5D890" };
+    } else if (t.includes('christmas')) {
+      // Green/festive for Christmas
+      palette = { bg: "linear-gradient(135deg, #081910 0%, #133C22 45%, #1E6B3C 85%, #8DD4AC 100%)", glow: "rgba(30,107,60,0.5)", textLight: "#B8EDD4" };
+    } else if (t.includes('comedy') || t.includes('laughter')) {
+      // Bright yellow/orange for comedy
+      palette = { bg: "linear-gradient(135deg, #2B0800 0%, #6B2200 45%, #C44B00 85%, #FFAA70 100%)", glow: "rgba(196,75,0,0.5)", textLight: "#FFD0A0" };
+    } else if (t.includes('flight')) {
+      // Sky blue for flight
+      palette = { bg: "linear-gradient(135deg, #0A1A2E 0%, #1E4A7A 45%, #5B9BD5 85%, #B3D9FF 100%)", glow: "rgba(91,155,213,0.5)", textLight: "#D0E8FF" };
+    } else if (t.includes('siliguri') || t.includes('families') || t.includes('blessed')) {
+      // Mountain/nature tones - earthy greens and browns
+      palette = { bg: "linear-gradient(135deg, #1A2B1A 0%, #3D5A3D 45%, #7A9D6F 85%, #C8E6C9 100%)", glow: "rgba(122,157,111,0.5)", textLight: "#E8F5E9" };
+    } else {
+      // Default gradient cycling
+      const palettes = [
+        { bg: "linear-gradient(135deg, #2C1400 0%, #7B3800 45%, #CF8529 85%, #F5D890 100%)", glow: "rgba(207,133,41,0.5)", textLight: "#F5D890" },
+        { bg: "linear-gradient(135deg, #3B0A18 0%, #8B1A3A 45%, #C4547A 85%, #F8CEDC 100%)", glow: "rgba(196,84,122,0.5)", textLight: "#F8CEDC" },
+        { bg: "linear-gradient(135deg, #060E1E 0%, #0D2653 45%, #2663A6 85%, #8AB4E0 100%)", glow: "rgba(38,99,166,0.5)", textLight: "#B8D4F5" },
+      ];
+      palette = palettes[index % palettes.length];
+    }
+
+    return { icon, palette };
+  };
 
   return (
     <section
@@ -265,7 +311,7 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
             <BookOpen size={18} style={{ color: "var(--wedding-accent)" }} />
           </div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            How It All Began
+            Where Love Began
           </p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Our Story
@@ -286,8 +332,7 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
 
           <div className="space-y-10 sm:space-y-16">
             {milestones.map((milestone, idx) => {
-              const palette = palettes[idx % palettes.length];
-              const IconComp = icons[idx % icons.length];
+              const { icon: IconComp, palette } = getMilestoneVisuals(milestone.title, idx);
               const isRight = idx % 2 === 1;
 
               return (
@@ -304,50 +349,143 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
                 >
                   {/* ── Illustration panel ── */}
                   <div
-                    className="w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0"
+                    className="w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0 cursor-pointer transition-transform hover:scale-[1.02]"
                     style={{
                       background: palette.bg,
                       boxShadow: `0 12px 50px ${palette.glow}`,
                       height: "220px",
                     }}
+                    onClick={() => setSelectedMilestone(milestone)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedMilestone(milestone);
+                      }
+                    }}
+                    aria-label={`View details for ${milestone.title}`}
                   >
-                    {/* Radial centre glow */}
-                    <div
+                    {/* Animated radial glow */}
+                    <motion.div
                       className="absolute inset-0"
                       style={{
                         background: `radial-gradient(ellipse 70% 70% at 50% 50%, ${palette.glow} 0%, transparent 68%)`,
                       }}
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        opacity: [0.8, 1, 0.8],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
                     />
-                    {/* Concentric decorative rings */}
+
+                    {/* Floating particles */}
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute rounded-full"
+                        style={{
+                          width: Math.random() * 4 + 2,
+                          height: Math.random() * 4 + 2,
+                          background: palette.textLight,
+                          opacity: 0.3,
+                          left: `${Math.random() * 100}%`,
+                          top: `${Math.random() * 100}%`,
+                        }}
+                        animate={{
+                          y: [0, -20, 0],
+                          x: [0, Math.random() * 10 - 5, 0],
+                          opacity: [0.2, 0.5, 0.2],
+                        }}
+                        transition={{
+                          duration: 3 + Math.random() * 2,
+                          repeat: Infinity,
+                          delay: Math.random() * 2,
+                          ease: "easeInOut",
+                        }}
+                      />
+                    ))}
+
+                    {/* Rotating decorative rings */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div
+                      <motion.div
                         className="absolute rounded-full border"
                         style={{ width: 160, height: 160, borderColor: "rgba(255,255,255,0.15)" }}
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                       />
-                      <div
+                      <motion.div
                         className="absolute rounded-full border"
                         style={{ width: 100, height: 100, borderColor: "rgba(255,255,255,0.22)" }}
+                        animate={{ rotate: -360 }}
+                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
                       />
                     </div>
-                    {/* Central icon */}
+
+                    {/* Central icon with enhanced animation */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <motion.div
-                        className="rounded-full p-5"
+                        className="rounded-full p-5 relative"
                         style={{
                           background: "rgba(255,255,255,0.10)",
                           border: "1px solid rgba(255,255,255,0.20)",
                           backdropFilter: "blur(6px)",
                         }}
-                        whileInView={{ scale: [0.7, 1.08, 1] }}
+                        initial={{ scale: 0, rotate: -180 }}
+                        whileInView={{ scale: 1, rotate: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.65, delay: idx * 0.07 + 0.25 }}
+                        transition={{
+                          duration: 0.8,
+                          delay: idx * 0.07 + 0.25,
+                          type: "spring",
+                          stiffness: 200,
+                        }}
+                        whileHover={{
+                          scale: 1.15,
+                          rotate: 5,
+                          transition: { duration: 0.3 },
+                        }}
                       >
-                        <IconComp size={32} style={{ color: palette.textLight }} />
+                        <motion.div
+                          animate={{
+                            scale: [1, 1.05, 1],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                          }}
+                        >
+                          <IconComp size={32} style={{ color: palette.textLight }} />
+                        </motion.div>
+
+                        {/* Pulse effect */}
+                        <motion.div
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            border: `2px solid ${palette.textLight}`,
+                            opacity: 0,
+                          }}
+                          animate={{
+                            scale: [1, 1.5],
+                            opacity: [0.5, 0],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeOut",
+                          }}
+                        />
                       </motion.div>
                     </div>
+
                     {/* Bottom strip */}
                     <div
-                      className="absolute bottom-0 left-0 right-0 px-4 py-3"
+                      className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-center justify-between"
                       style={{ background: "linear-gradient(to top, rgba(0,0,0,0.60) 0%, transparent 100%)" }}
                     >
                       <p
@@ -356,46 +494,145 @@ function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
                       >
                         Chapter {String(idx + 1).padStart(2, "0")}
                       </p>
+                      <p
+                        className="text-[8px] tracking-wider uppercase font-medium flex items-center gap-1"
+                        style={{ color: "rgba(255,255,255,0.50)" }}
+                      >
+                        <Camera size={10} /> Click to view
+                      </p>
                     </div>
                   </div>
 
                   {/* ── Timeline dot (desktop only) ── */}
                   <div className="hidden sm:flex flex-col items-center justify-start flex-shrink-0 w-10 pt-20">
-                    <div
-                      className="w-[14px] h-[14px] rounded-full"
-                      style={{
-                        background: "var(--wedding-accent)",
-                        boxShadow: "0 0 0 4px var(--wedding-alt-bg), 0 0 0 6px var(--wedding-border)",
-                      }}
-                    />
+                    <motion.div
+                      className="relative"
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.07 + 0.4, type: "spring", stiffness: 300 }}
+                    >
+                      <div
+                        className="w-[14px] h-[14px] rounded-full"
+                        style={{
+                          background: "var(--wedding-accent)",
+                          boxShadow: "0 0 0 4px var(--wedding-alt-bg), 0 0 0 6px var(--wedding-border)",
+                        }}
+                      />
+                      {/* Animated ring pulse */}
+                      <motion.div
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          border: "2px solid var(--wedding-accent)",
+                          opacity: 0,
+                        }}
+                        animate={{
+                          scale: [1, 2.5],
+                          opacity: [0.6, 0],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: idx * 0.3,
+                          ease: "easeOut",
+                        }}
+                      />
+                    </motion.div>
                   </div>
 
                   {/* ── Text panel ── */}
-                  <div
+                  <motion.div
                     className={`w-full sm:flex-1 py-0 sm:py-6 ${
                       isRight ? "sm:text-right" : "sm:text-left"
                     }`}
+                    initial={{ opacity: 0, x: isRight ? 30 : -30 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.07 + 0.5, duration: 0.6 }}
                   >
-                    <h3
+                    <motion.h3
                       className="font-serif text-xl sm:text-2xl font-bold mb-3 leading-snug"
                       style={{ color: "var(--wedding-text)" }}
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.07 + 0.6, duration: 0.5 }}
                     >
                       {milestone.title}
-                    </h3>
-                    <div
+                    </motion.h3>
+                    <motion.div
                       className={`h-[2px] w-10 mb-4 ${isRight ? "sm:ml-auto" : ""}`}
                       style={{ background: "var(--wedding-accent)" }}
+                      initial={{ width: 0 }}
+                      whileInView={{ width: 40 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.07 + 0.7, duration: 0.5 }}
                     />
-                    <p className="text-sm leading-[1.85]" style={{ color: "var(--wedding-muted)" }}>
+                    <motion.p
+                      className="text-sm leading-[1.85]"
+                      style={{ color: "var(--wedding-muted)" }}
+                      initial={{ opacity: 0 }}
+                      whileInView={{ opacity: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx * 0.07 + 0.8, duration: 0.5 }}
+                    >
                       {milestone.description}
-                    </p>
-                  </div>
+                    </motion.p>
+                  </motion.div>
                 </motion.div>
               );
             })}
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <Dialog open={!!selectedMilestone} onOpenChange={(open) => !open && setSelectedMilestone(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedMilestone && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-serif text-2xl" style={{ color: "var(--wedding-text)" }}>
+                  {selectedMilestone.title}
+                </DialogTitle>
+                <p className="text-xs tracking-wider uppercase mt-1" style={{ color: "var(--wedding-muted)" }}>
+                  {selectedMilestone.date}
+                </p>
+              </DialogHeader>
+              <div className="space-y-4">
+                {selectedMilestone.imageUrl ? (
+                  <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--wedding-border)" }}>
+                    <img
+                      src={selectedMilestone.imageUrl}
+                      alt={selectedMilestone.title}
+                      className="w-full h-auto object-cover"
+                      style={{ maxHeight: "60vh", imageOrientation: "from-image" }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-xl p-12 text-center border-2 border-dashed"
+                    style={{ borderColor: "var(--wedding-border)", background: "var(--wedding-alt-bg)" }}
+                  >
+                    <Camera size={48} className="mx-auto mb-4" style={{ color: "var(--wedding-muted)", opacity: 0.5 }} />
+                    <p className="text-sm font-medium mb-2" style={{ color: "var(--wedding-text)" }}>
+                      Memory Coming Soon
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                      We're curating the perfect photo for this special moment
+                    </p>
+                  </div>
+                )}
+                <div className="px-1">
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+                    {selectedMilestone.description}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -449,7 +686,7 @@ function EventsSection({ events }: { events: WeddingEvent[] }) {
             <Calendar size={18} style={{ color: "var(--wedding-accent)" }} />
           </div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Ceremony Schedule
+            Celebrate With Us
           </p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-2 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Wedding Events
@@ -648,7 +885,7 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
             <Building size={18} style={{ color: "var(--wedding-accent)" }} />
           </div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Getting There
+            Join Us Here
           </p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Venue &amp; Travel
@@ -1139,12 +1376,19 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <Heart size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            Join Us
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             RSVP
           </h2>
           <SimpleDivider />
           <p className="text-sm mt-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            We would be honoured to have you celebrate with us. Please let us know if you can make it.
+            Your presence would mean the world to us as we begin this beautiful journey together. Please share your joy with us by confirming your attendance.
           </p>
         </motion.div>
 
@@ -1486,7 +1730,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
 }
 
 function getWardrobeTip(title: string, dressCode: string | null | undefined): {
-  style: string; desc: string; tip: string; footwear: string;
+  style: string; desc: string; tip: string; footwear: string; imageUrl: string;
 } {
   const t = title.toLowerCase();
   if (t.includes("haldi")) return {
@@ -1494,60 +1738,82 @@ function getWardrobeTip(title: string, dressCode: string | null | undefined): {
     desc: dressCode || "Bright yellows & greens — airy and full of life.",
     tip: "A light Anarkali or comfortable Kurta set is perfect. Choose breathable cotton or linen fabrics — you'll be seated for a while.",
     footwear: "Flats or Juttis — easy to remove for the rituals.",
+    imageUrl: "",
   };
   if (t.includes("sangeet")) return {
     style: "Festive Evening Glam",
     desc: dressCode || "Bold, shimmery, and made for dancing all night.",
     tip: "A vibrant Lehenga, Indo-western fusion, or a sharply-cut Sherwani works beautifully. Make sure you can move freely!",
     footwear: "Block heels or Mojari — stylish yet stable on the dance floor.",
+    imageUrl: "",
   };
   if (t.includes("engagement")) return {
     style: "Festive & Celebratory",
     desc: dressCode || "Bright, cheerful attire for a joyous occasion.",
     tip: "Opt for vibrant Indian formals. Semi-formal Indian wear works well — think Lehenga, co-ord sets, or a smart Kurta.",
     footwear: "Block heels, Juttis, or dress flats.",
+    imageUrl: "",
   };
   if (t.includes("reception")) return {
     style: "Black-tie Indian Elegance",
     desc: dressCode || "Formal, richly embellished, and statement-worthy.",
     tip: "A designer saree, embellished Lehenga, or a formal Sherwani with accessories. This is the evening to truly shine.",
     footwear: "Embellished heels or Nagra shoes — polished and formal.",
+    imageUrl: "",
   };
   if (t.includes("vidai")) return {
     style: "Elegant & Emotional",
     desc: dressCode || "Grace and tradition for a touching farewell.",
     tip: "Traditional attire befitting a meaningful ceremony. Subtle, elegant colours are preferred over very bright ones.",
     footwear: "Comfortable flats or traditional footwear.",
+    imageUrl: "",
   };
   if (t.includes("wedding") || t.includes("ceremony") || t.includes("biye")) return {
     style: "Elegant Traditional Wear",
     desc: dressCode || "Modest and comfortable for the holy ceremony.",
     tip: "Traditional attire — silk saree with heavy border, or a dhoti-kurta. Expect long rituals while seated; comfort is key.",
     footwear: "Comfortable flats or Juttis — rituals require removing footwear.",
+    imageUrl: "",
   };
   return {
     style: dressCode ?? "Smart Indian Formals",
     desc: dressCode ?? "Dress elegantly for the occasion.",
     tip: `Follow the dress code: ${dressCode ?? "Indian formals"}. When in doubt, err on the side of traditional.`,
     footwear: "Comfortable footwear appropriate for the event.",
+    imageUrl: "",
   };
+}
+
+// Get dress code color palette for each event type
+function getDressCodeColors(title: string): { primary: string; secondary: string; tertiary: string } {
+  const t = title.toLowerCase();
+  if (t.includes("haldi")) return { primary: "#FDB750", secondary: "#7FB069", tertiary: "#FFD88E" }; // Yellow, green, light yellow
+  if (t.includes("sangeet")) return { primary: "#E91E8C", secondary: "#C6A75E", tertiary: "#8B3A8B" }; // Pink, gold, purple
+  if (t.includes("engagement")) return { primary: "#E85D75", secondary: "#C6A75E", tertiary: "#FF9AA2" }; // Rose, gold, light pink
+  if (t.includes("reception")) return { primary: "#8B0000", secondary: "#C6A75E", tertiary: "#2C1400" }; // Deep red, gold, black
+  if (t.includes("vidai")) return { primary: "#D4A5A5", secondary: "#E6B9A6", tertiary: "#F5E6D3" }; // Muted rose, beige, cream
+  if (t.includes("wedding") || t.includes("ceremony") || t.includes("biye")) return { primary: "#A1122F", secondary: "#C6A75E", tertiary: "#FFFFFF" }; // Red, gold, white
+  return { primary: "#B9975B", secondary: "#8B6914", tertiary: "#EFE6D8" }; // Default gold palette
 }
 
 function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
   const [activeTip, setActiveTip] = useState<number | null>(null);
 
   const wardrobeItems = events.map((ev) => {
-    const { style, desc, tip, footwear } = getWardrobeTip(ev.title, ev.dressCode);
+    const { style, desc, tip, footwear, imageUrl } = getWardrobeTip(ev.title, ev.dressCode);
+    const colors = getDressCodeColors(ev.title);
     const date = new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
     return {
       id: ev.id,
       event: ev.title,
       date,
       icon: getEventIcon(ev.title),
+      colors,
       style,
       desc,
       tip,
       footwear,
+      imageUrl,
     };
   });
 
@@ -1565,14 +1831,14 @@ function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
             <Shirt size={18} style={{ color: "var(--wedding-accent)" }} />
           </div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Dress to Impress
+            Dress Your Best
           </p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
             Wardrobe Planner
           </h2>
           <SimpleDivider />
           <p className="text-xs mt-4" style={{ color: "var(--wedding-muted)" }}>
-            Tap the <Info size={11} className="inline mx-0.5" style={{ color: "var(--wedding-accent)" }} /> for squad style tips
+            Tap the <Info size={11} className="inline mx-0.5" style={{ color: "var(--wedding-accent)" }} /> for our styling suggestions for each celebration
           </p>
         </motion.div>
 
@@ -1594,8 +1860,31 @@ function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.07 }}
               >
+                {/* Dress code color swatches */}
+                <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+                  <div className="flex gap-1.5 items-center flex-1">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center border"
+                      style={{ backgroundColor: item.colors.primary, borderColor: "rgba(0,0,0,0.1)" }}
+                    >
+                      <Shirt size={18} style={{ color: "rgba(255,255,255,0.9)", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }} />
+                    </div>
+                    <div
+                      className="w-7 h-7 rounded-md border"
+                      style={{ backgroundColor: item.colors.secondary, borderColor: "rgba(0,0,0,0.1)" }}
+                    />
+                    <div
+                      className="w-7 h-7 rounded-md border"
+                      style={{ backgroundColor: item.colors.tertiary, borderColor: "rgba(0,0,0,0.1)" }}
+                    />
+                    <p className="text-[9px] tracking-[0.15em] uppercase ml-1" style={{ color: "var(--wedding-muted)", opacity: 0.6 }}>
+                      COLOR PALETTE
+                    </p>
+                  </div>
+                </div>
+
                 {/* Card header row */}
-                <div className="flex items-center gap-3 px-4 py-3.5">
+                <div className="flex items-center gap-3 px-4 py-3.5 border-t" style={{ borderColor: "var(--wedding-border)" }}>
                   {/* Event icon */}
                   <div
                     className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
@@ -1677,7 +1966,7 @@ function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
           whileInView={{ opacity: 0.65 }}
           viewport={{ once: true }}
         >
-          These are friendly suggestions — wear what makes you comfortable and confident!
+          These are heartfelt suggestions — we want you to feel beautiful and comfortable celebrating with us!
         </motion.p>
       </div>
     </section>
@@ -1741,7 +2030,7 @@ function FindByInviteSection({ onEditRsvp, onSubmitDirect, onSearchReady }: { on
           </h2>
           <SimpleDivider />
           <p className="text-sm mt-4 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            Search your name to see your guest invite status
+            Search for your name to view your personalized invitation details
           </p>
         </motion.div>
 
@@ -1796,10 +2085,10 @@ function FindByInviteSection({ onEditRsvp, onSubmitDirect, onSearchReady }: { on
             >
               <User size={28} className="mx-auto mb-3" style={{ color: "var(--wedding-accent)", opacity: 0.4 }} />
               <p className="font-serif text-base font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                We couldn't find your name in our guest list.
+                We couldn't find your name
               </p>
               <p className="text-xs mb-4" style={{ color: "var(--wedding-muted)" }}>
-                Please contact us if you believe this is an error.
+                Don't worry! You can still RSVP directly or reach out to us.
               </p>
               <button
                 onClick={() => {
@@ -1981,11 +2270,9 @@ function FindByInviteSection({ onEditRsvp, onSubmitDirect, onSearchReady }: { on
   );
 }
 
-function FaqsSection({ faqList }: { faqList: Faq[] }) {
-  if (faqList.length === 0) return null;
-
+function ContactInfoSection() {
   return (
-    <section id="faqs" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="faqs-section">
+    <section id="contact" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="contact-section">
       <div className="max-w-3xl mx-auto">
         <motion.div
           className="text-center mb-12"
@@ -1993,30 +2280,49 @@ function FaqsSection({ faqList }: { faqList: Faq[] }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--wedding-text)" }}>
-            Frequently Asked Questions
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+            <Phone size={18} style={{ color: "var(--wedding-accent)" }} />
+          </div>
+          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
+            Need Help?
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
+            Contact Us
           </h2>
           <SimpleDivider />
         </motion.div>
 
-        <Accordion type="single" collapsible className="space-y-3">
-          {faqList.map((faq) => (
-            <AccordionItem
-              key={faq.id}
-              value={faq.id}
-              className="rounded-lg px-6 overflow-hidden"
-              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-              data-testid={`faq-item-${faq.id}`}
+        <motion.div
+          className="rounded-lg p-8 text-center"
+          style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+        >
+          <p className="text-base sm:text-lg mb-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+            Have questions or need assistance? Our wedding coordinator is here to help make your experience memorable:
+          </p>
+          <div className="space-y-3">
+            <a
+              href="tel:+919876512345"
+              className="flex items-center justify-center gap-3 text-lg font-semibold hover:opacity-80 transition-opacity"
+              style={{ color: "var(--wedding-accent)" }}
             >
-              <AccordionTrigger className="text-left font-serif text-sm sm:text-base py-4" style={{ color: "var(--wedding-text)" }}>
-                {faq.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed pb-4" style={{ color: "var(--wedding-muted)" }}>
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+              <Phone size={20} />
+              <span>+91 98765 12345</span>
+            </a>
+            <a
+              href="mailto:wedding@kaustavhimasree.com"
+              className="flex items-center justify-center gap-3 text-base hover:opacity-80 transition-opacity"
+              style={{ color: "var(--wedding-text)" }}
+            >
+              <Mail size={18} />
+              <span>wedding@kaustavhimasree.com</span>
+            </a>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -2050,14 +2356,18 @@ function FooterSection() {
           Himasree &amp; Kaustav
         </h3>
 
-        <p className="text-xs tracking-[0.3em] uppercase mb-6" style={{ color: "var(--wedding-muted)", opacity: 0.7 }}>
+        <p className="text-xs tracking-[0.3em] uppercase mb-4" style={{ color: "var(--wedding-muted)", opacity: 0.7 }}>
           December 2026 &middot; Kolkata
+        </p>
+
+        <p className="text-xs leading-relaxed mb-6 italic" style={{ color: "var(--wedding-muted)", opacity: 0.65 }}>
+          Two hearts, one journey &mdash; forever begins here
         </p>
 
         <div className="h-px mx-auto max-w-[80px] mb-6" style={{ background: "linear-gradient(90deg, transparent, var(--wedding-accent), transparent)" }} />
 
         <p className="text-[11px] tracking-widest uppercase" style={{ color: "var(--wedding-muted)", opacity: 0.5 }}>
-          Made with love &amp; blessings &middot; © 2026
+          Crafted with love &amp; blessed by family &middot; © 2026
         </p>
       </div>
     </footer>
@@ -2074,6 +2384,7 @@ export default function Home() {
   const [searchTrigger, setSearchTrigger] = useState<{ fn: () => void; query: string } | null>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const currentPlaylistRef = useRef<string[]>([]);
+  const isBackgroundMusicRef = useRef<boolean>(false);
 
   /* ================= CHECK SAVED SIDE PREFERENCE ================= */
 
@@ -2107,7 +2418,6 @@ export default function Home() {
   const events = data?.events ?? [];
   const milestones = data?.stories ?? [];
   const venueList = data?.venues ?? [];
-  const faqList = data?.faqs ?? [];
 
   /* ================= FETCH ALL EVENTS FOR RSVP FORM ================= */
 
@@ -2124,66 +2434,64 @@ export default function Home() {
 
   /* ================= MUSIC SETUP ================= */
 
-  const playlist = useMemo(() => {
-    if (!config) return [];
+  const { playlist, isBackgroundMusic } = useMemo(() => {
+    if (!config) return { playlist: [], isBackgroundMusic: false };
 
-    if (side === "groom" && config.groomMusicUrls?.length) {
-      return config.groomMusicUrls.filter(Boolean).map((track: any) =>
+    // Priority: Background music > Groom/Bride specific
+    if (Array.isArray(config.backgroundMusicUrl) && config.backgroundMusicUrl.length) {
+      const bgPlaylist = config.backgroundMusicUrl.filter(Boolean).map((track: any) =>
         typeof track === 'object' ? track.url : track
       ).filter(Boolean);
+      return { playlist: bgPlaylist, isBackgroundMusic: true };
+    }
+
+    if (side === "groom" && config.groomMusicUrls?.length) {
+      const groomPlaylist = config.groomMusicUrls.filter(Boolean).map((track: any) =>
+        typeof track === 'object' ? track.url : track
+      ).filter(Boolean);
+      return { playlist: groomPlaylist, isBackgroundMusic: false };
     }
 
     if (side === "bride" && config.brideMusicUrls?.length) {
-      return config.brideMusicUrls.filter(Boolean).map((track: any) =>
+      const bridePlaylist = config.brideMusicUrls.filter(Boolean).map((track: any) =>
         typeof track === 'object' ? track.url : track
       ).filter(Boolean);
+      return { playlist: bridePlaylist, isBackgroundMusic: false };
     }
 
-    if (config.backgroundMusicUrl) {
-      return [config.backgroundMusicUrl];
-    }
-
-    return [];
-    // if (!config) return;
-
-    // let playlist: string[] = [];
-
-    // if (side === "groom" && config.groomMusicUrls?.length) {
-    //   playlist = config.groomMusicUrls.filter(Boolean);
-    // } else if (side === "bride" && config.brideMusicUrls?.length) {
-    //   playlist = config.brideMusicUrls.filter(Boolean);
-    // } else if (config.backgroundMusicUrl) {
-    //   playlist = [config.backgroundMusicUrl];
-    // }
-
-    // currentPlaylistRef.current = playlist;
-    // setCurrentTrackIndex(0);
-
-    // if (playlist.length > 0) {
-    //   stop();
-    //   setMusicUrl(playlist[0]);
-
-    //   if (sealOpened) {
-    //     setTimeout(() => fadeIn(), 300);
-    //   }
-    // }
+    return { playlist: [], isBackgroundMusic: false };
   }, [config, side]);
+
   /* ================= APPLY PLAYLIST WHEN IT CHANGES ================= */
 
   useEffect(() => {
     if (!playlist.length || !sideSelected) return;
 
+    // Check if playlist actually changed (compare URLs)
+    const playlistChanged =
+      currentPlaylistRef.current.length !== playlist.length ||
+      currentPlaylistRef.current.some((url, idx) => url !== playlist[idx]);
+
+    // Update refs
+    const wasBackgroundMusic = isBackgroundMusicRef.current;
+    isBackgroundMusicRef.current = isBackgroundMusic;
     currentPlaylistRef.current = playlist;
-    setCurrentTrackIndex(0);
 
-    stop();
-    setMusicUrl(playlist[0]);
+    // Only restart music if:
+    // 1. Playlist actually changed AND
+    // 2. (Not background music OR was not background music before)
+    // This keeps background music continuous when switching sides
+    if (playlistChanged && (!isBackgroundMusic || !wasBackgroundMusic)) {
+      setCurrentTrackIndex(0);
+      stop();
+      setMusicUrl(playlist[0]);
 
-    // Fade in music 1 second after side selection
-    setTimeout(() => {
-      fadeIn();
-    }, 1000);
-  }, [playlist, sideSelected, stop, setMusicUrl, fadeIn]);
+      // Fade in music 1 second after side selection
+      setTimeout(() => {
+        fadeIn();
+      }, 1000);
+    }
+  }, [playlist, isBackgroundMusic, sideSelected, stop, setMusicUrl, fadeIn]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -2323,7 +2631,7 @@ export default function Home() {
                 }
               }}
             />
-            <FaqsSection faqList={faqList} />
+            <ContactInfoSection />
             <FooterSection />
           </main>
 

@@ -19,7 +19,17 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 80);
+    const onScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Simple logic: hide at top (0-80px), show and stick when scrolled past 80px
+      if (currentScrollY > 80) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
@@ -35,7 +45,7 @@ export default function Header() {
     { id: "wardrobe", label: "Wardrobe" },
     { id: "story", label: "Our Story" },
     { id: "rsvp", label: "RSVP" },
-    { id: "faqs", label: "FAQ" },
+    { id: "contact", label: "Contact" },
   ];
 
   const handleNavClick = (id: string) => {
@@ -47,15 +57,15 @@ export default function Header() {
     <header
       className="fixed top-0 left-0 right-0 z-50 border-b"
       style={{
-        background: "var(--wedding-card-bg)",
-        borderColor: "var(--wedding-border)",
+        background: scrolled ? "var(--wedding-card-bg)" : "rgba(255,255,255,0.7)",
+        borderColor: scrolled ? "var(--wedding-border)" : "rgba(176,132,72,0.15)",
         backdropFilter: "blur(14px)",
         WebkitBackdropFilter: "blur(14px)",
         boxShadow: scrolled ? "0 2px 20px rgba(46,43,39,0.07)" : "none",
         opacity: scrolled ? 1 : 0,
-        pointerEvents: scrolled ? "auto" : "none",
         transform: scrolled ? "translateY(0)" : "translateY(-100%)",
-        transition: "opacity 0.4s ease, transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s ease",
+        pointerEvents: scrolled ? "auto" : "none",
+        transition: "all 0.3s ease",
       }}
       data-testid="header"
     >

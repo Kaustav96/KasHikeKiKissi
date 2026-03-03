@@ -833,7 +833,7 @@ function CrudTab({
 
 function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; qc: any; toast: any }) {
   // Track if user has modified music URLs (to distinguish from "not loaded yet")
-  const musicUrlsModified = useRef({ groom: false, bride: false });
+  const musicUrlsModified = useRef({ background: false, groom: false, bride: false });
 
   const [form, setForm] = useState(() => {
     if (!config) {
@@ -842,7 +842,7 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
         dateToBeDecided: true,
         coupleStory: "",
         upiId: "",
-        backgroundMusicUrl: "",
+        backgroundMusicUrl: [] as { name: string; url: string }[],
         groomMusicUrls: [] as { name: string; url: string }[],
         brideMusicUrls: [] as { name: string; url: string }[],
       };
@@ -856,7 +856,9 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
       dateToBeDecided: !hasWeddingDate,
       coupleStory: config.coupleStory ?? "",
       upiId: config.upiId ?? "",
-      backgroundMusicUrl: config.backgroundMusicUrl ?? "",
+      backgroundMusicUrl: Array.isArray(config.backgroundMusicUrl)
+        ? config.backgroundMusicUrl
+        : [],
       groomMusicUrls: Array.isArray(config.groomMusicUrls)
         ? config.groomMusicUrls
         : [],
@@ -886,7 +888,13 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
       dateToBeDecided: !hasWeddingDate,
       coupleStory: config.coupleStory ?? "",
       upiId: config.upiId ?? "",
-      backgroundMusicUrl: config.backgroundMusicUrl ?? "",
+      backgroundMusicUrl: Array.isArray(config.backgroundMusicUrl)
+        ? config.backgroundMusicUrl.map((item: any) =>
+            typeof item === 'string'
+              ? { name: '', url: item }
+              : item
+          )
+        : [],
       groomMusicUrls: Array.isArray(config.groomMusicUrls)
         ? config.groomMusicUrls.map((item: any) =>
             typeof item === 'string'
@@ -903,7 +911,7 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
         : [],
     });
     // Reset modification flags when config loads
-    musicUrlsModified.current = { groom: false, bride: false };
+    musicUrlsModified.current = { background: false, groom: false, bride: false };
     lastConfigVersion.current = configVersion;
   }, [config]);
   // useEffect(() => {
@@ -926,20 +934,42 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
       const payload: any = {
         coupleStory: data.coupleStory,
         upiId: data.upiId,
-        backgroundMusicUrl: data.backgroundMusicUrl ?? "",
       };
 
-      // Only include music URLs if user has explicitly modified them
-      // This prevents accidentally clearing DB values when form hasn't loaded them yet
-      if (musicUrlsModified.current.groom) {
-        payload.groomMusicUrls = Array.isArray(data.groomMusicUrls)
-          ? data.groomMusicUrls.filter((track: { name: string; url: string }) => track.url && track.url.trim())
-          : [];
-      }
-      if (musicUrlsModified.current.bride) {
-        payload.brideMusicUrls = Array.isArray(data.brideMusicUrls)
-          ? data.brideMusicUrls.filter((track: { name: string; url: string }) => track.url && track.url.trim())
-          : [];
+      // Mutual exclusivity logic:
+      // If background music exists, clear groom/bride. If groom/bride exist, clear background.
+      const hasBackgroundMusic = Array.isArray(data.backgroundMusicUrl) &&
+        data.backgroundMusicUrl.some((t: any) => t.url && t.url.trim());
+      const hasGroomMusic = Array.isArray(data.groomMusicUrls) &&
+        data.groomMusicUrls.some((t: any) => t.url && t.url.trim());
+      const hasBrideMusic = Array.isArray(data.brideMusicUrls) &&
+        data.brideMusicUrls.some((t: any) => t.url && t.url.trim());
+
+      if (hasBackgroundMusic) {
+        // Background music takes precedence - clear groom/bride
+        payload.backgroundMusicUrl = data.backgroundMusicUrl.filter(
+          (track: { name: string; url: string }) => track.url && track.url.trim()
+        );
+        payload.groomMusicUrls = [];
+        payload.brideMusicUrls = [];
+      } else if (hasGroomMusic || hasBrideMusic) {
+        // Groom/Bride music exists - clear background
+        payload.backgroundMusicUrl = [];
+        if (musicUrlsModified.current.groom) {
+          payload.groomMusicUrls = data.groomMusicUrls.filter(
+            (track: { name: string; url: string }) => track.url && track.url.trim()
+          );
+        }
+        if (musicUrlsModified.current.bride) {
+          payload.brideMusicUrls = data.brideMusicUrls.filter(
+            (track: { name: string; url: string }) => track.url && track.url.trim()
+          );
+        }
+      } else {
+        // No music at all - set all to empty
+        payload.backgroundMusicUrl = [];
+        payload.groomMusicUrls = [];
+        payload.brideMusicUrls = [];
       }
 
       if (!data.dateToBeDecided && data.weddingDate?.trim()) {
@@ -1030,42 +1060,125 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
               data-testid="input-upi-id"
             />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
-              <Music size={12} /> Background Music (Fallback)
-            </label>
-            <div className="space-y-2">
-              <input
-                value={form.backgroundMusicUrl}
-                onChange={(e) => setForm({ ...form, backgroundMusicUrl: e.target.value })}
-                placeholder="Enter music URL or upload file below"
-                className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
-                data-testid="input-music-url"
-              />
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const dataUrl = event.target?.result as string;
-                        setForm({ ...form, backgroundMusicUrl: dataUrl });
-                      };
-                      reader.readAsDataURL(file);
-                    }
+        </div>
+
+        {/* Background Music Playlist */}
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+            <Music size={12} /> Background Music Playlist (Universal)
+            {config?.backgroundMusicUrl && Array.isArray(config.backgroundMusicUrl) && config.backgroundMusicUrl.length > 0 && (
+              <span className="ml-auto text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-600">
+                {config.backgroundMusicUrl.length} saved
+              </span>
+            )}
+          </label>
+          <div className="space-y-2">
+            {form.backgroundMusicUrl.length === 0 && config?.backgroundMusicUrl && Array.isArray(config.backgroundMusicUrl) && config.backgroundMusicUrl.length > 0 && (
+              <div className="p-3 rounded bg-yellow-500/10 border border-yellow-500/20">
+                <p className="text-xs text-yellow-600 mb-2">
+                  ⚠️ {config.backgroundMusicUrl.length} music URL(s) saved in database. Click below to edit them.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    musicUrlsModified.current.background = true;
+                    const musicUrls = Array.isArray(config.backgroundMusicUrl)
+                      ? config.backgroundMusicUrl.map((item: any) =>
+                          typeof item === 'string'
+                            ? { name: '', url: item }
+                            : item
+                        )
+                      : [];
+                    setForm({ ...form, backgroundMusicUrl: musicUrls });
                   }}
-                  className="text-xs text-muted-foreground file:mr-2 file:px-3 file:py-1 file:rounded file:border-0 file:text-xs file:bg-secondary file:text-secondary-foreground"
-                  data-testid="input-music-file"
-                />
+                  className="px-3 py-1.5 rounded bg-yellow-600 text-white text-xs"
+                >
+                  Load Existing Music URLs
+                </button>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                Fallback music when theme-specific music is not set
-              </p>
-            </div>
+            )}
+            {form.backgroundMusicUrl.map((track, idx) => (
+              <div key={idx} className="space-y-2 p-3 rounded bg-background/50 border">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Track {idx + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      musicUrlsModified.current.background = true;
+                      const updated = form.backgroundMusicUrl.filter((_, i) => i !== idx);
+                      setForm({ ...form, backgroundMusicUrl: updated });
+                    }}
+                    className="ml-auto px-2 py-1 rounded bg-destructive text-destructive-foreground text-xs"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    value={track.name}
+                    onChange={(e) => {
+                      musicUrlsModified.current.background = true;
+                      const updated = [...form.backgroundMusicUrl];
+                      updated[idx] = { ...updated[idx], name: e.target.value };
+                      setForm({ ...form, backgroundMusicUrl: updated });
+                    }}
+                    placeholder="Track name (e.g., Wedding March)"
+                    className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+                  />
+                  <div className="space-y-1">
+                    <input
+                      value={track.url}
+                      onChange={(e) => {
+                        musicUrlsModified.current.background = true;
+                        const updated = [...form.backgroundMusicUrl];
+                        updated[idx] = { ...updated[idx], url: e.target.value };
+                        setForm({ ...form, backgroundMusicUrl: updated });
+                      }}
+                      placeholder="Music URL or upload file below"
+                      className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+                    />
+                    <input
+                      type="file"
+                      accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          musicUrlsModified.current.background = true;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const dataUrl = event.target?.result as string;
+                            const updated = [...form.backgroundMusicUrl];
+                            updated[idx] = {
+                              ...updated[idx],
+                              url: dataUrl,
+                              name: updated[idx].name || file.name.replace(/\.[^/.]+$/, "")
+                            };
+                            setForm({ ...form, backgroundMusicUrl: updated });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="text-xs text-muted-foreground file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:text-xs file:bg-secondary file:text-secondary-foreground"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                musicUrlsModified.current.background = true;
+                setForm({ ...form, backgroundMusicUrl: [...form.backgroundMusicUrl, { name: '', url: '' }] });
+              }}
+              className="px-3 py-2 rounded bg-secondary text-secondary-foreground text-xs"
+            >
+              + Add Background Music Track
+            </button>
+            <p className="text-[10px] text-muted-foreground">
+              ⚠️ Note: Background music will override theme-specific music. Clear background to use groom/bride playlists.
+            </p>
           </div>
+        </div>
 
           {/* Groom Music Playlist */}
           <div>
@@ -1302,7 +1415,6 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
               </p>
             </div>
           </div>
-        </div>
         <button
           onClick={() => saveMutation.mutate(form)}
           disabled={saveMutation.isPending}

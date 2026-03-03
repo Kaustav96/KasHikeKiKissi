@@ -523,7 +523,7 @@ export async function registerRoutes(
       venueMapUrl: z.string().url().optional().or(z.literal("")),
       coupleStory: z.string().max(5000).optional(),
       upiId: z.string().max(200).optional(),
-      backgroundMusicUrl: z.string().optional().or(z.literal("")),
+      backgroundMusicUrl: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
       groomMusicUrls: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
       brideMusicUrls: z.array(z.object({ name: z.string(), url: z.string() })).optional(),
     });

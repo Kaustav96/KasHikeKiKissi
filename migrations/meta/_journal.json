@@ -15,6 +15,13 @@
       "when": 1772363261059,
       "tag": "0001_ambitious_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772558102290,
+      "tag": "0002_magical_blue_blade",
+      "breakpoints": true
     }
   ]
 }
