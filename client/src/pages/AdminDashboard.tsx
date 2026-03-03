@@ -37,9 +37,8 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/config"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: true, // Refresh when admin returns to tab
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   type GuestsResponse = {
@@ -56,9 +55,8 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/guests"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: true, // Refresh when admin returns to tab
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   const guests = data?.data ?? [];
@@ -73,36 +71,32 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/events"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: true, // Refresh when admin returns to tab
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   const { data: stories = [] } = useQuery<StoryMilestone[]>({
     queryKey: ["/api/admin/stories"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: true, // Refresh when admin returns to tab
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   const { data: venues = [] } = useQuery<Venue[]>({
     queryKey: ["/api/admin/venues"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: true, // Refresh when admin returns to tab
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   const { data: faqs = [] } = useQuery<Faq[]>({
     queryKey: ["/api/admin/faqs"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
-    refetchInterval: 10000, // Auto-refresh every 10 seconds
-    refetchOnWindowFocus: true,
-    staleTime: 5000,
+    refetchOnWindowFocus: true, // Refresh when admin returns to tab
+    staleTime: 1 * 60 * 1000, // 1 minute cache
   });
 
   if (authLoading) {

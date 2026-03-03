@@ -1154,11 +1154,6 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
     form.setValue("side", side as "groom" | "bride" | "both");
   }, [side, form]);
 
-  // Debug: Log state changes
-  useEffect(() => {
-    console.log("State changed - isUpdating:", isUpdating, "selectedGuest:", selectedGuest?.name);
-  }, [isUpdating, selectedGuest]);
-
   // Auto-prefill when guest is selected from "Find Your Invitation"
   useEffect(() => {
     if (!prefillGuest) return;
@@ -1189,9 +1184,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
 
   // Check for existing guest by name
   const checkExistingGuest = async (name: string) => {
-    console.log("checkExistingGuest called with:", name);
     if (!name || name.length < 3) {
-      console.log("Name too short (<3 chars), skipping check");
       return;
     }
 
@@ -1200,14 +1193,12 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
       const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
       if (res.ok) {
         const guestList = await res.json();
-        console.log("Found guests:", guestList);
         // Show selection popup if any guests found (even if just 1)
         if (Array.isArray(guestList) && guestList.length > 0) {
           setFoundGuests(guestList);
           setShowGuestSelectionPopup(true);
         } else {
           // No guests found — if we were in update mode, exit it and reset fields
-          console.log("No guests found, clearing states if in update mode");
           setFoundGuests([]);
           if (isUpdating) {
             setIsUpdating(false);
@@ -1227,7 +1218,6 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
         }
       } else {
         // Name not in database — same reset logic
-        console.log("API returned error, clearing states");
         setFoundGuests([]);
         if (isUpdating) {
           setIsUpdating(false);
@@ -1246,7 +1236,6 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
         }
       }
     } catch (err) {
-      console.error("Error checking guest:", err);
       setFoundGuests([]);
     } finally {
       setCheckingName(false);
@@ -1296,27 +1285,17 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
 
   const rsvpMutation = useMutation({
     mutationFn: async (data: PublicRsvpForm) => {
-      console.log("=== RSVP MUTATION DEBUG ===");
-      console.log("isUpdating:", isUpdating);
-      console.log("selectedGuest:", selectedGuest);
-      console.log("Form data name:", data.name);
-
       // If updating existing guest, use their ID - but verify name matches!
       if (isUpdating && selectedGuest) {
-        console.log("In UPDATE mode, checking name match...");
         // Safety check: ensure the name being submitted matches the selected guest
         if (data.name.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
           // Name mismatch - treat as new guest instead
-          console.warn("⚠️ Name mismatch! Form:", data.name, "vs Selected:", selectedGuest.name);
-          console.log("Creating NEW guest instead of updating");
           const res = await apiRequest("POST", "/api/rsvp/public", data);
           return res.json();
         }
-        console.log("✓ Name matches, updating existing guest:", selectedGuest.inviteSlug);
         const res = await apiRequest("POST", "/api/rsvp", { ...data, slug: selectedGuest.inviteSlug });
         return res.json();
       } else {
-        console.log("✓ Creating NEW guest (not in update mode)");
         const res = await apiRequest("POST", "/api/rsvp/public", data);
         return res.json();
       }
@@ -1447,7 +1426,6 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
 
                       // AGGRESSIVE state clearing: if name doesn't match selected guest, clear everything
                       if (selectedGuest && newName.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
-                        console.log("Name mismatch detected in onChange, clearing states");
                         setIsUpdating(false);
                         setSelectedGuest(null);
                         setFoundGuests([]);
@@ -2385,17 +2363,9 @@ export default function Home() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const currentPlaylistRef = useRef<string[]>([]);
   const isBackgroundMusicRef = useRef<boolean>(false);
+  const prevSideSelectedRef = useRef<boolean>(false);
 
-  /* ================= CHECK SAVED SIDE PREFERENCE ================= */
-
-  useEffect(() => {
-    // Restore the theme so the crest/data loads with the right colours,
-    // but never skip the crest — it always plays on every load / refresh.
-    const savedSide = localStorage.getItem('wedding-side-preference');
-    if (savedSide === 'groom' || savedSide === 'bride') {
-      setSide(savedSide);
-    }
-  }, []);
+  /* ================= NO SIDE PREFERENCE STORAGE - ALWAYS SHOW CREST ================= */
 
   /* ================= SINGLE PUBLIC QUERY ================= */
 
@@ -2408,8 +2378,8 @@ export default function Home() {
       );
       return res.json();
     },
-    staleTime: 5 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes - wedding data rarely changes
+    refetchOnWindowFocus: false, // Avoid unnecessary refetches on tab switch
     refetchOnReconnect: true,
   });
 
@@ -2422,12 +2392,13 @@ export default function Home() {
   /* ================= FETCH ALL EVENTS FOR RSVP FORM ================= */
 
   const { data: allEventsData } = useQuery({
-    queryKey: ["/api/events"],
+    queryKey: ["/api/events", side],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/events");
       return res.json();
     },
-    staleTime: 5 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes - wedding data rarely changes
+    refetchOnWindowFocus: false,
   });
 
   const allEvents = allEventsData ?? [];
@@ -2467,6 +2438,10 @@ export default function Home() {
   useEffect(() => {
     if (!playlist.length || !sideSelected) return;
 
+    // Check if this is a fresh side selection (sideSelected just became true)
+    const isFreshSelection = !prevSideSelectedRef.current && sideSelected;
+    prevSideSelectedRef.current = sideSelected;
+
     // Check if playlist actually changed (compare URLs)
     const playlistChanged =
       currentPlaylistRef.current.length !== playlist.length ||
@@ -2475,13 +2450,17 @@ export default function Home() {
     // Update refs
     const wasBackgroundMusic = isBackgroundMusicRef.current;
     isBackgroundMusicRef.current = isBackgroundMusic;
-    currentPlaylistRef.current = playlist;
 
-    // Only restart music if:
-    // 1. Playlist actually changed AND
-    // 2. (Not background music OR was not background music before)
-    // This keeps background music continuous when switching sides
-    if (playlistChanged && (!isBackgroundMusic || !wasBackgroundMusic)) {
+    // Start music if:
+    // 1. Fresh selection (user just picked a side) OR
+    // 2. (Playlist changed AND not background music transition)
+    // This keeps background music continuous when switching sides, but restarts on fresh selection
+    const shouldStartMusic =
+      isFreshSelection ||
+      (playlistChanged && (!isBackgroundMusic || !wasBackgroundMusic));
+
+    if (shouldStartMusic) {
+      currentPlaylistRef.current = playlist;
       setCurrentTrackIndex(0);
       stop();
       setMusicUrl(playlist[0]);
@@ -2490,8 +2469,11 @@ export default function Home() {
       setTimeout(() => {
         fadeIn();
       }, 1000);
+    } else if (!playlistChanged) {
+      // Update ref even if playlist didn't change
+      currentPlaylistRef.current = playlist;
     }
-  }, [playlist, isBackgroundMusic, sideSelected, stop, setMusicUrl, fadeIn]);
+  }, [playlist, isBackgroundMusic, sideSelected]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -2500,16 +2482,7 @@ export default function Home() {
       const playlist = currentPlaylistRef.current;
       if (playlist.length <= 1) return;
 
-    //   const nextIndex = (currentTrackIndex + 1) % playlist.length;
-    //   setCurrentTrackIndex(nextIndex);
-    //   setMusicUrl(playlist[nextIndex]);
-
-    //   setTimeout(() => fadeIn(), 100);
-    // };
-
-    // setOnTrackEnd(handleEnded);
-    // return () => setOnTrackEnd(null);
-    setCurrentTrackIndex((prev) => {
+      setCurrentTrackIndex((prev) => {
         const next = (prev + 1) % playlist.length;
         setMusicUrl(playlist[next]);
         fadeIn();
@@ -2519,7 +2492,7 @@ export default function Home() {
 
     setOnTrackEnd(handleEnded);
     return () => setOnTrackEnd(null);
-  }, [ setMusicUrl, fadeIn, setOnTrackEnd]);
+  }, []);
 
   /* ================= VIEW COUNT ================= */
 
@@ -2552,10 +2525,7 @@ export default function Home() {
 
   const handleCrestFinish = () => {
     setShowCrest(false);
-    const savedSide = localStorage.getItem('wedding-side-preference');
-    if (savedSide === 'groom' || savedSide === 'bride') {
-      setSideSelected(true);
-    }
+    // Always show side selection after crest - no stored preference
   };
 
   return (
@@ -2567,7 +2537,6 @@ export default function Home() {
           key="selection"
           onSelectSide={(selectedSide) => {
             setSide(selectedSide);
-            localStorage.setItem('wedding-side-preference', selectedSide);
             setSideSelected(true);
           }}
         />
@@ -2583,13 +2552,12 @@ export default function Home() {
           <ViewingSideOverlay
             onBackToSelection={() => {
               stop();
-              localStorage.removeItem('wedding-side-preference');
               setShowCrest(false);
               setSideSelected(false);
+              prevSideSelectedRef.current = false; // Reset for next selection
             }}
             onSideChange={(newSide) => {
               setSide(newSide);
-              localStorage.setItem('wedding-side-preference', newSide);
             }}
           />
 

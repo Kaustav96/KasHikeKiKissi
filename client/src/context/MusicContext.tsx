@@ -105,55 +105,70 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setMusicUrl = useCallback((url: string) => {
-    if (audioRef.current && url && audioRef.current.src !== url) {
-      // Validate URL before setting
-      if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
-        console.error('Invalid music URL format:', url);
-        return;
+    try {
+      if (audioRef.current && url && audioRef.current.src !== url) {
+        // Validate URL before setting
+        if (!url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:') && !url.startsWith('/')) {
+          return;
+        }
+        audioRef.current.src = url;
+        audioRef.current.load();
       }
-      audioRef.current.src = url;
-      audioRef.current.load();
+    } catch (error) {
+      // Silently handle audio loading errors on mobile
     }
   }, []);
 
   const fadeIn = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !audio.src || audio.src === window.location.href) return;
+    try {
+      const audio = audioRef.current;
+      if (!audio || !audio.src || audio.src === window.location.href) return;
 
-    // Reset state for fresh start
-    audio.volume = 0;
-    audio.muted = isMuted;
-    audio.currentTime = 0;
+      // Reset state for fresh start
+      audio.volume = 0;
+      audio.muted = isMuted;
+      audio.currentTime = 0;
 
-    // iOS Safari requires play() to be called directly from user interaction
-    const playPromise = audio.play();
+      // iOS Safari requires play() to be called directly from user interaction
+      const playPromise = audio.play();
 
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        setIsPlaying(true);
-        setHasStarted(true);
-        let vol = 0;
-        const interval = setInterval(() => {
-          vol = Math.min(vol + 0.05, 0.6);
-          if (!audio.muted) audio.volume = vol;
-          if (vol >= 0.6) clearInterval(interval);
-        }, 100);
-      }).catch((error) => {
-        console.error('Audio playback failed:', error.name, error.message);
-        console.error('Audio source:', audio.src);
-        // On iOS, this might fail if not from direct user interaction
-      });
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setIsPlaying(true);
+          setHasStarted(true);
+          let vol = 0;
+          const interval = setInterval(() => {
+            if (!audio || audio.paused) {
+              clearInterval(interval);
+              return;
+            }
+            vol = Math.min(vol + 0.05, 0.6);
+            if (!audio.muted) audio.volume = vol;
+            if (vol >= 0.6) clearInterval(interval);
+          }, 100);
+        }).catch(() => {
+          // Silently handle playback failures (common on mobile)
+        });
+      }
+    } catch (error) {
+      // Silently handle audio errors on mobile
     }
   }, [isMuted]);
 
   const play = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !audio.src || audio.src === window.location.href) return;
-    audio.volume = 0.6;
-    audio.play().then(() => {
-      setIsPlaying(true);
-      setHasStarted(true);
-    }).catch(() => {});
+    try {
+      const audio = audioRef.current;
+      if (!audio || !audio.src || audio.src === window.location.href) return;
+      audio.volume = 0.6;
+      audio.play().then(() => {
+        setIsPlaying(true);
+        setHasStarted(true);
+      }).catch(() => {
+        // Silently handle playback failures
+      });
+    } catch (error) {
+      // Silently handle audio errors
+    }
   }, []);
 
   const pause = useCallback(() => {

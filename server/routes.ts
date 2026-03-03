@@ -76,6 +76,7 @@ export async function registerRoutes(
     if (!config) return res.json(null);
 
     const { adminPasswordHash: _, ...safe } = config;
+    res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(safe);
   });
 
@@ -119,6 +120,7 @@ export async function registerRoutes(
       .where(filters.length ? and(...filters) : undefined)
       .orderBy(weddingEvents.sortOrder);
 
+    res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(events);
   });
   app.get("/api/events/:id/calendar", async (req, res) => {
@@ -194,6 +196,7 @@ export async function registerRoutes(
     const guest = await storage.getGuestBySlug(req.params.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
 
+    res.setHeader("Cache-Control", "public, max-age=3600"); // 1 hour (invites don't change)
     res.json(guest);
   });
   /* ================= PUBLIC HOME (BATCHED) ================= */
@@ -204,7 +207,7 @@ export async function registerRoutes(
   };
 
   const homeCache = new Map<string, HomeCacheEntry>();
-  const HOME_CACHE_TTL = 5 * 1000; // 5 seconds for instant updates
+  const HOME_CACHE_TTL = 2 * 60 * 1000; // 2 minutes - balance freshness with performance
 
   app.get("/api/public/home", async (req, res) => {
     try {
@@ -304,7 +307,7 @@ export async function registerRoutes(
         faqs: faqList,
       };
       homeCache.set(cacheKey, { data: result, timestamp: now });
-      res.setHeader("Cache-Control", "public, max-age=60");
+      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes browser cache
 
       res.json(result);
     } catch (err) {
@@ -324,6 +327,7 @@ export async function registerRoutes(
       .from(storyMilestones)
       .orderBy(storyMilestones.sortOrder);
 
+    res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(stories);
   });
 
@@ -335,13 +339,14 @@ export async function registerRoutes(
       .from(venues)
       .orderBy(venues.sortOrder);
 
+    res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(venuesList);
   });
   /* ================= PUBLIC FAQ ================= */
 
   let faqCache: any[] | null = null;
   let faqCacheTime = 0;
-  const FAQ_CACHE_TTL = 60 * 1000; // 1 minute
+  const FAQ_CACHE_TTL = 2 * 60 * 1000; // 2 minutes - match home page caching
 
   app.get("/api/faqs", async (_req, res) => {
     try {
@@ -365,7 +370,7 @@ export async function registerRoutes(
       faqCache = faqList;
       faqCacheTime = now;
 
-      res.setHeader("Cache-Control", "public, max-age=60");
+      res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes - match home page
       res.json(faqList);
 
     } catch (err) {
