@@ -2028,7 +2028,15 @@ function FindByInviteSection({ onEditRsvp, onSubmitDirect, onSearchReady }: { on
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setQuery(newValue);
+                // Clear results when search box is cleared
+                if (newValue.trim().length === 0) {
+                  setResults(null);
+                  setSelectedGuest(null);
+                }
+              }}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Enter your full name..."
               className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
@@ -2389,19 +2397,8 @@ export default function Home() {
   const milestones = data?.stories ?? [];
   const venueList = data?.venues ?? [];
 
-  /* ================= FETCH ALL EVENTS FOR RSVP FORM ================= */
-
-  const { data: allEventsData } = useQuery({
-    queryKey: ["/api/events", side],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/events");
-      return res.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes - wedding data rarely changes
-    refetchOnWindowFocus: false,
-  });
-
-  const allEvents = allEventsData ?? [];
+  // Use all events (unfiltered) from home endpoint for RSVP form
+  const allEvents = data?.allEvents ?? [];
 
   /* ================= MUSIC SETUP ================= */
 
@@ -2498,8 +2495,16 @@ export default function Home() {
 
   useEffect(() => {
     const hasIncremented = sessionStorage.getItem("view_counted");
+    console.log("[VIEW COUNT DEBUG] Has already incremented:", hasIncremented);
     if (!hasIncremented) {
-      apiRequest("POST", "/api/increment-view").catch(() => {});
+      console.log("[VIEW COUNT DEBUG] Calling increment-view API...");
+      apiRequest("POST", "/api/increment-view")
+        .then((response) => {
+          console.log("[VIEW COUNT DEBUG] Increment successful:", response);
+        })
+        .catch((error) => {
+          console.error("[VIEW COUNT DEBUG] Increment failed:", error);
+        });
       sessionStorage.setItem("view_counted", "true");
     }
   }, []);

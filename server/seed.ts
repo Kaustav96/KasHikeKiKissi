@@ -36,6 +36,7 @@ export async function seedDatabase(): Promise<void> {
       adminPasswordHash: "",
       upiId: "",
       backgroundMusicUrl: [] as { name: string; url: string }[],
+      viewCount: 0,
     });
     console.log("[Seed] Created wedding config");
   }

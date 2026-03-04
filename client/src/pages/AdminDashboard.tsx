@@ -38,7 +38,8 @@ export default function AdminDashboard() {
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!admin,
     refetchOnWindowFocus: true, // Refresh when admin returns to tab
-    staleTime: 1 * 60 * 1000, // 1 minute cache
+    refetchInterval: 10000, // Auto-refresh every 10 seconds to keep viewCount updated
+    staleTime: 0, // Always fetch fresh data for accurate view count
   });
 
   type GuestsResponse = {

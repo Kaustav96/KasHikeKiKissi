@@ -11,6 +11,8 @@ import { and, or, eq, sql } from "drizzle-orm";
 import { db } from "./db.js";
 import { config } from "process";
 import cloudinary from "./cloudinary";
+import { logger } from "./utils/logger";
+import { MemoryCache } from "./utils/cache";
 
 /* =========================================================
    Utilities
@@ -83,22 +85,44 @@ export async function registerRoutes(
 
   app.post("/api/increment-view", async (_req, res) => {
     try {
+      console.log("[VIEW COUNT DEBUG] Increment view endpoint called");
+
+      // Get existing config to find the ID
+      const existing = await storage.getWeddingConfig();
+      console.log("[VIEW COUNT DEBUG] Existing config:", {
+        id: existing?.id,
+        currentViewCount: existing?.viewCount
+      });
+
+      if (!existing) {
+        console.log("[VIEW COUNT DEBUG] No config found!");
+        return res.status(404).json({ error: "Config not found" });
+      }
+
+      console.log("[VIEW COUNT DEBUG] Updating viewCount for config ID:", existing.id);
+
       const [updated] = await db
         .update(weddingConfig)
         .set({
           viewCount: sql`${weddingConfig.viewCount} + 1`,
           updatedAt: new Date(),
         })
+        .where(eq(weddingConfig.id, existing.id))
         .returning({ viewCount: weddingConfig.viewCount });
 
+      console.log("[VIEW COUNT DEBUG] Update result:", updated);
+
       if (!updated) {
+        console.log("[VIEW COUNT DEBUG] Update returned no result!");
         return res.status(404).json({ error: "Config not found" });
       }
 
+      console.log("[VIEW COUNT DEBUG] New viewCount:", updated.viewCount);
       res.json({ viewCount: updated.viewCount });
 
     } catch (error) {
-      console.error("Error incrementing view count:", error);
+      console.error("[VIEW COUNT DEBUG] Error:", error);
+      logger.error("Error incrementing view count:", error);
       res.status(500).json({ error: "Failed to increment view count" });
     }
   });
@@ -156,7 +180,7 @@ export async function registerRoutes(
       res.send(ics);
 
     } catch (error) {
-      console.error("Calendar generation error:", error);
+      logger.error("Calendar generation error:", error);
       res.status(500).json({ error: "Failed to generate calendar file" });
     }
   });
@@ -202,23 +226,16 @@ export async function registerRoutes(
   });
   /* ================= PUBLIC HOME (BATCHED) ================= */
 
-  type HomeCacheEntry = {
-    data: any;
-    timestamp: number;
-  };
-
-  const homeCache = new Map<string, HomeCacheEntry>();
-  const HOME_CACHE_TTL = 2 * 60 * 1000; // 2 minutes - balance freshness with performance
+  const homeCache = new MemoryCache<any>(2 * 60 * 1000); // 2 minutes TTL
 
   app.get("/api/public/home", async (req, res) => {
     try {
       const side = (req.query.side as string) || "both";
-      const cacheKey = `home_${side}`;
-      const now = Date.now();
+      const cacheKey = `home_v2_${side}`; // v2: added allEvents field
 
       const cached = homeCache.get(cacheKey);
-      if (cached && now - cached.timestamp < HOME_CACHE_TTL) {
-        return res.json(cached.data);
+      if (cached) {
+        return res.json(cached);
       }
 
       const rawConfig = await storage.getWeddingConfig();
@@ -229,7 +246,7 @@ export async function registerRoutes(
       const safeConfig = { ...rawConfig };
       delete (safeConfig as any).adminPasswordHash;
 
-      // Events (side filtered)
+      // Events (side filtered for display)
       let whereCondition;
 
       if (side !== "both") {
@@ -259,6 +276,29 @@ export async function registerRoutes(
         })
         .from(weddingEvents)
         .where(whereCondition)
+        .orderBy(weddingEvents.sortOrder);
+
+      // All events (unfiltered, for RSVP form)
+      const allEvents = await db
+        .select({
+          id: weddingEvents.id,
+          title: weddingEvents.title,
+          description: weddingEvents.description,
+          startTime: weddingEvents.startTime,
+          endTime: weddingEvents.endTime,
+          venueName: weddingEvents.venueName,
+          venueAddress: weddingEvents.venueAddress,
+          venueMapUrl: weddingEvents.venueMapUrl,
+          isMainEvent: weddingEvents.isMainEvent,
+          dressCode: weddingEvents.dressCode,
+          howToReach: weddingEvents.howToReach,
+          accommodation: weddingEvents.accommodation,
+          distanceInfo: weddingEvents.distanceInfo,
+          contactPerson: weddingEvents.contactPerson,
+          side: weddingEvents.side,
+          sortOrder: weddingEvents.sortOrder,
+        })
+        .from(weddingEvents)
         .orderBy(weddingEvents.sortOrder);
 
       const stories = await db
@@ -303,16 +343,17 @@ export async function registerRoutes(
       const result = {
         config: safeConfig,
         events,
+        allEvents, // All events unfiltered (for RSVP form)
         stories,
         venues: venuesData,
         faqs: faqList,
       };
-      homeCache.set(cacheKey, { data: result, timestamp: now });
+      homeCache.set(cacheKey, result);
       res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes browser cache
 
       res.json(result);
     } catch (err) {
-      console.error("Public home fetch error FULL:", err);
+      logger.error("Public home fetch error:", err);
       return res.status(500).json({
         error: "Failed to load homepage data",
         message: err instanceof Error ? err.message : "Unknown error",
@@ -345,17 +386,13 @@ export async function registerRoutes(
   });
   /* ================= PUBLIC FAQ ================= */
 
-  let faqCache: any[] | null = null;
-  let faqCacheTime = 0;
-  const FAQ_CACHE_TTL = 2 * 60 * 1000; // 2 minutes - match home page caching
+  const faqCache = new MemoryCache<any[]>(2 * 60 * 1000); // 2 minutes TTL
 
   app.get("/api/faqs", async (_req, res) => {
     try {
-      const now = Date.now();
-
-      // Serve from cache if fresh
-      if (faqCache && now - faqCacheTime < FAQ_CACHE_TTL) {
-        return res.json(faqCache);
+      const cached = faqCache.get("faqs");
+      if (cached) {
+        return res.json(cached);
       }
 
       const faqList = await db
@@ -368,14 +405,13 @@ export async function registerRoutes(
         .from(faqs)
         .orderBy(faqs.sortOrder);
 
-      faqCache = faqList;
-      faqCacheTime = now;
+      faqCache.set("faqs", faqList);
 
       res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes - match home page
       res.json(faqList);
 
     } catch (err) {
-      console.error("Public FAQ fetch error:", err);
+      logger.error("Public FAQ fetch error:", err);
       res.status(500).json({ error: "Failed to fetch FAQs" });
     }
   });
@@ -432,14 +468,13 @@ export async function registerRoutes(
     }
 
     const data = parsed.data;
-    console.log("=== PUBLIC RSVP BACKEND ===");
-    console.log("Checking for existing guest with name:", data.name);
+    logger.debug("Public RSVP - Checking for existing guest:", data.name);
     const existing = await storage.getGuestByName(data.name);
-    console.log("Existing guest found:", existing ? existing.name : "NONE");
+    logger.debug("Existing guest found:", existing ? existing.name : "NONE");
 
 
     if (existing) {
-      console.log("⚠️ UPDATING existing guest:", existing.name);
+      logger.debug("Updating existing guest:", existing.name);
       const updated = await storage.updateGuest(existing.id, {
         rsvpStatus: data.rsvpStatus,
         adultsCount: data.adultsCount,
@@ -460,7 +495,7 @@ export async function registerRoutes(
       });
     }
 
-    console.log("✓ CREATING new guest:", data.name);
+    logger.debug("Creating new guest:", data.name);
     const slug = generateSlug(data.name);
 
     const newGuest = await storage.createGuest({
@@ -542,7 +577,7 @@ export async function registerRoutes(
         apiKey: process.env.CLOUDINARY_API_KEY,
       });
     } catch (error: any) {
-      console.error("[ERROR] Signature generation failed:", error.message);
+      logger.error("Signature generation failed:", error.message);
       res.status(500).json({ error: "Signature failed" });
     }
   });
@@ -550,6 +585,12 @@ export async function registerRoutes(
   /* =========================================================
        ================= ADMIN Config =================
     ========================================================= */
+
+  app.get("/api/admin/config", requireAdmin, async (_req, res) => {
+    const config = await storage.getWeddingConfig();
+    res.json(config);
+  });
+
   app.patch("/api/admin/config", requireAdmin, async (req, res) => {
     const schema = z.object({
       weddingDate: z.string().datetime().nullable().optional(),
@@ -610,7 +651,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (err) {
-      console.error(err);
+      logger.error("Config update error:", err);
       res.status(500).json({ error: "Failed to save config" });
     }
   });
@@ -743,7 +784,7 @@ export async function registerRoutes(
       res.status(201).json(milestone);
 
     } catch (err) {
-      console.error("Create story error:", err);
+      logger.error("Create story error:", err);
       res.status(500).json({ error: "Failed to create story milestone" });
     }
   });
@@ -794,7 +835,7 @@ export async function registerRoutes(
       homeCache.clear(); // Invalidate home cache to reflect story updates on homepage
 
     } catch (err) {
-      console.error("Update story error:", err);
+      logger.error("Update story error:", err);
       res.status(500).json({ error: "Failed to update story milestone" });
     }
   });
@@ -806,7 +847,7 @@ export async function registerRoutes(
       const venueList = await storage.getVenues();
       res.json(venueList);
     } catch (err) {
-      console.error("Fetch venues error:", err);
+      logger.error("Fetch venues error:", err);
       res.status(500).json({ error: "Failed to fetch venues" });
     }
   });
@@ -848,7 +889,7 @@ export async function registerRoutes(
       res.status(201).json(venue);
 
     } catch (err) {
-      console.error("Create venue error:", err);
+      logger.error("Create venue error:", err);
       res.status(500).json({ error: "Failed to create venue" });
     }
   });
@@ -901,7 +942,7 @@ export async function registerRoutes(
       res.json(updated);
       homeCache.clear(); // Invalidate home cache to reflect venue updates on homepage
     } catch (err) {
-      console.error("Update venue error:", err);
+      logger.error("Update venue error:", err);
       res.status(500).json({ error: "Failed to update venue" });
     }
   });
@@ -928,7 +969,7 @@ export async function registerRoutes(
       res.json(faqList);
 
     } catch (err) {
-      console.error("Fetch FAQs error:", err);
+      logger.error("Fetch FAQs error:", err);
       res.status(500).json({ error: "Failed to fetch FAQs" });
     }
   });
@@ -965,7 +1006,7 @@ export async function registerRoutes(
       res.status(201).json(created);
 
     } catch (err) {
-      console.error("Create FAQ error:", err);
+      logger.error("Create FAQ error:", err);
       res.status(500).json({ error: "Failed to create FAQ" });
     }
   });
@@ -1013,7 +1054,7 @@ export async function registerRoutes(
       homeCache.clear(); // Invalidate home cache to reflect FAQ updates on homepage
 
     } catch (err) {
-      console.error("Update FAQ error:", err);
+      logger.error("Update FAQ error:", err);
       res.status(500).json({ error: "Failed to update FAQ" });
     }
   });
@@ -1027,7 +1068,7 @@ export async function registerRoutes(
       res.json({ success: true });
 
     } catch (err) {
-      console.error("Delete FAQ error:", err);
+      logger.error("Delete FAQ error:", err);
       res.status(500).json({ error: "Failed to delete FAQ" });
     }
   });
@@ -1255,7 +1296,7 @@ export async function registerRoutes(
       res.end();
 
     } catch (err) {
-      console.error(err);
+      logger.error("Export error:", err);
       res.status(500).json({ error: "Export failed" });
     }
   });
