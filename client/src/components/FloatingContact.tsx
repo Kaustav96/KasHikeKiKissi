@@ -8,9 +8,6 @@ export default function FloatingContact() {
   const { side } = useWeddingTheme();
   const { isPlaying, togglePlayPause } = useMusic();
 
-  const accentColor = side === "groom" ? "#B9975B" : "#8B0000";
-  const bgColor = side === "groom" ? "#EFE6D8" : "#F8F1E7";
-
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3" data-testid="floating-contact">
       {/* Music Control */}
@@ -18,9 +15,9 @@ export default function FloatingContact() {
         onClick={togglePlayPause}
         className="p-4 rounded-full shadow-xl border-2 transition-all"
         style={{
-          background: bgColor,
-          borderColor: accentColor,
-          color: accentColor,
+          background: 'var(--wedding-card-bg)',
+          borderColor: 'var(--wedding-accent)',
+          color: 'var(--wedding-accent)',
         }}
         title={isPlaying ? "Pause music" : "Play music"}
         data-testid="music-toggle"

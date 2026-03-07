@@ -8,12 +8,12 @@ import {
   BedDouble, Info, BookOpen, Sparkles, Shirt, Sun, Music, Crown, Building,
   X as XIcon, Users, Film, Camera, Cake, TreePine, Laugh, Mountain,
 } from "lucide-react";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { Link } from "wouter";
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
-import CrestIntro from "@/components/CrestIntro";
+import EnvelopeIntro from "@/components/EnvelopeIntro";
 import Header from "@/components/Header";
 import SideSelectionLanding from "@/components/SideSelectionLanding";
 import ViewingSideOverlay from "@/components/ViewingSideOverlay";
@@ -26,24 +26,23 @@ import { MandalaHalfOrnament, GoldMedallion, ThinGoldDivider, RoyalFrame } from 
 import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue } from "../../../shared/schema.js";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import HeroBokeh from "@/components/ui/HeroBokeh.tsx";
+import SimpleDivider from "@/components/SimpleDivider";
+import { getEventIcon, getWardrobeTip, getDressCodeColors } from "@/lib/weddingUtils";
 
-function SimpleDivider() {
-  return (
-    <div className="flex items-center justify-center gap-3 py-2 my-1">
-      <div className="h-px w-16" style={{ background: "var(--wedding-border)" }} />
-      <div className="w-1 h-1 rounded-full" style={{ background: "var(--wedding-muted)", opacity: 0.5 }} />
-      <div className="w-1 h-1 rounded-full" style={{ background: "var(--wedding-muted)", opacity: 0.5 }} />
-      <div className="w-1 h-1 rounded-full" style={{ background: "var(--wedding-muted)", opacity: 0.5 }} />
-      <div className="h-px w-16" style={{ background: "var(--wedding-border)" }} />
-    </div>
-  );
-}
+// Lazy load heavy sections for better performance
+const StorySection = lazy(() => import("@/components/home/StorySection"));
+const EventsSection = lazy(() => import("@/components/home/EventsSection"));
 
-function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDateConfirmed: boolean }) {
+import FindByInviteSection from "@/components/home/FindByInviteSection";
+import ContactInfoSection from "@/components/home/ContactInfoSection";
+import FooterSection from "@/components/home/FooterSection";
+
+const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingConfig, isDateConfirmed: boolean }) => {
   const { side } = useWeddingTheme();
-  // Groom side: dark antique gold; Bride side: accent color (unchanged)
-  const nameColor = side === "groom" ? "#8B6914" : "var(--wedding-accent)";
-  const ampColor = side === "groom" ? "#A1122F" : "#C6A75E";
+  // Use wedding theme colors for consistent palette across both sides
+  const nameColor = "var(--wedding-accent)";
+  const ampColor = "var(--wedding-accent)";
   return (
     <section
       id="hero"
@@ -51,6 +50,8 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
       style={{ background: "var(--wedding-hero-gradient)" }}
       data-testid="hero-section"
     >
+      <HeroBokeh />
+      <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
       {/* Mandala ornaments on sides */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-15 pointer-events-none">
         <MandalaHalfOrnament side="left" />
@@ -63,7 +64,7 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 70% 50% at 50% 45%, rgba(185,151,91,0.09) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 60% 40% at 50% 45%, rgba(185,151,91,0.18) 0%, rgba(0,0,0,0) 70%)",
         }}
       />
 
@@ -187,8 +188,8 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
             </>
           ) : (
             <p
-              className="font-serif text-xl italic"
-              style={{ color: "var(--wedding-accent)" }}
+              className="font-serif text-xl italic font-semibold"
+              style={{ color: "var(--wedding-text)" }}
               data-testid="date-tbd"
             >
               Date TBD
@@ -221,636 +222,9 @@ function HeroSection({ config, isDateConfirmed }: { config: WeddingConfig, isDat
       </motion.button>
     </section>
   );
-}
+});
 
-function StorySection({ milestones }: { milestones: StoryMilestone[] }) {
-  if (milestones.length === 0) return null;
-
-  const [selectedMilestone, setSelectedMilestone] = useState<StoryMilestone | null>(null);
-
-  // Function to get icon and palette based on milestone title
-  const getMilestoneVisuals = (title: string, index: number) => {
-    const t = title.toLowerCase();
-
-    // Icon mapping based on milestone content
-    let icon = Sparkles; // default
-    if (t.includes('beginning')) icon = Heart;
-    else if (t.includes('movie')) icon = Film;
-    else if (t.includes('photo')) icon = Camera;
-    else if (t.includes('birthday') || t.includes('isha')) icon = Cake;
-    else if (t.includes('christmas')) icon = TreePine;
-    else if (t.includes('comedy') || t.includes('laughter')) icon = Laugh;
-    else if (t.includes('flight')) icon = Plane;
-    else if (t.includes('siliguri') || t.includes('families') || t.includes('blessed')) icon = Mountain;
-
-    // Color palette mapping for better thematic match
-    let palette;
-    if (t.includes('beginning')) {
-      // Romantic pink/rose for beginning
-      palette = { bg: "linear-gradient(135deg, #3B0A18 0%, #8B1A3A 45%, #C4547A 85%, #F8CEDC 100%)", glow: "rgba(196,84,122,0.5)", textLight: "#F8CEDC" };
-    } else if (t.includes('movie')) {
-      // Dark purple/cinema vibes
-      palette = { bg: "linear-gradient(135deg, #130820 0%, #341466 45%, #6C2BBD 85%, #C09AEF 100%)", glow: "rgba(108,43,189,0.5)", textLight: "#DCC5F8" };
-    } else if (t.includes('photo')) {
-      // Blue for memories/photos
-      palette = { bg: "linear-gradient(135deg, #060E1E 0%, #0D2653 45%, #2663A6 85%, #8AB4E0 100%)", glow: "rgba(38,99,166,0.5)", textLight: "#B8D4F5" };
-    } else if (t.includes('birthday') || t.includes('isha')) {
-      // Warm gold/spiritual
-      palette = { bg: "linear-gradient(135deg, #2C1400 0%, #7B3800 45%, #CF8529 85%, #F5D890 100%)", glow: "rgba(207,133,41,0.5)", textLight: "#F5D890" };
-    } else if (t.includes('christmas')) {
-      // Green/festive for Christmas
-      palette = { bg: "linear-gradient(135deg, #081910 0%, #133C22 45%, #1E6B3C 85%, #8DD4AC 100%)", glow: "rgba(30,107,60,0.5)", textLight: "#B8EDD4" };
-    } else if (t.includes('comedy') || t.includes('laughter')) {
-      // Bright yellow/orange for comedy
-      palette = { bg: "linear-gradient(135deg, #2B0800 0%, #6B2200 45%, #C44B00 85%, #FFAA70 100%)", glow: "rgba(196,75,0,0.5)", textLight: "#FFD0A0" };
-    } else if (t.includes('flight')) {
-      // Sky blue for flight
-      palette = { bg: "linear-gradient(135deg, #0A1A2E 0%, #1E4A7A 45%, #5B9BD5 85%, #B3D9FF 100%)", glow: "rgba(91,155,213,0.5)", textLight: "#D0E8FF" };
-    } else if (t.includes('siliguri') || t.includes('families') || t.includes('blessed')) {
-      // Mountain/nature tones - earthy greens and browns
-      palette = { bg: "linear-gradient(135deg, #1A2B1A 0%, #3D5A3D 45%, #7A9D6F 85%, #C8E6C9 100%)", glow: "rgba(122,157,111,0.5)", textLight: "#E8F5E9" };
-    } else {
-      // Default gradient cycling
-      const palettes = [
-        { bg: "linear-gradient(135deg, #2C1400 0%, #7B3800 45%, #CF8529 85%, #F5D890 100%)", glow: "rgba(207,133,41,0.5)", textLight: "#F5D890" },
-        { bg: "linear-gradient(135deg, #3B0A18 0%, #8B1A3A 45%, #C4547A 85%, #F8CEDC 100%)", glow: "rgba(196,84,122,0.5)", textLight: "#F8CEDC" },
-        { bg: "linear-gradient(135deg, #060E1E 0%, #0D2653 45%, #2663A6 85%, #8AB4E0 100%)", glow: "rgba(38,99,166,0.5)", textLight: "#B8D4F5" },
-      ];
-      palette = palettes[index % palettes.length];
-    }
-
-    return { icon, palette };
-  };
-
-  return (
-    <section
-      id="story"
-      className="py-16 sm:py-24 px-4 sm:px-8 relative overflow-hidden"
-      style={{ background: "var(--wedding-alt-bg)" }}
-      data-testid="story-section"
-    >
-      <div className="absolute top-0 left-0 w-32 md:w-48 opacity-8 pointer-events-none">
-        <MandalaHalfOrnament side="left" />
-      </div>
-      <div className="absolute bottom-0 right-0 w-32 md:w-48 opacity-8 pointer-events-none">
-        <MandalaHalfOrnament side="right" />
-      </div>
-
-      <div className="max-w-5xl mx-auto">
-        {/* Section header */}
-        <motion.div
-          className="text-center mb-14"
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div
-            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
-          >
-            <BookOpen size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
-          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Where Love Began
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
-            Our Story
-          </h2>
-          <SimpleDivider />
-        </motion.div>
-
-        {/* Timeline */}
-        <div className="relative">
-          {/* Vertical centre line — desktop only */}
-          <div
-            className="hidden sm:block absolute left-1/2 top-0 bottom-0 w-px pointer-events-none"
-            style={{
-              background: "linear-gradient(to bottom, transparent, var(--wedding-border) 8%, var(--wedding-border) 92%, transparent)",
-              transform: "translateX(-50%)",
-            }}
-          />
-
-          <div className="space-y-10 sm:space-y-16">
-            {milestones.map((milestone, idx) => {
-              const { icon: IconComp, palette } = getMilestoneVisuals(milestone.title, idx);
-              const isRight = idx % 2 === 1;
-
-              return (
-                <motion.div
-                  key={milestone.id}
-                  className={`flex flex-col gap-6 sm:items-start sm:gap-0 ${
-                    isRight ? "sm:flex-row-reverse" : "sm:flex-row"
-                  }`}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 0.6, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
-                  data-testid={`story-milestone-${milestone.id}`}
-                >
-                  {/* ── Illustration panel ── */}
-                  <div
-                    className="w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0 cursor-pointer transition-transform hover:scale-[1.02]"
-                    style={{
-                      background: palette.bg,
-                      boxShadow: `0 12px 50px ${palette.glow}`,
-                      height: "220px",
-                    }}
-                    onClick={() => setSelectedMilestone(milestone)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSelectedMilestone(milestone);
-                      }
-                    }}
-                    aria-label={`View details for ${milestone.title}`}
-                  >
-                    {/* Animated radial glow */}
-                    <motion.div
-                      className="absolute inset-0"
-                      style={{
-                        background: `radial-gradient(ellipse 70% 70% at 50% 50%, ${palette.glow} 0%, transparent 68%)`,
-                      }}
-                      animate={{
-                        scale: [1, 1.1, 1],
-                        opacity: [0.8, 1, 0.8],
-                      }}
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                    />
-
-                    {/* Floating particles */}
-                    {[...Array(6)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        className="absolute rounded-full"
-                        style={{
-                          width: Math.random() * 4 + 2,
-                          height: Math.random() * 4 + 2,
-                          background: palette.textLight,
-                          opacity: 0.3,
-                          left: `${Math.random() * 100}%`,
-                          top: `${Math.random() * 100}%`,
-                        }}
-                        animate={{
-                          y: [0, -20, 0],
-                          x: [0, Math.random() * 10 - 5, 0],
-                          opacity: [0.2, 0.5, 0.2],
-                        }}
-                        transition={{
-                          duration: 3 + Math.random() * 2,
-                          repeat: Infinity,
-                          delay: Math.random() * 2,
-                          ease: "easeInOut",
-                        }}
-                      />
-                    ))}
-
-                    {/* Rotating decorative rings */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <motion.div
-                        className="absolute rounded-full border"
-                        style={{ width: 160, height: 160, borderColor: "rgba(255,255,255,0.15)" }}
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                      />
-                      <motion.div
-                        className="absolute rounded-full border"
-                        style={{ width: 100, height: 100, borderColor: "rgba(255,255,255,0.22)" }}
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                      />
-                    </div>
-
-                    {/* Central icon with enhanced animation */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <motion.div
-                        className="rounded-full p-5 relative"
-                        style={{
-                          background: "rgba(255,255,255,0.10)",
-                          border: "1px solid rgba(255,255,255,0.20)",
-                          backdropFilter: "blur(6px)",
-                        }}
-                        initial={{ scale: 0, rotate: -180 }}
-                        whileInView={{ scale: 1, rotate: 0 }}
-                        viewport={{ once: true }}
-                        transition={{
-                          duration: 0.8,
-                          delay: idx * 0.07 + 0.25,
-                          type: "spring",
-                          stiffness: 200,
-                        }}
-                        whileHover={{
-                          scale: 1.15,
-                          rotate: 5,
-                          transition: { duration: 0.3 },
-                        }}
-                      >
-                        <motion.div
-                          animate={{
-                            scale: [1, 1.05, 1],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                          }}
-                        >
-                          <IconComp size={32} style={{ color: palette.textLight }} />
-                        </motion.div>
-
-                        {/* Pulse effect */}
-                        <motion.div
-                          className="absolute inset-0 rounded-full"
-                          style={{
-                            border: `2px solid ${palette.textLight}`,
-                            opacity: 0,
-                          }}
-                          animate={{
-                            scale: [1, 1.5],
-                            opacity: [0.5, 0],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeOut",
-                          }}
-                        />
-                      </motion.div>
-                    </div>
-
-                    {/* Bottom strip */}
-                    <div
-                      className="absolute bottom-0 left-0 right-0 px-4 py-3 flex items-center justify-between"
-                      style={{ background: "linear-gradient(to top, rgba(0,0,0,0.60) 0%, transparent 100%)" }}
-                    >
-                      <p
-                        className="text-[9px] tracking-[0.38em] uppercase font-semibold"
-                        style={{ color: "rgba(255,255,255,0.60)" }}
-                      >
-                        Chapter {String(idx + 1).padStart(2, "0")}
-                      </p>
-                      <p
-                        className="text-[8px] tracking-wider uppercase font-medium flex items-center gap-1"
-                        style={{ color: "rgba(255,255,255,0.50)" }}
-                      >
-                        <Camera size={10} /> Click to view
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* ── Timeline dot (desktop only) ── */}
-                  <div className="hidden sm:flex flex-col items-center justify-start flex-shrink-0 w-10 pt-20">
-                    <motion.div
-                      className="relative"
-                      initial={{ scale: 0 }}
-                      whileInView={{ scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: idx * 0.07 + 0.4, type: "spring", stiffness: 300 }}
-                    >
-                      <div
-                        className="w-[14px] h-[14px] rounded-full"
-                        style={{
-                          background: "var(--wedding-accent)",
-                          boxShadow: "0 0 0 4px var(--wedding-alt-bg), 0 0 0 6px var(--wedding-border)",
-                        }}
-                      />
-                      {/* Animated ring pulse */}
-                      <motion.div
-                        className="absolute inset-0 rounded-full"
-                        style={{
-                          border: "2px solid var(--wedding-accent)",
-                          opacity: 0,
-                        }}
-                        animate={{
-                          scale: [1, 2.5],
-                          opacity: [0.6, 0],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          delay: idx * 0.3,
-                          ease: "easeOut",
-                        }}
-                      />
-                    </motion.div>
-                  </div>
-
-                  {/* ── Text panel ── */}
-                  <motion.div
-                    className={`w-full sm:flex-1 py-0 sm:py-6 ${
-                      isRight ? "sm:text-right" : "sm:text-left"
-                    }`}
-                    initial={{ opacity: 0, x: isRight ? 30 : -30 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: idx * 0.07 + 0.5, duration: 0.6 }}
-                  >
-                    <motion.h3
-                      className="font-serif text-xl sm:text-2xl font-bold mb-3 leading-snug"
-                      style={{ color: "var(--wedding-text)" }}
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: idx * 0.07 + 0.6, duration: 0.5 }}
-                    >
-                      {milestone.title}
-                    </motion.h3>
-                    <motion.div
-                      className={`h-[2px] w-10 mb-4 ${isRight ? "sm:ml-auto" : ""}`}
-                      style={{ background: "var(--wedding-accent)" }}
-                      initial={{ width: 0 }}
-                      whileInView={{ width: 40 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: idx * 0.07 + 0.7, duration: 0.5 }}
-                    />
-                    <motion.p
-                      className="text-sm leading-[1.85]"
-                      style={{ color: "var(--wedding-muted)" }}
-                      initial={{ opacity: 0 }}
-                      whileInView={{ opacity: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: idx * 0.07 + 0.8, duration: 0.5 }}
-                    >
-                      {milestone.description}
-                    </motion.p>
-                  </motion.div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Image Modal */}
-      <Dialog open={!!selectedMilestone} onOpenChange={(open) => !open && setSelectedMilestone(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedMilestone && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-serif text-2xl" style={{ color: "var(--wedding-text)" }}>
-                  {selectedMilestone.title}
-                </DialogTitle>
-                <p className="text-xs tracking-wider uppercase mt-1" style={{ color: "var(--wedding-muted)" }}>
-                  {selectedMilestone.date}
-                </p>
-              </DialogHeader>
-              <div className="space-y-4">
-                {selectedMilestone.imageUrl ? (
-                  <div className="rounded-xl overflow-hidden border" style={{ borderColor: "var(--wedding-border)" }}>
-                    <img
-                      src={selectedMilestone.imageUrl}
-                      alt={selectedMilestone.title}
-                      className="w-full h-auto object-cover"
-                      style={{ maxHeight: "60vh", imageOrientation: "from-image" }}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="rounded-xl p-12 text-center border-2 border-dashed"
-                    style={{ borderColor: "var(--wedding-border)", background: "var(--wedding-alt-bg)" }}
-                  >
-                    <Camera size={48} className="mx-auto mb-4" style={{ color: "var(--wedding-muted)", opacity: 0.5 }} />
-                    <p className="text-sm font-medium mb-2" style={{ color: "var(--wedding-text)" }}>
-                      Memory Coming Soon
-                    </p>
-                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-                      We're curating the perfect photo for this special moment
-                    </p>
-                  </div>
-                )}
-                <div className="px-1">
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                    {selectedMilestone.description}
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </section>
-  );
-}
-
-
-
-function getEventIcon(title: string) {
-  const t = title.toLowerCase();
-  if (t.includes("haldi")) return Sun;
-  if (t.includes("sangeet") || t.includes("music")) return Music;
-  if (t.includes("reception")) return Sparkles;
-  if (t.includes("engagement")) return Heart;
-  return Crown;
-}
-
-function EventsSection({ events }: { events: WeddingEvent[] }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const { side } = useWeddingTheme();
-
-  // Show all events (no side filter) so nothing is hidden
-  const filteredEvents = events;
-
-  if (filteredEvents.length === 0) return null;
-
-  const dateMap = new Map<string, WeddingEvent[]>();
-  filteredEvents.forEach((ev) => {
-    const dateStr = new Date(ev.startTime).toLocaleDateString("en-IN", {
-      year: "numeric", month: "short", day: "numeric",
-    });
-    if (!dateMap.has(dateStr)) dateMap.set(dateStr, []);
-    dateMap.get(dateStr)!.push(ev);
-  });
-
-  const dates = Array.from(dateMap.keys());
-  const active = selectedDate || dates[0] || null;
-  const activeEvents = active ? dateMap.get(active) || [] : [];
-
-  const sideName = side === "groom" ? "Kaustav's" : "Himasree's";
-
-  return (
-    <section id="events" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="events-section">
-      <div className="max-w-5xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
-            <Calendar size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
-          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Celebrate With Us
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-2 tracking-tight" style={{ color: "var(--wedding-text)" }}>
-            Wedding Events
-          </h2>
-          <p className="text-xs tracking-[0.15em] uppercase mb-4" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
-            Events for {sideName} side
-          </p>
-          <SimpleDivider />
-        </motion.div>
-
-        {/* Date tab pills */}
-        {dates.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-8 justify-center flex-wrap" data-testid="event-date-timeline">
-            {dates.map((date) => (
-              <button
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                className="px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 transition-all"
-                style={{
-                  background: active === date ? "var(--wedding-accent)" : "rgba(255,255,255,0.6)",
-                  color: active === date ? "#fff" : "var(--wedding-text)",
-                  border: `1px solid ${active === date ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
-                  boxShadow: active === date ? "0 2px 12px rgba(185,151,91,0.20)" : "none",
-                }}
-                data-testid={`event-date-${date}`}
-              >
-                <Calendar size={11} />
-                {date}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {activeEvents.map((event, idx) => {
-            const EventIcon = getEventIcon(event.title);
-            return (
-              <motion.div
-                key={event.id}
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  background: "var(--wedding-card-bg)",
-                  border: event.isMainEvent ? "2px solid var(--wedding-accent)" : "1px solid var(--wedding-border)",
-                  boxShadow: event.isMainEvent
-                    ? "0 4px 24px rgba(176,132,72,0.14)"
-                    : "0 2px 12px rgba(46,43,39,0.05)",
-                }}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                data-testid={`event-card-${event.id}`}
-              >
-                {/* Top accent bar */}
-                {event.isMainEvent && (
-                  <div className="h-[3px]" style={{
-                    background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
-                  }} />
-                )}
-
-                <div className="p-5 sm:p-6">
-                  {/* Icon + title */}
-                  <div className="flex items-start gap-4 mb-4">
-                    <div
-                      className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
-                      style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
-                    >
-                      <EventIcon size={18} style={{ color: "var(--wedding-accent)" }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                        {event.isMainEvent && (
-                          <span
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] tracking-[0.2em] uppercase"
-                            style={{ background: "var(--wedding-accent)", color: "#fff" }}
-                          >
-                            Main Event
-                          </span>
-                        )}
-                        {event.side && event.side !== "both" && (
-                          <span
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] tracking-[0.2em] uppercase"
-                            style={{
-                              background: event.side === "bride" ? "rgba(139,0,0,0.12)" : "rgba(176,132,72,0.15)",
-                              color: event.side === "bride" ? "#8B0000" : "var(--wedding-accent)",
-                              border: `1px solid ${event.side === "bride" ? "rgba(139,0,0,0.25)" : "var(--wedding-border)"}`,
-                            }}
-                          >
-                            {event.side === "bride" ? "Bride's" : "Groom's"} side
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-serif text-lg font-semibold leading-tight" style={{ color: "var(--wedding-text)" }}>
-                        {event.title}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <ThinGoldDivider className="mb-4" />
-
-                  {event.description && (
-                    <p className="text-sm mb-4 leading-[1.7]" style={{ color: "var(--wedding-muted)" }}>
-                      {event.description}
-                    </p>
-                  )}
-
-                  {/* Info rows */}
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <Clock size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
-                      <span style={{ color: "var(--wedding-text)" }}>
-                        {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                        {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
-                      </span>
-                    </div>
-                    {event.venueName && (
-                      <div className="flex items-center gap-2.5">
-                        <MapPin size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
-                        <span style={{ color: "var(--wedding-text)" }}>{event.venueName}</span>
-                      </div>
-                    )}
-                    {event.dressCode && (
-                      <div className="flex items-center gap-2.5">
-                        <Shirt size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
-                        <span className="text-xs" style={{ color: "var(--wedding-muted)" }}>Dress Code: {event.dressCode}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex gap-2 flex-wrap">
-                    <a
-                      href={`/api/events/${event.id}/calendar`}
-                      className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                      style={{ border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
-                      data-testid={`download-ics-${event.id}`}
-                    >
-                      <Calendar size={11} />
-                      Add to Calendar
-                    </a>
-                    {event.venueMapUrl && (
-                      <a
-                        href={event.venueMapUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                        style={{ border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
-                        data-testid={`map-link-${event.id}`}
-                      >
-                        <ExternalLink size={11} />
-                        View Map
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function VenueSection({ venueList }: { venueList: Venue[] }) {
+const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
   const [activeVenueIdx, setActiveVenueIdx] = useState(0);
   const [activeSubSection, setActiveSubSection] = useState<"map" | "stay" | "reach">("map");
 
@@ -902,7 +276,7 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
               className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all"
               style={{
                 background: activeVenueIdx === i ? "var(--wedding-accent)" : "var(--wedding-card-bg)",
-                color: activeVenueIdx === i ? "#fff" : "var(--wedding-text)",
+                color: activeVenueIdx === i ? "var(--wedding-bg)" : "var(--wedding-text)",
                 border: `1px solid ${activeVenueIdx === i ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
                 boxShadow: activeVenueIdx === i ? "0 3px 16px rgba(176,132,72,0.22)" : "none",
               }}
@@ -913,8 +287,8 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded-full"
                 style={{
-                  background: activeVenueIdx === i ? "rgba(255,255,255,0.2)" : "rgba(176,132,72,0.10)",
-                  color: activeVenueIdx === i ? "#fff" : "var(--wedding-accent)",
+                  background: activeVenueIdx === i ? "rgba(0,0,0,0.2)" : "rgba(176,132,72,0.10)",
+                  color: activeVenueIdx === i ? "var(--wedding-bg)" : "var(--wedding-accent)",
                 }}
               >
                 {venueCities[i]}
@@ -998,7 +372,7 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-medium transition-opacity hover:opacity-85"
-                          style={{ background: "var(--wedding-accent)", color: "#fff" }}
+                          style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
                         >
                           <Navigation size={12} /> Get Directions
                         </a>
@@ -1084,7 +458,7 @@ function VenueSection({ venueList }: { venueList: Venue[] }) {
       </div>
     </section>
   );
-}
+});
 
 const publicRsvpFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters").max(200),
@@ -1241,6 +615,26 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
       setCheckingName(false);
     }
   };
+
+  // Debounced name check - triggers 500ms after user stops typing
+  // Skip if already in update mode (e.g., coming from "Find My Invite")
+  useEffect(() => {
+    const name = form.watch("name");
+    if (!name || name.length < 3) {
+      return;
+    }
+
+    // Don't search if we're already updating an existing guest
+    if (isUpdating) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      checkExistingGuest(name);
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [form.watch("name"), isUpdating]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectAndConfirmGuest = (guest: any) => {
     if (!guest) return;
@@ -1438,7 +832,6 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
                         form.setValue("message", "");
                       }
                     }}
-                    onBlur={(e) => checkExistingGuest(e.target.value)}
                     placeholder="Full Name"
                     className="w-full px-4 py-2.5 rounded-lg text-sm"
                     style={{
@@ -1567,7 +960,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
                 type="submit"
                 disabled={rsvpMutation.isPending}
                 className="w-full py-3 rounded-lg text-sm font-medium tracking-wider uppercase transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "var(--wedding-accent)", color: "#fff" }}
+                style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
                 data-testid="submit-rsvp"
               >
                 {rsvpMutation.isPending ? (
@@ -1707,74 +1100,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
   );
 }
 
-function getWardrobeTip(title: string, dressCode: string | null | undefined): {
-  style: string; desc: string; tip: string; footwear: string; imageUrl: string;
-} {
-  const t = title.toLowerCase();
-  if (t.includes("haldi")) return {
-    style: "Sunlit Traditional",
-    desc: dressCode || "Bright yellows & greens — airy and full of life.",
-    tip: "A light Anarkali or comfortable Kurta set is perfect. Choose breathable cotton or linen fabrics — you'll be seated for a while.",
-    footwear: "Flats or Juttis — easy to remove for the rituals.",
-    imageUrl: "",
-  };
-  if (t.includes("sangeet")) return {
-    style: "Festive Evening Glam",
-    desc: dressCode || "Bold, shimmery, and made for dancing all night.",
-    tip: "A vibrant Lehenga, Indo-western fusion, or a sharply-cut Sherwani works beautifully. Make sure you can move freely!",
-    footwear: "Block heels or Mojari — stylish yet stable on the dance floor.",
-    imageUrl: "",
-  };
-  if (t.includes("engagement")) return {
-    style: "Festive & Celebratory",
-    desc: dressCode || "Bright, cheerful attire for a joyous occasion.",
-    tip: "Opt for vibrant Indian formals. Semi-formal Indian wear works well — think Lehenga, co-ord sets, or a smart Kurta.",
-    footwear: "Block heels, Juttis, or dress flats.",
-    imageUrl: "",
-  };
-  if (t.includes("reception")) return {
-    style: "Black-tie Indian Elegance",
-    desc: dressCode || "Formal, richly embellished, and statement-worthy.",
-    tip: "A designer saree, embellished Lehenga, or a formal Sherwani with accessories. This is the evening to truly shine.",
-    footwear: "Embellished heels or Nagra shoes — polished and formal.",
-    imageUrl: "",
-  };
-  if (t.includes("vidai")) return {
-    style: "Elegant & Emotional",
-    desc: dressCode || "Grace and tradition for a touching farewell.",
-    tip: "Traditional attire befitting a meaningful ceremony. Subtle, elegant colours are preferred over very bright ones.",
-    footwear: "Comfortable flats or traditional footwear.",
-    imageUrl: "",
-  };
-  if (t.includes("wedding") || t.includes("ceremony") || t.includes("biye")) return {
-    style: "Elegant Traditional Wear",
-    desc: dressCode || "Modest and comfortable for the holy ceremony.",
-    tip: "Traditional attire — silk saree with heavy border, or a dhoti-kurta. Expect long rituals while seated; comfort is key.",
-    footwear: "Comfortable flats or Juttis — rituals require removing footwear.",
-    imageUrl: "",
-  };
-  return {
-    style: dressCode ?? "Smart Indian Formals",
-    desc: dressCode ?? "Dress elegantly for the occasion.",
-    tip: `Follow the dress code: ${dressCode ?? "Indian formals"}. When in doubt, err on the side of traditional.`,
-    footwear: "Comfortable footwear appropriate for the event.",
-    imageUrl: "",
-  };
-}
-
-// Get dress code color palette for each event type
-function getDressCodeColors(title: string): { primary: string; secondary: string; tertiary: string } {
-  const t = title.toLowerCase();
-  if (t.includes("haldi")) return { primary: "#FDB750", secondary: "#7FB069", tertiary: "#FFD88E" }; // Yellow, green, light yellow
-  if (t.includes("sangeet")) return { primary: "#E91E8C", secondary: "#C6A75E", tertiary: "#8B3A8B" }; // Pink, gold, purple
-  if (t.includes("engagement")) return { primary: "#E85D75", secondary: "#C6A75E", tertiary: "#FF9AA2" }; // Rose, gold, light pink
-  if (t.includes("reception")) return { primary: "#8B0000", secondary: "#C6A75E", tertiary: "#2C1400" }; // Deep red, gold, black
-  if (t.includes("vidai")) return { primary: "#D4A5A5", secondary: "#E6B9A6", tertiary: "#F5E6D3" }; // Muted rose, beige, cream
-  if (t.includes("wedding") || t.includes("ceremony") || t.includes("biye")) return { primary: "#A1122F", secondary: "#C6A75E", tertiary: "#FFFFFF" }; // Red, gold, white
-  return { primary: "#B9975B", secondary: "#8B6914", tertiary: "#EFE6D8" }; // Default gold palette
-}
-
-function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
+const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
   const [activeTip, setActiveTip] = useState<number | null>(null);
 
   const wardrobeItems = events.map((ev) => {
@@ -1949,422 +1275,13 @@ function WardrobePlannerSection({ events }: { events: WeddingEvent[] }) {
       </div>
     </section>
   );
-}
-
-function FindByInviteSection({ onEditRsvp, onSubmitDirect, onSearchReady }: { onEditRsvp: (guest: any) => void; onSubmitDirect: (name: string) => void; onSearchReady: (searchFn: () => void, currentQuery: string) => void }) {
-  const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [results, setResults] = useState<any[] | null>(null);
-  const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
-
-  const handleSearch = useCallback(async () => {
-    const name = query.trim();
-    if (name.length < 2) return;
-    setSearching(true);
-    setResults(null);
-    setSelectedGuest(null);
-    try {
-      const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
-      } else {
-        setResults([]);
-      }
-    } catch {
-      setResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [query]);
-
-  // Expose search function to parent
-  useEffect(() => {
-    onSearchReady(handleSearch, query);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleSearch, query]);
-
-  const notFound = results !== null && results.length === 0;
-  const found = results !== null && results.length > 0;
-
-  return (
-    <section id="find-invite" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="find-invite-section">
-      <div className="max-w-lg mx-auto">
-        <motion.div
-          className="text-center mb-10"
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
-            <Search size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
-          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Check Your Invite
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
-            Find Your Invitation
-          </h2>
-          <SimpleDivider />
-          <p className="text-sm mt-4 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            Search for your name to view your personalized invitation details
-          </p>
-        </motion.div>
-
-        {/* Search input */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative flex gap-2 mb-4"
-        >
-          <div className="flex-1 relative">
-            <Search
-              size={15}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: "var(--wedding-accent)", opacity: 0.55 }}
-            />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setQuery(newValue);
-                // Clear results when search box is cleared
-                if (newValue.trim().length === 0) {
-                  setResults(null);
-                  setSelectedGuest(null);
-                }
-              }}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Enter your full name..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
-              style={{
-                background: "var(--wedding-card-bg)",
-                border: "1px solid var(--wedding-border)",
-                color: "var(--wedding-text)",
-              }}
-            />
-          </div>
-          <button
-            onClick={handleSearch}
-            disabled={searching || query.trim().length < 2}
-            className="px-5 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--wedding-accent)", color: "#fff" }}
-          >
-            {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-            Search
-          </button>
-        </motion.div>
-
-        {/* Results */}
-        <AnimatePresence mode="wait">
-          {notFound && (
-            <motion.div
-              key="not-found"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="rounded-xl p-5 text-center"
-              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-            >
-              <User size={28} className="mx-auto mb-3" style={{ color: "var(--wedding-accent)", opacity: 0.4 }} />
-              <p className="font-serif text-base font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                We couldn't find your name
-              </p>
-              <p className="text-xs mb-4" style={{ color: "var(--wedding-muted)" }}>
-                Don't worry! You can still RSVP directly or reach out to us.
-              </p>
-              <button
-                onClick={() => {
-                  onSubmitDirect(query.trim());
-                  const el = document.getElementById("rsvp");
-                  if (el) {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    history.replaceState(null, "", window.location.pathname);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg transition-opacity hover:opacity-80"
-                style={{ background: "var(--wedding-accent)", color: "#fff", border: "none", cursor: "pointer" }}
-              >
-                Submit RSVP Directly <ChevronRight size={11} />
-              </button>
-            </motion.div>
-          )}
-
-          {found && !selectedGuest && (
-            <motion.div
-              key="found-list"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="space-y-2"
-            >
-              <p className="text-xs text-center mb-3" style={{ color: "var(--wedding-muted)" }}>
-                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to view &amp; edit your RSVP
-              </p>
-              {results!.map((guest) => (
-                <button
-                  key={guest.id}
-                  onClick={() => setSelectedGuest(guest)}
-                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:scale-[1.01]"
-                  style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(176,132,72,0.10)", color: "var(--wedding-accent)" }}
-                  >
-                    <User size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm" style={{ color: "var(--wedding-text)" }}>{guest.name}</p>
-                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-                      {guest.rsvpStatus === "confirmed" ? "✓ RSVP Confirmed" : guest.rsvpStatus === "declined" ? "✗ Declined" : "RSVP Pending"}
-                    </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
-                      Tap to view &amp; edit RSVP →
-                    </p>
-                  </div>
-                  <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
-                </button>
-              ))}
-            </motion.div>
-          )}
-
-          {selectedGuest && (
-            <motion.div
-              key="guest-detail"
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              className="rounded-2xl overflow-hidden relative"
-              style={{ background: "var(--wedding-card-bg)", border: "2px solid var(--wedding-accent)", boxShadow: "0 8px 40px rgba(176,132,72,0.18)" }}
-            >
-              {/* Gold top bar */}
-              <div className="h-[4px]" style={{
-                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
-              }} />
-
-              {/* Back / close corner button */}
-              <button
-                onClick={() => setSelectedGuest(null)}
-                className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-opacity hover:opacity-70"
-                style={{ background: "rgba(176,132,72,0.12)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
-                aria-label="Back to results"
-              >
-                <XIcon size={13} />
-              </button>
-
-              <div className="p-6 sm:p-8 text-center">
-                {/* Icon */}
-                <div
-                  className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
-                  style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
-                >
-                  <Heart size={28} style={{ color: "var(--wedding-accent)" }} />
-                </div>
-
-                <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{ color: "var(--wedding-accent)", opacity: 0.7 }}>
-                  You're on the list!
-                </p>
-                <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3 leading-tight" style={{ color: "var(--wedding-text)" }}>
-                  Hello, {selectedGuest.name.split(" ")[0]}!
-                </h3>
-
-                <ThinGoldDivider className="mb-4" />
-
-                <p className="text-sm leading-[1.75] mb-5" style={{ color: "var(--wedding-muted)" }}>
-                  We can't wait to celebrate with you at our wedding.{" "}
-                  {selectedGuest.rsvpStatus === "confirmed"
-                    ? "Your RSVP is confirmed — we're so excited to see you!"
-                    : selectedGuest.rsvpStatus === "declined"
-                    ? "We see you've declined, but you're always welcome to reach out."
-                    : "Your invite is ready — please complete your RSVP below."}
-                </p>
-
-                {/* Guest details card */}
-                <div
-                  className="rounded-xl px-4 py-4 mb-5 text-left space-y-2"
-                  style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)" }}
-                >
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <User size={12} style={{ color: "var(--wedding-accent)" }} />
-                    <span style={{ color: "var(--wedding-muted)" }}>{selectedGuest.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <Users size={12} style={{ color: "var(--wedding-accent)" }} />
-                    <span style={{ color: "var(--wedding-muted)" }}>
-                      {selectedGuest.adultsCount ?? 1} Adult{(selectedGuest.adultsCount ?? 1) > 1 ? "s" : ""}
-                      {selectedGuest.childrenCount > 0 ? `, ${selectedGuest.childrenCount} Child${selectedGuest.childrenCount > 1 ? "ren" : ""}` : ""}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <Check size={12} style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-accent)" }} />
-                    <span className="capitalize" style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-muted)" }}>
-                      {selectedGuest.rsvpStatus === "confirmed" ? "RSVP Confirmed" : selectedGuest.rsvpStatus === "declined" ? "Declined" : "RSVP Pending"}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => onEditRsvp(selectedGuest)}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all mb-2"
-                  style={{ background: "var(--wedding-accent)", color: "#fff", border: "none" }}
-                >
-                  Edit My RSVP
-                </button>
-                <button
-                  onClick={() => { setSelectedGuest(null); setQuery(""); setResults(null); }}
-                  className="w-full py-2 rounded-xl text-xs font-medium transition-all"
-                  style={{ background: "transparent", color: "var(--wedding-muted)", border: "1px solid var(--wedding-border)" }}
-                >
-                  Search for Another Guest
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Bottom contact links */}
-        <motion.div
-          className="mt-6 text-center space-y-3"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>Can't find your name?</p>
-          <div className="flex flex-wrap justify-center gap-2 text-xs">
-            <a
-              href="tel:+919876543210"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
-              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
-            >
-              <Phone size={11} /> Contact Kaustav (Groom Side)
-            </a>
-            <a
-              href="tel:+919876543211"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
-              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
-            >
-              <Phone size={11} /> Contact Himasree (Bride Side)
-            </a>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function ContactInfoSection() {
-  return (
-    <section id="contact" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="contact-section">
-      <div className="max-w-3xl mx-auto">
-        <motion.div
-          className="text-center mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
-            <Phone size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
-          <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Need Help?
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
-            Contact Us
-          </h2>
-          <SimpleDivider />
-        </motion.div>
-
-        <motion.div
-          className="rounded-lg p-8 text-center"
-          style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2 }}
-        >
-          <p className="text-base sm:text-lg mb-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            Have questions or need assistance? Our wedding coordinator is here to help make your experience memorable:
-          </p>
-          <div className="space-y-3">
-            <a
-              href="tel:+919876512345"
-              className="flex items-center justify-center gap-3 text-lg font-semibold hover:opacity-80 transition-opacity"
-              style={{ color: "var(--wedding-accent)" }}
-            >
-              <Phone size={20} />
-              <span>+91 98765 12345</span>
-            </a>
-            <a
-              href="mailto:wedding@kaustavhimasree.com"
-              className="flex items-center justify-center gap-3 text-base hover:opacity-80 transition-opacity"
-              style={{ color: "var(--wedding-text)" }}
-            >
-              <Mail size={18} />
-              <span>wedding@kaustavhimasree.com</span>
-            </a>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function FooterSection() {
-  return (
-    <footer
-      className="relative overflow-hidden"
-      style={{ background: "var(--wedding-bg)" }}
-      data-testid="footer"
-    >
-      {/* Top gold line */}
-      <div className="h-px" style={{
-        background: "linear-gradient(90deg, transparent 0%, var(--wedding-accent) 50%, transparent 100%)",
-        opacity: 0.35
-      }} />
-
-      <div className="max-w-md mx-auto px-4 py-12 text-center">
-        {/* Golden heart icon */}
-        <div className="flex justify-center mb-5">
-          <Heart
-            size={32}
-            fill="var(--wedding-accent)"
-            style={{ color: "var(--wedding-accent)", filter: "drop-shadow(0 2px 8px rgba(176,132,72,0.35))" }}
-          />
-        </div>
-
-        {/* Names */}
-        <h3 className="font-serif text-2xl sm:text-3xl font-bold tracking-wide mb-2" style={{ color: "var(--wedding-accent)" }}>
-          Himasree &amp; Kaustav
-        </h3>
-
-        <p className="text-xs tracking-[0.3em] uppercase mb-4" style={{ color: "var(--wedding-muted)", opacity: 0.7 }}>
-          December 2026 &middot; Kolkata
-        </p>
-
-        <p className="text-xs leading-relaxed mb-6 italic" style={{ color: "var(--wedding-muted)", opacity: 0.65 }}>
-          Two hearts, one journey &mdash; forever begins here
-        </p>
-
-        <div className="h-px mx-auto max-w-[80px] mb-6" style={{ background: "linear-gradient(90deg, transparent, var(--wedding-accent), transparent)" }} />
-
-        <p className="text-[11px] tracking-widest uppercase" style={{ color: "var(--wedding-muted)", opacity: 0.5 }}>
-          Crafted with love &amp; blessed by family &middot; © 2026
-        </p>
-      </div>
-    </footer>
-  );
-}
+});
 
 export default function Home() {
   const { setMusicUrl, fadeIn, stop, setOnTrackEnd } = useMusic();
   const { setSide, side } = useWeddingTheme();
 
-  const [showCrest, setShowCrest] = useState(true);
+  const [envelopeOpened, setEnvelopeOpened] = useState(false);
   const [sideSelected, setSideSelected] = useState(false);
   const [pendingRsvpGuest, setPendingRsvpGuest] = useState<any>(null);
   const [searchTrigger, setSearchTrigger] = useState<{ fn: () => void; query: string } | null>(null);
@@ -2489,7 +1406,7 @@ export default function Home() {
 
     setOnTrackEnd(handleEnded);
     return () => setOnTrackEnd(null);
-  }, []);
+  }, [setOnTrackEnd, fadeIn, setMusicUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ================= VIEW COUNT ================= */
 
@@ -2526,47 +1443,44 @@ export default function Home() {
 
   if (!config) return null;
 
-  /* ================= ENTRANCE SEQUENCE + MAIN (AnimatePresence fade transitions) ================= */
+  /* ================= ENTRANCE SEQUENCE: ENVELOPE -> SIDE SELECTION -> MAIN ================= */
 
-  const handleCrestFinish = () => {
-    setShowCrest(false);
-    // Always show side selection after crest - no stored preference
-  };
+  if (!envelopeOpened) {
+    return <EnvelopeIntro onFinish={() => setEnvelopeOpened(true)} />;
+  }
+
+  if (!sideSelected) {
+    return (
+      <SideSelectionLanding
+        onSelectSide={(selectedSide) => {
+          setSide(selectedSide);
+          setSideSelected(true);
+        }}
+      />
+    );
+  }
 
   return (
-    <AnimatePresence mode="wait">
-      {showCrest ? (
-        <CrestIntro key="crest" onFinish={handleCrestFinish} />
-      ) : !sideSelected ? (
-        <SideSelectionLanding
-          key="selection"
-          onSelectSide={(selectedSide) => {
-            setSide(selectedSide);
-            setSideSelected(true);
-          }}
-        />
-      ) : (
-        <motion.div
-          key="main"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <Header />
+    <motion.div
+      key="main"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Header />
 
-          <ViewingSideOverlay
-            onBackToSelection={() => {
-              stop();
-              setShowCrest(false);
-              setSideSelected(false);
-              prevSideSelectedRef.current = false; // Reset for next selection
-            }}
-            onSideChange={(newSide) => {
-              setSide(newSide);
-            }}
-          />
+      <ViewingSideOverlay
+        onBackToSelection={() => {
+          stop();
+          setSideSelected(false);
+          prevSideSelectedRef.current = false; // Reset for next selection
+        }}
+        onSideChange={(newSide) => {
+          setSide(newSide);
+        }}
+      />
 
-          <main>
+      <main>
             <HeroSection config={config} isDateConfirmed={isDateConfirmed} />
             <FindByInviteSection
               onEditRsvp={(guest) => {
@@ -2587,10 +1501,14 @@ export default function Home() {
                 setSearchTrigger({ fn: searchFn, query: currentQuery });
               }}
             />
-            <EventsSection events={events} />
+            <Suspense fallback={<div className="py-16 sm:py-20" />}>
+              <EventsSection events={events} />
+            </Suspense>
             <VenueSection venueList={venueList} />
             <WardrobePlannerSection events={allEvents} />
-            <StorySection milestones={milestones} />
+            <Suspense fallback={<div className="py-16 sm:py-24" />}>
+              <StorySection milestones={milestones} />
+            </Suspense>
             <RsvpSection
               events={allEvents}
               prefillGuest={pendingRsvpGuest}
@@ -2608,9 +1526,7 @@ export default function Home() {
             <FooterSection />
           </main>
 
-          <FloatingContact />
-        </motion.div>
-      )}
-    </AnimatePresence>
+      <FloatingContact />
+    </motion.div>
   );
 }
