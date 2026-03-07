@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { motion, useTransform, useMotionValue } from "framer-motion";
 import {
     BookOpen, Camera, Sparkles, Heart, Film, Cake, TreePine, Laugh, Plane, Mountain
 } from "lucide-react";
@@ -13,11 +13,38 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
 
     const [selectedMilestone, setSelectedMilestone] = useState<StoryMilestone | null>(null);
     const [activeMilestoneIndex, setActiveMilestoneIndex] = useState<number>(0);
+    const scrollProgressMotion = useMotionValue(0);
     const [scrollProgress, setScrollProgress] = useState<number>(0);
     const milestoneRefs = useRef<(HTMLDivElement | null)[]>([]);
     const timelineRef = useRef<HTMLDivElement>(null);
 
-    // Track scroll progress and active milestone
+    // Track scroll progress with IntersectionObserver for better performance
+    useEffect(() => {
+        const observers: IntersectionObserver[] = [];
+
+        milestoneRefs.current.forEach((ref, index) => {
+            if (!ref) return;
+
+            const observer = new IntersectionObserver(
+                ([entry]) => {
+                    if (entry.isIntersecting) {
+                        setActiveMilestoneIndex(index);
+                    }
+                },
+                {
+                    threshold: 0.5,
+                    rootMargin: "-20% 0px -20% 0px"
+                }
+            );
+
+            observer.observe(ref);
+            observers.push(observer);
+        });
+
+        return () => observers.forEach((o) => o.disconnect());
+    }, [milestones.length]);
+
+    // Track scroll progress for timeline animation
     useEffect(() => {
         const handleScroll = () => {
             if (!timelineRef.current) return;
@@ -31,8 +58,6 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
             // Calculate progress (0 to 1)
             let progress = 0;
             if (timelineTop < viewportHeight && timelineBottom > 0) {
-                // const visibleStart = Math.max(0, viewportHeight - timelineTop);
-                // const visibleEnd = Math.min(timelineHeight, viewportHeight - timelineTop + viewportHeight);
                 progress = Math.min(
                     1,
                     Math.max(
@@ -42,26 +67,16 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                 );
             }
             setScrollProgress(progress);
-
-            // Find active milestone
-            milestoneRefs.current.forEach((ref, index) => {
-                if (ref) {
-                    const milestoneRect = ref.getBoundingClientRect();
-                    const milestoneCenter = milestoneRect.top + milestoneRect.height / 2;
-                    if (milestoneCenter >= viewportHeight * 0.3 && milestoneCenter <= viewportHeight * 0.7) {
-                        setActiveMilestoneIndex(index);
-                    }
-                }
-            });
+            scrollProgressMotion.set(progress);
         };
 
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         handleScroll(); // Initial check
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [milestones.length]);
+    }, [scrollProgressMotion, milestones.length]);
 
-    // Function to get icon and palette based on milestone title
-    const getMilestoneVisuals = (title: string, index: number) => {
+    // Function to get icon and palette based on milestone title (memoized)
+    const getMilestoneVisuals = useCallback((title: string, index: number) => {
         const t = title.toLowerCase();
 
         // Icon mapping based on milestone content
@@ -112,7 +127,21 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
         }
 
         return { icon, palette };
-    };
+    }, []);
+
+    // Generate stable particles (prevents re-render jitter)
+    const particles = useMemo(() => {
+        return [...Array(6)].map(() => ({
+            left: Math.random() * 100,
+            top: Math.random() * 100,
+            size: Math.random() * 4 + 2,
+            delay: Math.random() * 2,
+            x: Math.random() * 10 - 5
+        }));
+    }, []);
+
+    // Smooth sparkle animation using framer-motion transform
+    const sparkleY = useTransform(scrollProgressMotion, [0, 1], ["0%", "100%"]);
 
     return (
         <section
@@ -175,14 +204,14 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                         transition={{ duration: 0.1, ease: "linear" }}
                     />
 
-                    {/* Sparkle travel effect */}
+                    {/* Sparkle travel effect - smooth transform */}
                     {scrollProgress > 0 && (
                         <motion.div
                             className="hidden sm:block absolute left-1/2 w-2 h-2 rounded-full pointer-events-none -ml-1"
                             style={{
                                 background: "var(--wedding-accent)",
                                 boxShadow: "0 0 12px var(--wedding-accent), 0 0 6px var(--wedding-accent)",
-                                top: `${scrollProgress * 100}%`,
+                                top: sparkleY,
                             }}
                             animate={{
                                 scale: [1, 1.5, 1],
@@ -214,12 +243,12 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                                     transition={{ duration: 0.6, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
                                     data-testid={`story-milestone-${milestone.id}`}
                                 >
-                                    {/* ── Illustration panel ── */}
+                                    {/* ── Illustration panel with image preview ── */}
                                     <div
                                         className={`w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0 cursor-pointer transition-all duration-300 ${isActive ? "scale-105" : "hover:scale-[1.02]"
                                             }`}
                                         style={{
-                                            background: palette.bg,
+                                            background: milestone.imageUrl ? 'transparent' : palette.bg,
                                             boxShadow: isActive
                                                 ? `0 20px 80px ${palette.glow}, 0 0 0 3px var(--wedding-accent)`
                                                 : `0 12px 50px ${palette.glow}`,
@@ -236,11 +265,34 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                                         }}
                                         aria-label={`View details for ${milestone.title}`}
                                     >
+                                        {/* Background image with overlay */}
+                                        {milestone.imageUrl && (
+                                            <>
+                                                <div
+                                                    className="absolute inset-0 bg-cover bg-center"
+                                                    style={{
+                                                        backgroundImage: `url(${milestone.imageUrl})`,
+                                                        backgroundSize: 'cover',
+                                                        backgroundPosition: 'center',
+                                                    }}
+                                                />
+                                                <div
+                                                    className="absolute inset-0"
+                                                    style={{
+                                                        background: `linear-gradient(135deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.75) 100%)`,
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+
                                         {/* Animated radial glow */}
                                         <motion.div
                                             className="absolute inset-0"
                                             style={{
-                                                background: `radial-gradient(ellipse 70% 70% at 50% 50%, ${palette.glow} 0%, transparent 68%)`,
+                                                background: milestone.imageUrl
+                                                    ? `radial-gradient(ellipse 70% 70% at 50% 50%, ${palette.glow} 0%, transparent 68%)`
+                                                    : `radial-gradient(ellipse 70% 70% at 50% 50%, ${palette.glow} 0%, transparent 68%)`,
+                                                opacity: milestone.imageUrl ? 0.6 : 0.8,
                                             }}
                                             animate={{
                                                 scale: [1, 1.1, 1],
@@ -253,28 +305,28 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                                             }}
                                         />
 
-                                        {/* Floating particles */}
-                                        {[...Array(6)].map((_, i) => (
+                                        {/* Floating particles - stable version */}
+                                        {particles.map((p, i) => (
                                             <motion.div
                                                 key={i}
                                                 className="absolute rounded-full"
                                                 style={{
-                                                    width: Math.random() * 4 + 2,
-                                                    height: Math.random() * 4 + 2,
+                                                    width: p.size,
+                                                    height: p.size,
                                                     background: palette.textLight,
                                                     opacity: 0.3,
-                                                    left: `${Math.random() * 100}%`,
-                                                    top: `${Math.random() * 100}%`,
+                                                    left: `${p.left}%`,
+                                                    top: `${p.top}%`,
                                                 }}
                                                 animate={{
                                                     y: [0, -20, 0],
-                                                    x: [0, Math.random() * 10 - 5, 0],
+                                                    x: [0, p.x, 0],
                                                     opacity: [0.2, 0.5, 0.2],
                                                 }}
                                                 transition={{
-                                                    duration: 3 + Math.random() * 2,
+                                                    duration: 3 + p.delay,
                                                     repeat: Infinity,
-                                                    delay: Math.random() * 2,
+                                                    delay: p.delay,
                                                     ease: "easeInOut",
                                                 }}
                                             />

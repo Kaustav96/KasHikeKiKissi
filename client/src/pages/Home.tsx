@@ -1295,11 +1295,11 @@ export default function Home() {
   /* ================= SINGLE PUBLIC QUERY ================= */
 
   const { data, isLoading } = useQuery({
-    queryKey: ["public-home", side],
+    queryKey: ["public-home"],  // Remove side from query key to prevent refetching on side switch
     queryFn: async () => {
       const res = await apiRequest(
         "GET",
-        `/api/public/home?side=${side}`
+        `/api/public/home?side=both`  // Always fetch all data, filter client-side
       );
       return res.json();
     },
@@ -1310,7 +1310,16 @@ export default function Home() {
 
   const config = data?.config;
   const isDateConfirmed = !!config?.weddingDate;
-  const events = data?.events ?? [];
+
+  // Filter events client-side based on current side to avoid server refetch on side switch
+  const events = useMemo(() => {
+    if (!data?.allEvents) return [];
+    if (side === "groom" || side === "bride") {
+      return data.allEvents.filter((e: any) => e.side === side || e.side === "both");
+    }
+    return data.allEvents;
+  }, [data?.allEvents, side]);
+
   const milestones = data?.stories ?? [];
   const venueList = data?.venues ?? [];
 
