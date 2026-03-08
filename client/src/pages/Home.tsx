@@ -3,13 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MapPin, Calendar, Clock, ChevronDown, ChevronRight, Heart, ExternalLink,
-  Loader2, Check, Search, User, Phone, Mail, Navigation, Plane, Train, Car,
-  BedDouble, Info, BookOpen, Sparkles, Shirt, Sun, Music, Crown, Building,
-  X as XIcon, Users, Film, Camera, Cake, TreePine, Laugh, Mountain,
+  MapPin, ChevronDown, Heart,
+  Loader2, Check, Phone, Navigation, Plane, Train, Car,
+  BedDouble, Info, Shirt, Building,
+  Users,
 } from "lucide-react";
-import React, { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
-import { Link } from "wouter";
+import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
@@ -19,16 +18,15 @@ import SideSelectionLanding from "@/components/SideSelectionLanding";
 import ViewingSideOverlay from "@/components/ViewingSideOverlay";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import FloatingContact from "@/components/FloatingContact";
-import { MandalaHalfOrnament, GoldMedallion, ThinGoldDivider, RoyalFrame } from "@/components/RoyalOrnaments";
-import type { WeddingConfig, WeddingEvent, StoryMilestone, Venue } from "../../../shared/schema.js";
-import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { MandalaHalfOrnament, GoldMedallion } from "@/components/RoyalOrnaments";
+import type { WeddingConfig, WeddingEvent, Venue } from "@shared/schema.ts";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import HeroBokeh from "@/components/ui/HeroBokeh.tsx";
 import SimpleDivider from "@/components/SimpleDivider";
 import { getEventIcon, getWardrobeTip, getDressCodeColors } from "@/lib/weddingUtils";
+import { ANIMATION_CONSTANTS } from "@/lib/animations";
 
 // Lazy load heavy sections for better performance
 const StorySection = lazy(() => import("@/components/home/StorySection"));
@@ -38,8 +36,7 @@ import FindByInviteSection from "@/components/home/FindByInviteSection";
 import ContactInfoSection from "@/components/home/ContactInfoSection";
 import FooterSection from "@/components/home/FooterSection";
 
-const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingConfig, isDateConfirmed: boolean }) => {
-  const { side } = useWeddingTheme();
+const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
   // Use wedding theme colors for consistent palette across both sides
   const nameColor = "var(--wedding-accent)";
   const ampColor = "var(--wedding-accent)";
@@ -47,11 +44,35 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
     <section
       id="hero"
       className="min-h-screen flex flex-col items-center justify-center relative pt-14 overflow-hidden"
-      style={{ background: "var(--wedding-hero-gradient)" }}
+      style={{
+        background: `
+          radial-gradient(circle at 50% 40%, rgba(198,167,94,0.18), transparent 60%),
+          var(--wedding-hero-gradient)
+        `
+      }}
       data-testid="hero-section"
     >
+      {/* Layer 1: Subtle texture pattern for depth */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+
+      {/* Layer 2: Soft gold radial glow for richness */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 70% 50% at 50% 45%, rgba(185,151,91,0.15) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Layer 3: Ambient bokeh effect */}
       <HeroBokeh />
-      <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
+
+      {/* Subtle dark overlay for contrast */}
+      <div className="absolute inset-0 bg-black/5 pointer-events-none"></div>
       {/* Mandala ornaments on sides */}
       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-32 sm:w-48 md:w-64 opacity-15 pointer-events-none">
         <MandalaHalfOrnament side="left" />
@@ -68,26 +89,20 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
         }}
       />
 
-      {/* Subtle circle pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
 
       <motion.div
         className="text-center z-10 px-4 relative max-w-3xl mx-auto"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+        transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth, delay: ANIMATION_CONSTANTS.delay.medium }}
       >
         {/* Central medallion above names */}
         <div className="flex justify-center mb-8">
           <motion.div
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: ANIMATION_CONSTANTS.duration.slow, delay: ANIMATION_CONSTANTS.delay.long, ease: ANIMATION_CONSTANTS.easing.smooth }}
+            whileHover={{ scale: 1.05, rotate: 6 }}
           >
             <GoldMedallion size={90} />
           </motion.div>
@@ -98,7 +113,7 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
           style={{ color: "var(--wedding-muted)" }}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
+          transition={{ delay: 0.5, duration: ANIMATION_CONSTANTS.duration.normal }}
         >
           The Wedding Celebration of
         </motion.p>
@@ -109,7 +124,7 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
           data-testid="hero-title"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.6, duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
           Himasree
         </motion.h1>
@@ -121,14 +136,14 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
             style={{ background: "linear-gradient(to right, transparent, var(--wedding-accent))" }}
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ delay: 0.85, duration: 0.6, ease: "easeOut" }}
+            transition={{ delay: 0.85, duration: ANIMATION_CONSTANTS.duration.normal, ease: "easeOut" }}
           />
           <motion.span
             className="font-serif text-3xl sm:text-4xl italic"
             style={{ color: ampColor }}
             initial={{ opacity: 0, scale: 0.7 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.9, duration: 0.5 }}
+            transition={{ delay: 0.9, duration: ANIMATION_CONSTANTS.duration.normal }}
           >
             &amp;
           </motion.span>
@@ -137,7 +152,7 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
             style={{ background: "linear-gradient(to left, transparent, var(--wedding-accent))" }}
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ delay: 0.85, duration: 0.6, ease: "easeOut" }}
+            transition={{ delay: 0.85, duration: ANIMATION_CONSTANTS.duration.normal, ease: "easeOut" }}
           />
         </div>
 
@@ -146,7 +161,7 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
           style={{ color: nameColor }}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.7, duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
           Kaustav
         </motion.h1>
@@ -163,7 +178,8 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
           }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 1, duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 32px rgba(46,43,39,0.12)" }}
         >
           {/* Shimmer top line */}
           <div
@@ -215,6 +231,8 @@ const HeroSection = React.memo(({ config, isDateConfirmed }: { config: WeddingCo
         initial={{ opacity: 0, y: -4 }}
         animate={{ opacity: 0.6, y: [0, 6, 0] }}
         transition={{ delay: 2, duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        whileHover={{ opacity: 0.9, scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
         onClick={() => window.scrollBy({ top: window.innerHeight * 0.65, behavior: "smooth" })}
         aria-label="Scroll down"
       >
@@ -246,18 +264,30 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
   ];
 
   return (
-    <section id="venue" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="venue-section">
-      <div className="max-w-3xl mx-auto">
+    <section id="venue" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-alt-bg)" }} data-testid="venue-section">
+      {/* Subtle background texture */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="max-w-3xl mx-auto relative">
         <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+          <motion.div
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+            whileHover={{ scale: 1.05, rotate: 6 }}
+          >
             <Building size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
+          </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
             Join Us Here
           </p>
@@ -270,7 +300,7 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
         {/* ── Venue Tab Switcher (Wedding / Reception) ── */}
         <div className="flex gap-3 justify-center mb-6 flex-wrap">
           {[0, 1].map((i) => (
-            <button
+            <motion.button
               key={i}
               onClick={() => { setActiveVenueIdx(i); setActiveSubSection("map"); }}
               className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all"
@@ -280,6 +310,8 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                 border: `1px solid ${activeVenueIdx === i ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
                 boxShadow: activeVenueIdx === i ? "0 3px 16px rgba(176,132,72,0.22)" : "none",
               }}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               data-testid={`venue-tab-${i}`}
             >
               <MapPin size={14} />
@@ -293,14 +325,14 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
               >
                 {venueCities[i]}
               </span>
-            </button>
+            </motion.button>
           ))}
         </div>
 
         {/* ── Sub-Section Tab Buttons ── */}
         <div className="flex gap-2 justify-center mb-7 flex-wrap">
           {subTabs.map(({ id, label, icon: SubIcon }) => (
-            <button
+            <motion.button
               key={id}
               onClick={() => setActiveSubSection(id)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium transition-all"
@@ -310,11 +342,13 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                 border: `1px solid ${activeSubSection === id ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
                 fontWeight: activeSubSection === id ? 600 : 400,
               }}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               data-testid={`venue-sub-${id}`}
             >
               <SubIcon size={13} />
               {label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -362,6 +396,7 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                           allowFullScreen
                           loading="lazy"
                           title={`Map - ${activeVenue.name}`}
+                          referrerPolicy="no-referrer-when-downgrade"
                         />
                       </div>
                     )}
@@ -500,8 +535,6 @@ type PublicRsvpForm = z.infer<typeof publicRsvpFormSchema>;
 function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingEvent[]; prefillGuest?: any; onRsvpSuccess?: () => void }) {
   const { toast } = useToast();
   const { side, setSide } = useWeddingTheme();
-  const [submitted, setSubmitted] = useState(false);
-  const [submittedStatus, setSubmittedStatus] = useState<string>("");
   const [checkingName, setCheckingName] = useState(false);
   const [foundGuests, setFoundGuests] = useState<any[]>([]);
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
@@ -534,10 +567,9 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
     if (prefillGuest.side && prefillGuest.side !== side && prefillGuest.side !== "both") {
       setSide(prefillGuest.side);
     }
-    setSubmitted(false);
 
     // Check if this is an existing guest (has rsvpStatus) or new name (no rsvpStatus)
-    const isExistingGuest = prefillGuest.rsvpStatus && prefillGuest.rsvpStatus !== null;
+    const isExistingGuest = prefillGuest.rsvpStatus !== null;
 
     if (isExistingGuest) {
       // Full prefill for existing guest
@@ -741,18 +773,30 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
   const rsvpStatus = form.watch("rsvpStatus");
 
   return (
-    <section id="rsvp" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="rsvp-section">
-      <div className="max-w-lg mx-auto">
+    <section id="rsvp" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-bg)" }} data-testid="rsvp-section">
+      {/* Subtle background texture */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="max-w-lg mx-auto relative">
         <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+          <motion.div
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+            whileHover={{ scale: 1.05, rotate: 6 }}
+          >
             <Heart size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
+          </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
             Join Us
           </p>
@@ -780,7 +824,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
             </label>
             <div className="flex flex-col sm:flex-row gap-3">
               {(["confirmed", "declined"] as const).map((status) => (
-                <button
+                <motion.button
                   key={status}
                   type="button"
                   onClick={() => {
@@ -796,10 +840,12 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
                     color: rsvpStatus === status ? "#fff" : "var(--wedding-text)",
                     border: `1px solid ${rsvpStatus === status ? "var(--wedding-accent)" : "var(--wedding-border)"}`
                   }}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
                   data-testid={`rsvp-${status}`}
                 >
                   {status === "confirmed" ? "Joyfully Accept" : "Respectfully Decline"}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -956,11 +1002,13 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
                 />
               </div>
 
-              <button
+              <motion.button
                 type="submit"
                 disabled={rsvpMutation.isPending}
                 className="w-full py-3 rounded-lg text-sm font-medium tracking-wider uppercase transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 data-testid="submit-rsvp"
               >
                 {rsvpMutation.isPending ? (
@@ -968,7 +1016,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
                 ) : (
                   "Submit RSVP"
                 )}
-              </button>
+              </motion.button>
             </>
           )}
         </motion.form>
@@ -1122,18 +1170,30 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
   });
 
   return (
-    <section id="wardrobe" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="wardrobe-section">
-      <div className="max-w-4xl mx-auto">
+    <section id="wardrobe" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-bg)" }} data-testid="wardrobe-section">
+      {/* Subtle background texture */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="max-w-4xl mx-auto relative">
         <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+          <motion.div
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+            whileHover={{ scale: 1.05, rotate: 6 }}
+          >
             <Shirt size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
+          </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
             Dress Your Best
           </p>
@@ -1153,7 +1213,7 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
             return (
               <motion.div
                 key={item.id}
-                className="rounded-2xl overflow-hidden"
+                className="rounded-2xl overflow-hidden hover:shadow-xl transition-all"
                 style={{
                   background: "var(--wedding-card-bg)",
                   border: "1px solid var(--wedding-border)",
@@ -1162,7 +1222,12 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
                 initial={{ opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: idx * 0.07 }}
+                transition={{
+                  delay: idx * ANIMATION_CONSTANTS.stagger.fast,
+                  duration: ANIMATION_CONSTANTS.duration.slow,
+                  ease: ANIMATION_CONSTANTS.easing.smooth
+                }}
+                whileHover={{ y: -4 }}
               >
                 {/* Dress code color swatches */}
                 <div className="px-4 pt-3 pb-2 flex items-center gap-2">
@@ -1211,7 +1276,7 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
                   </div>
 
                   {/* Info button */}
-                  <button
+                  <motion.button
                     onClick={() => setActiveTip(isOpen ? null : idx)}
                     className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all"
                     style={{
@@ -1219,10 +1284,12 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
                       border: "1px solid var(--wedding-border)",
                       color: isOpen ? "#fff" : "var(--wedding-accent)",
                     }}
+                    whileHover={{ scale: 1.1, rotate: 6 }}
+                    whileTap={{ scale: 0.9 }}
                     aria-label="Show style tip"
                   >
                     <Info size={13} />
-                  </button>
+                  </motion.button>
                 </div>
 
                 {/* Expanded tip panel */}
@@ -1285,8 +1352,8 @@ export default function Home() {
   const [sideSelected, setSideSelected] = useState(false);
   const [pendingRsvpGuest, setPendingRsvpGuest] = useState<any>(null);
   const [searchTrigger, setSearchTrigger] = useState<{ fn: () => void; query: string } | null>(null);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const currentPlaylistRef = useRef<string[]>([]);
+  const currentTrackIndexRef = useRef<number>(0);
   const isBackgroundMusicRef = useRef<boolean>(false);
   const prevSideSelectedRef = useRef<boolean>(false);
 
@@ -1309,7 +1376,6 @@ export default function Home() {
   });
 
   const config = data?.config;
-  const isDateConfirmed = !!config?.weddingDate;
 
   // Filter events client-side based on current side to avoid server refetch on side switch
   const events = useMemo(() => {
@@ -1384,7 +1450,7 @@ export default function Home() {
 
     if (shouldStartMusic) {
       currentPlaylistRef.current = playlist;
-      setCurrentTrackIndex(0);
+      currentTrackIndexRef.current = 0;
       stop();
       setMusicUrl(playlist[0]);
 
@@ -1396,7 +1462,7 @@ export default function Home() {
       // Update ref even if playlist didn't change
       currentPlaylistRef.current = playlist;
     }
-  }, [playlist, isBackgroundMusic, sideSelected]);
+  }, [playlist, isBackgroundMusic, sideSelected, stop, setMusicUrl, fadeIn]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -1405,17 +1471,16 @@ export default function Home() {
       const playlist = currentPlaylistRef.current;
       if (playlist.length <= 1) return;
 
-      setCurrentTrackIndex((prev) => {
-        const next = (prev + 1) % playlist.length;
-        setMusicUrl(playlist[next]);
-        fadeIn();
-        return next;
-      });
+      // Get next track in playlist
+      const next = (currentTrackIndexRef.current + 1) % playlist.length;
+      currentTrackIndexRef.current = next;
+      setMusicUrl(playlist[next]);
+      fadeIn();
     };
 
     setOnTrackEnd(handleEnded);
     return () => setOnTrackEnd(null);
-  }, [setOnTrackEnd, fadeIn, setMusicUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [setOnTrackEnd, fadeIn, setMusicUrl]);
 
   /* ================= VIEW COUNT ================= */
 
@@ -1490,7 +1555,7 @@ export default function Home() {
       />
 
       <main>
-            <HeroSection config={config} isDateConfirmed={isDateConfirmed} />
+            <HeroSection config={config} />
             <FindByInviteSection
               onEditRsvp={(guest) => {
                 setPendingRsvpGuest(guest);
@@ -1510,12 +1575,12 @@ export default function Home() {
                 setSearchTrigger({ fn: searchFn, query: currentQuery });
               }}
             />
-            <Suspense fallback={<div className="py-16 sm:py-20" />}>
+            <Suspense fallback={<div className="py-24 md:py-32" />}>
               <EventsSection events={events} />
             </Suspense>
             <VenueSection venueList={venueList} />
             <WardrobePlannerSection events={allEvents} />
-            <Suspense fallback={<div className="py-16 sm:py-24" />}>
+            <Suspense fallback={<div className="py-24 md:py-32" />}>
               <StorySection milestones={milestones} />
             </Suspense>
             <RsvpSection

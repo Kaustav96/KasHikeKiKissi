@@ -6,6 +6,7 @@ import {
 import SimpleDivider from "../SimpleDivider";
 import { ThinGoldDivider } from "../RoyalOrnaments";
 import { apiRequest } from "@/lib/queryClient";
+import { ANIMATION_CONSTANTS } from "@/lib/animations";
 
 export default function FindByInviteSection({
   onEditRsvp,
@@ -52,18 +53,30 @@ export default function FindByInviteSection({
   const found = results !== null && results.length > 0;
 
   return (
-    <section id="find-invite" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-alt-bg)" }} data-testid="find-invite-section">
-      <div className="max-w-lg mx-auto">
+    <section id="find-invite" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-alt-bg)" }} data-testid="find-invite-section">
+      {/* Subtle background texture */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="max-w-lg mx-auto relative">
         <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+          <motion.div
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+            whileHover={{ scale: 1.05, rotate: 6 }}
+          >
             <Search size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
+          </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
             Check Your Invite
           </p>
@@ -111,15 +124,17 @@ export default function FindByInviteSection({
               }}
             />
           </div>
-          <button
+          <motion.button
             onClick={handleSearch}
             disabled={searching || query.trim().length < 3}
             className="px-5 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
             style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
           >
             {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
             Search
-          </button>
+          </motion.button>
         </motion.div>
 
         {/* Results */}
@@ -140,7 +155,7 @@ export default function FindByInviteSection({
               <p className="text-xs mb-4" style={{ color: "var(--wedding-muted)" }}>
                 Don't worry! You can still RSVP directly or reach out to us.
               </p>
-              <button
+              <motion.button
                 onClick={() => {
                   onSubmitDirect(query.trim());
                   const el = document.getElementById("rsvp");
@@ -151,9 +166,11 @@ export default function FindByInviteSection({
                 }}
                 className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg transition-opacity hover:opacity-80"
                 style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)", border: "none", cursor: "pointer" }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
               >
                 Submit RSVP Directly <ChevronRight size={11} />
-              </button>
+              </motion.button>
             </motion.div>
           )}
 
@@ -169,11 +186,13 @@ export default function FindByInviteSection({
                 Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to view &amp; edit your RSVP
               </p>
               {results!.map((guest) => (
-                <button
+                <motion.button
                   key={guest.id}
                   onClick={() => setSelectedGuest(guest)}
-                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:shadow-xl"
                   style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  whileTap={{ scale: 0.99 }}
                 >
                   <div
                     className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
@@ -191,7 +210,7 @@ export default function FindByInviteSection({
                     </p>
                   </div>
                   <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
-                </button>
+                </motion.button>
               ))}
             </motion.div>
           )}

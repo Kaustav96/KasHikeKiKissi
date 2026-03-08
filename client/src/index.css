@@ -4,6 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global UI Polish */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0, 0, 0, .10);

@@ -1,11 +1,18 @@
 import { motion } from "framer-motion";
-import { Phone, Mail } from "lucide-react";
-import SimpleDivider from "@/components/SimpleDivider";
+import { Heart } from "lucide-react";
+import SimpleDivider from "../SimpleDivider";
 import { ANIMATION_CONSTANTS } from "@/lib/animations";
 
-export default function ContactInfoSection() {
+export default function CoupleStorySection({ story }: { story: string }) {
+  if (!story || story.trim() === "") return null;
+
   return (
-    <section id="contact" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-alt-bg)" }} data-testid="contact-section">
+    <section
+      id="couple-story"
+      className="py-24 md:py-32 px-4 sm:px-8 relative"
+      style={{ background: "var(--wedding-bg)" }}
+      data-testid="couple-story-section"
+    >
       {/* Subtle background texture */}
       <div
         className="absolute inset-0 opacity-[0.035] pointer-events-none"
@@ -27,55 +34,59 @@ export default function ContactInfoSection() {
             style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
             whileHover={{ scale: 1.05, rotate: 6 }}
           >
-            <Phone size={18} style={{ color: "var(--wedding-accent)" }} />
+            <Heart size={18} style={{ color: "var(--wedding-accent)" }} />
           </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Need Help?
+            Our Journey
           </p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
-            Contact Us
+            Our Story
           </h2>
           <SimpleDivider />
         </motion.div>
 
         <motion.div
-          className="rounded-lg p-8 text-center hover:shadow-xl transition-all"
-          style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+          className="rounded-2xl p-8 sm:p-10 text-center hover:shadow-xl transition-all"
+          style={{
+            background: "var(--wedding-card-bg)",
+            border: "2px solid var(--wedding-accent)",
+            boxShadow: "0 4px 24px rgba(176,132,72,0.14)"
+          }}
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{
             delay: ANIMATION_CONSTANTS.delay.medium,
-            duration: ANIMATION_CONSTANTS.duration.normal,
+            duration: ANIMATION_CONSTANTS.duration.slow,
             ease: ANIMATION_CONSTANTS.easing.smooth
           }}
           whileHover={{ y: -4 }}
         >
-          <p className="text-base sm:text-lg mb-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            Have questions or need assistance? Our wedding coordinator is here to help make your experience memorable:
-          </p>
-          <div className="space-y-3">
-            <motion.a
-              href="tel:+919876512345"
-              className="flex items-center justify-center gap-3 text-lg font-semibold transition-opacity"
-              style={{ color: "var(--wedding-accent)" }}
-              whileHover={{ scale: 1.04 }}
+          {/* Decorative top accent */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="w-8 h-px bg-gradient-to-r from-transparent to-[var(--wedding-accent)]" />
+            <Heart size={16} style={{ color: "var(--wedding-accent)" }} className="animate-pulse" />
+            <div className="w-8 h-px bg-gradient-to-l from-transparent to-[var(--wedding-accent)]" />
+          </div>
+
+          <div className="prose prose-sm sm:prose-base mx-auto" style={{ maxWidth: "65ch" }}>
+            <p
+              className="text-base sm:text-lg leading-relaxed whitespace-pre-line text-left"
+              style={{ color: "var(--wedding-text)", opacity: 0.9 }}
             >
-              <Phone size={20} />
-              <span>+91 98765 12345</span>
-            </motion.a>
-            <motion.a
-              href="mailto:wedding@kaustavhimasree.com"
-              className="flex items-center justify-center gap-3 text-base transition-opacity"
-              style={{ color: "var(--wedding-text)" }}
-              whileHover={{ scale: 1.04 }}
-            >
-              <Mail size={18} />
-              <span>wedding@kaustavhimasree.com</span>
-            </motion.a>
+              {story}
+            </p>
+          </div>
+
+          {/* Decorative bottom accent */}
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-[var(--wedding-accent)] to-transparent" />
+            <span className="text-[var(--wedding-accent)] text-xs">✦</span>
+            <div className="w-12 h-px bg-gradient-to-l from-transparent via-[var(--wedding-accent)] to-transparent" />
           </div>
         </motion.div>
       </div>
     </section>
   );
 }
+

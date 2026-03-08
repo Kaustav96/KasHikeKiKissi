@@ -7,6 +7,7 @@ import SimpleDivider from "../SimpleDivider";
 import { ThinGoldDivider } from "../RoyalOrnaments";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { getEventIcon } from "@/lib/weddingUtils";
+import { ANIMATION_CONSTANTS } from "@/lib/animations";
 import type { WeddingEvent } from "../../../../shared/schema.js";
 
 const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
@@ -34,18 +35,30 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
   const sideName = side === "groom" ? "Kaustav's" : "Himasree's";
 
   return (
-    <section id="events" className="py-16 sm:py-20 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="events-section">
-      <div className="max-w-5xl mx-auto">
+    <section id="events" className="py-24 md:py-32 px-4 sm:px-8" style={{ background: "var(--wedding-bg)" }} data-testid="events-section">
+      {/* Subtle background texture */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}
+      />
+
+      <div className="max-w-5xl mx-auto relative">
         <motion.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
         >
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
-            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}>
+          <motion.div
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
+            style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+            whileHover={{ scale: 1.05, rotate: 6 }}
+          >
             <Calendar size={18} style={{ color: "var(--wedding-accent)" }} />
-          </div>
+          </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
             Celebrate With Us
           </p>
@@ -62,7 +75,7 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
         {dates.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-8 justify-center flex-wrap" data-testid="event-date-timeline">
             {dates.map((date) => (
-              <button
+              <motion.button
                 key={date}
                 onClick={() => setSelectedDate(date)}
                 className="px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 transition-all"
@@ -72,11 +85,13 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
                   border: `1px solid ${active === date ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
                   boxShadow: active === date ? "0 2px 12px rgba(185,151,91,0.20)" : "none",
                 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 data-testid={`event-date-${date}`}
               >
                 <Calendar size={11} />
                 {date}
-              </button>
+              </motion.button>
             ))}
           </div>
         )}
@@ -87,7 +102,7 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
             return (
               <motion.div
                 key={event.id}
-                className="rounded-2xl overflow-hidden"
+                className="rounded-2xl overflow-hidden hover:shadow-xl transition-all"
                 style={{
                   background: "var(--wedding-card-bg)",
                   border: event.isMainEvent ? "2px solid var(--wedding-accent)" : "1px solid var(--wedding-border)",
@@ -97,7 +112,12 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
                 }}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                transition={{
+                  delay: idx * ANIMATION_CONSTANTS.stagger.fast,
+                  duration: ANIMATION_CONSTANTS.duration.slow,
+                  ease: ANIMATION_CONSTANTS.easing.smooth
+                }}
+                whileHover={{ y: -4 }}
                 data-testid={`event-card-${event.id}`}
               >
                 {/* Top accent bar */}

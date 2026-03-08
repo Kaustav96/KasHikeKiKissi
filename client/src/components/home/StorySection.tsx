@@ -6,12 +6,15 @@ import {
 import SimpleDivider from "../SimpleDivider";
 import { MandalaHalfOrnament } from "../RoyalOrnaments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import type { StoryMilestone } from "../../../../shared/schema.js";
+import { Button } from "../ui/button";
+import { ANIMATION_CONSTANTS } from "@/lib/animations";
+import type { StoryMilestone } from "@shared/schema.ts";
 
-const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] }) => {
-    if (milestones.length === 0) return null;
+const StorySection = React.memo(({ milestones, coupleStory }: { milestones: StoryMilestone[], coupleStory?: string }) => {
+    if (milestones.length === 0 && !coupleStory) return null;
 
     const [selectedMilestone, setSelectedMilestone] = useState<StoryMilestone | null>(null);
+    const [isCoupleStoryOpen, setIsCoupleStoryOpen] = useState(false);
     const [activeMilestoneIndex, setActiveMilestoneIndex] = useState<number>(0);
     const scrollProgressMotion = useMotionValue(0);
     const [scrollProgress, setScrollProgress] = useState<number>(0);
@@ -146,10 +149,18 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
     return (
         <section
             id="story"
-            className="py-16 sm:py-24 px-4 sm:px-8 relative overflow-hidden"
+            className="py-24 md:py-32 px-4 sm:px-8 relative overflow-hidden"
             style={{ background: "var(--wedding-alt-bg)" }}
             data-testid="story-section"
         >
+            {/* Subtle background texture */}
+            <div
+                className="absolute inset-0 opacity-[0.035] pointer-events-none"
+                style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}
+            />
+
             <div className="absolute top-0 left-0 w-32 md:w-48 opacity-8 pointer-events-none">
                 <MandalaHalfOrnament side="left" />
             </div>
@@ -157,13 +168,14 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                 <MandalaHalfOrnament side="right" />
             </div>
 
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-5xl mx-auto relative">
                 {/* Section header */}
                 <motion.div
                     className="text-center mb-14"
                     initial={{ opacity: 0, y: 18 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
+                    transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth }}
                 >
                     <div
                         className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-4"
@@ -225,6 +237,41 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                         />
                     )}
 
+                    {/* Couple Story Button - opens modal */}
+                    {coupleStory && coupleStory.trim() !== "" && (
+                        <motion.div
+                            className="mb-12 sm:mb-16 flex justify-center"
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{
+                                duration: ANIMATION_CONSTANTS.duration.slow,
+                                ease: ANIMATION_CONSTANTS.easing.smooth
+                            }}
+                        >
+                            <Button
+                                onClick={() => setIsCoupleStoryOpen(true)}
+                                className="group relative overflow-hidden rounded-full px-8 py-6 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-600"
+                                style={{
+                                    background: "var(--wedding-accent)",
+                                    color: "var(--wedding-bg)",
+                                    border: "2px solid var(--wedding-accent)"
+                                }}
+                            >
+                                <motion.span hidden
+                                    className="relative z-10 flex items-center gap-3"
+                                    whileHover={{ scale: 1.04 }}
+                                >
+                                    <Heart size={18} className="group-hover:animate-pulse" fill="currentColor" />
+                                    Read Our Love Story
+                                    <Sparkles size={16} className="group-hover:animate-pulse" />
+                                </motion.span>
+                                {/* Hover glow effect */}
+                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                            </Button>
+                        </motion.div>
+                    )}
+
                     <div className="space-y-10 sm:space-y-16">
                         {milestones.map((milestone, idx) => {
                             const { icon: IconComp, palette } = getMilestoneVisuals(milestone.title, idx);
@@ -240,12 +287,16 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                                     initial={{ opacity: 0, y: 30 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true, margin: "-60px" }}
-                                    transition={{ duration: 0.6, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                                    transition={{
+                                        duration: ANIMATION_CONSTANTS.duration.slow,
+                                        delay: idx * ANIMATION_CONSTANTS.stagger.fast,
+                                        ease: ANIMATION_CONSTANTS.easing.smooth
+                                    }}
                                     data-testid={`story-milestone-${milestone.id}`}
                                 >
                                     {/* ── Illustration panel with image preview ── */}
-                                    <div
-                                        className={`w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0 cursor-pointer transition-all duration-300 ${isActive ? "scale-105" : "hover:scale-[1.02]"
+                                    <motion.div
+                                        className={`w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0 cursor-pointer transition-all duration-300 ${isActive ? "scale-105" : ""
                                             }`}
                                         style={{
                                             background: milestone.imageUrl ? 'transparent' : palette.bg,
@@ -255,6 +306,8 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                                             height: "220px",
                                         }}
                                         onClick={() => setSelectedMilestone(milestone)}
+                                        whileHover={{ scale: 1.02, y: -4 }}
+                                        whileTap={{ scale: 0.98 }}
                                         role="button"
                                         tabIndex={0}
                                         onKeyDown={(e) => {
@@ -423,7 +476,7 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                                                 <Camera size={10} /> Click to view
                                             </p>
                                         </div>
-                                    </div>
+                                    </motion.div>
 
                                     {/* ── Timeline dot (desktop only) ── */}
                                     <div className="hidden sm:flex flex-col items-center justify-start flex-shrink-0 w-10 pt-20">
@@ -555,6 +608,65 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                             </div>
                         </>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Couple Story Modal */}
+            <Dialog open={isCoupleStoryOpen} onOpenChange={setIsCoupleStoryOpen}>
+                <DialogContent
+                    className="max-w-2xl max-h-[85vh] overflow-y-auto"
+                    style={{
+                        background: "var(--wedding-card-bg)",
+                        border: "2px solid var(--wedding-accent)",
+                    }}
+                >
+                    <DialogHeader>
+                        <DialogTitle
+                            className="font-serif text-2xl sm:text-3xl text-center pb-4"
+                            style={{ color: "var(--wedding-text)" }}
+                        >
+                            <div className="flex items-center justify-center gap-3 mb-2">
+                                <Heart size={24} style={{ color: "var(--wedding-accent)" }} fill="var(--wedding-accent)" />
+                                <span>Our Love Story</span>
+                                <Heart size={24} style={{ color: "var(--wedding-accent)" }} fill="var(--wedding-accent)" />
+                            </div>
+                            <SimpleDivider />
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="relative overflow-hidden rounded-xl p-6 sm:p-8">
+                        {/* Decorative background texture */}
+                        <div
+                            className="absolute inset-0 opacity-[0.035] pointer-events-none"
+                            style={{
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23B9975B' fill-opacity='0.4'%3E%3Cpath d='M40 0C17.9 0 0 17.9 0 40s17.9 40 40 40 40-17.9 40-40S62.1 0 40 0zm0 72c-17.7 0-32-14.3-32-32S22.3 8 40 8s32 14.3 32 32-14.3 32-32 32z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                            }}
+                        />
+
+                        {/* Top decorative accent */}
+                        <div className="flex items-center justify-center gap-2 mb-6">
+                            <div className="w-12 h-px bg-gradient-to-r from-transparent via-[var(--wedding-accent)] to-transparent" />
+                            <Sparkles size={16} style={{ color: "var(--wedding-accent)" }} />
+                            <div className="w-12 h-px bg-gradient-to-l from-transparent via-[var(--wedding-accent)] to-transparent" />
+                        </div>
+
+                        {/* Story content */}
+                        <div className="prose prose-sm sm:prose-base mx-auto max-w-2xl relative z-10">
+                            <p
+                                className="text-sm sm:text-base leading-relaxed whitespace-pre-line text-center"
+                                style={{ color: "var(--wedding-text)", opacity: 0.95 }}
+                            >
+                                {coupleStory}
+                            </p>
+                        </div>
+
+                        {/* Bottom decorative accent */}
+                        <div className="flex items-center justify-center gap-2 mt-6">
+                            <div className="w-12 h-px bg-gradient-to-r from-transparent via-[var(--wedding-accent)] to-transparent" />
+                            <span className="text-[var(--wedding-accent)] text-xs">✦</span>
+                            <div className="w-12 h-px bg-gradient-to-l from-transparent via-[var(--wedding-accent)] to-transparent" />
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </section>
