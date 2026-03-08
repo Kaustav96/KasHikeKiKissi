@@ -1,646 +1,448 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-interface EnvelopeIntroProps {
-    onFinish: () => void;
+interface Props {
+  onFinish?: () => void;
 }
 
-export default function EnvelopeIntro({ onFinish }: EnvelopeIntroProps) {
-    const [opened, setOpened] = useState(false);
-    const [loading, setLoading] = useState(false);
+export default function EnvelopeIntro({ onFinish }: Props) {
+  const [sealBreaking, setSealBreaking] = useState(false);
+  const [envelopeOpen, setEnvelopeOpen] = useState(false);
+  const [letterVisible, setLetterVisible] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
-    const handleOpen = () => {
-        if (opened) return;
+  const sparkles = Array.from({ length: 20 });
 
-        setOpened(true);
+  // Auto-open envelope after 2 seconds
+  useEffect(() => {
+    const openTimer = setTimeout(() => {
+      // Break seal (smoother transition - no shake, just fade)
+      setSealBreaking(true);
 
-        setTimeout(() => {
-            setLoading(true);
-        }, 7000);
+      // Show letter immediately when seal starts breaking
+      setLetterVisible(true);
 
-        setTimeout(() => {
-            onFinish();
-        }, 8500);
-    };
+      // Open envelope after seal disappears (1s)
+      setTimeout(() => setEnvelopeOpen(true), 1000);
+    }, 2000);
 
-    return (
+    return () => clearTimeout(openTimer);
+  }, [onFinish]);
+
+  // Countdown timer that starts when letter is visible
+  useEffect(() => {
+    if (!letterVisible) return;
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          // Navigate when countdown reaches 0
+          setTimeout(() => {
+            if (onFinish) onFinish();
+            else window.location.href = "/side-selection";
+          }, 1000);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [letterVisible, onFinish]);
+
+
+  return (
+    <div className="fixed inset-0 overflow-hidden">
+      {/* Blurred background layer */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "url('/lux-bg.jpeg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "blur(4px)",
+          transform: "scale(1.1)"
+        }}
+      />
+
+
+      {/* Full Page Envelope - Split into two halves */}
+      <div className="relative w-full h-full">
+
+        {/* Top Half of Envelope */}
         <div
-            className="fixed inset-0 flex items-center justify-center z-50 overflow-hidden"
-            style={{
-                background:
-                    "linear-gradient(135deg,#F5EDE5 0%,#EFE6D8 50%,#F5EDE5 100%)",
-            }}
+          className={`absolute top-0 left-0 right-0 transition-all duration-[2500ms] ease-out origin-bottom ${
+            envelopeOpen ? "-translate-y-full" : ""
+          }`}
+          style={{
+            height: "50%",
+            background: "linear-gradient(180deg, #7A0F1C 0%, #8B0E27 80%, #A1122F 100%)",
+            boxShadow: "0 10px 50px rgba(0,0,0,0.5)"
+          }}
         >
+          {/* Decorative gold border at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
 
-            {/* GANESH CAMOUFLAGE BACKGROUND */}
-            <motion.div
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.12 }}
-                transition={{ duration: 2 }}
-            >
-                <img
-                    src="/Ganeshji.png"
-                    className="w-[900px] max-w-none object-contain"
-                    style={{
-                        filter: "blur(2px) drop-shadow(0 0 40px rgba(198,167,94,0.3))",
-                    }}
-                />
-            </motion.div>
+          {/* Gold ornamental pattern */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 opacity-40">
+            <svg width="200" height="40" viewBox="0 0 200 40" fill="none">
+              <path d="M10 20 Q50 10 100 20 Q150 30 190 20" stroke="#D4AF37" strokeWidth="2" fill="none" opacity="0.6"/>
+              <circle cx="100" cy="20" r="4" fill="#FFD700"/>
+              <circle cx="50" cy="15" r="3" fill="#D4AF37"/>
+              <circle cx="150" cy="25" r="3" fill="#D4AF37"/>
+            </svg>
+          </div>
 
-            {/* GOLDEN RADIAL GLOW */}
-            <div
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            >
-                <div
-                    style={{
-                        width: "900px",
-                        height: "900px",
-                        background:
-                            "radial-gradient(circle, rgba(198,167,94,0.25) 0%, transparent 60%)",
-                        filter: "blur(60px)",
-                    }}
-                />
-            </div>
-
-            {/* Decorative Background Patterns */}
-            <div className="absolute inset-0 overflow-hidden opacity-10">
-                <svg className="absolute w-full h-full">
-                    <defs>
-                        <pattern id="paisley" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-                            <path d="M40 20 Q30 30 40 50 Q50 60 60 50 Q70 40 60 20 Q50 10 40 20"
-                                fill="none" stroke="#C6A75E" strokeWidth="1" opacity="0.6" />
-                            <circle cx="50" cy="35" r="15" fill="none" stroke="#A1122F" strokeWidth="0.8" opacity="0.5" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#paisley)" />
-                </svg>
-            </div>
-
-            {/* Container for Ganesh and Envelope */}
-            <div className="relative flex flex-col items-center gap-8">
-
-                {/* GANESH ICON */}
-                {/* <motion.div
-                    className="relative z-10"
-                    initial={{ opacity: 0, y: -20, scale: 0.8 }}
-                    animate={{
-                        opacity: opened ? 0 : 1,
-                        y: opened ? -40 : 0,
-                        scale: opened ? 0.7 : 1
-                    }}
-                >
-                    <motion.img
-                        src="/Ganeshji.png"
-                        className="w-36 h-36 drop-shadow-lg object-contain"
-                        animate={{
-                            filter: [
-                                "drop-shadow(0 4px 8px rgba(198,167,94,0.3))",
-                                "drop-shadow(0 6px 12px rgba(198,167,94,0.5))",
-                                "drop-shadow(0 4px 8px rgba(198,167,94,0.3))"
-                            ]
-                        }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                </motion.div> */}
-
-                <div
-                    className="relative w-[360px] h-[230px] cursor-pointer"
-                    onClick={handleOpen}
-                >
-
-                    {/* ENVELOPE BODY */}
-
-                    <div
-                        className="absolute inset-0 rounded-lg"
-                        style={{
-                            background:
-                                "linear-gradient(145deg,#8B0000 0%,#6B0000 60%,#3B0000 100%)",
-                            boxShadow: "0 40px 120px rgba(0,0,0,0.35)",
-                            border: "2px solid #C6A75E",
-                        }}
-                    />
-
-                    {/* INVITATION LETTER */}
-
-                    <motion.div
-                        className="absolute left-1/2 -translate-x-1/2 rounded-lg shadow-2xl overflow-hidden"
-                        style={{
-                            top: 45,
-                            width: "500px",
-                            height: "650px",
-                            background: "linear-gradient(135deg, #FFFFFF 0%, #FFF9F0 50%, #FFFBF5 100%)",
-                            border: "4px double #C6A75E",
-                            zIndex: 20,
-                        }}
-                        initial={{ opacity: 0, y: 0, scale: 0.5 }}
-                        animate={{
-                            opacity: opened ? 1 : 0,
-                            y: opened ? -350 : 0,
-                            scale: opened ? 1 : 0.5,
-                        }}
-                        transition={{
-                            duration: 1.4,
-                            delay: 1.2,
-                            ease: [0.16, 1, 0.3, 1]
-                        }}
-                    >
-                        <div className="relative w-full h-full flex flex-col items-center justify-center text-center px-12 py-10">
-
-                            <img
-                                src="/top.png"
-                                className="absolute top-0 left-0 w-full opacity-50"
-                                style={{
-                                    height: "40%",
-                                    objectFit: "cover",
-                                }}
-                            />
-
-                            <img
-                                src="/bottom.png"
-                                className="absolute bottom-0 left-0 w-full opacity-50"
-                                style={{
-                                    height: "40%",
-                                    objectFit: "cover",
-                                }}
-                            />
-
-                            <motion.p
-                                className="font-serif text-5xl font-extrabold relative z-10 mb-3"
-                                style={{ color: "#A1122F" }}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: opened ? 1 : 0, y: opened ? 0 : 10 }}
-                                transition={{ delay: 2.6 }}
-                            >
-                                শুভ বিবাহ
-                            </motion.p>
-
-                            <motion.p
-                                className="text-[15px] tracking-[0.25em] uppercase mb-2 italic font-semibold"
-                                style={{ color: "#8B6B2E" }}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: opened ? 1 : 0 }}
-                                transition={{ delay: 2.8 }}
-                            >
-                                Shubho Bibaho
-                            </motion.p>
-
-                            <motion.p
-                                className="text-[12px] tracking-[0.2em] uppercase mb-6 font-semibold"
-                                style={{ color: "#6B5B47" }}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: opened ? 1 : 0 }}
-                                transition={{ delay: 3.0 }}
-                            >
-                                Wedding Invitation
-                            </motion.p>
-
-                            <motion.p
-                                className="text-[13px] italic leading-relaxed font-medium"
-                                style={{ color: "#6B5B47" }}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: opened ? 1 : 0 }}
-                                transition={{ delay: 3.2 }}
-                            >
-                                With blessings of our families
-                            </motion.p>
-
-                        </div>
-                    </motion.div>
-                        {/* WAX SEAL */}
-
-{!opened && (
-  <motion.div
-    className="absolute flex items-center justify-center"
-    style={{
-      top: "48px",      // aligns with triangle tip
-      left: "135px",    // move slightly left from center
-      zIndex: 30
-    }}
-    initial={{ scale: 0.95 }}
-    animate={{
-      opacity: opened ? 0 : 1,
-      scale: [1, 1.05, 1],
-    }}
-    transition={{
-      opacity: { duration: 0.4 },
-      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-    }}
-  >
-    <div
-      className="w-24 h-24 rounded-full flex items-center justify-center font-serif"
-      style={{
-        background:
-          "linear-gradient(145deg,#FFD700 0%,#E6BE00 40%,#C6A75E 70%,#8B6B2E 100%)",
-        color: "#7A0F1C",
-        fontSize: "24px",
-        fontWeight: "bold",
-        boxShadow:
-          "0 12px 40px rgba(198,167,94,0.6), inset 0 3px 6px rgba(255,255,255,0.6), inset 0 -4px 8px rgba(0,0,0,0.25)",
-        border: "2px solid #B9975B",
-      }}
-    >
-      HK
-    </div>
-  </motion.div>
-)}
-
-                    {/* ENVELOPE FLAP */}
-
-                    <motion.div
-                        className="absolute top-0 left-0 right-0 h-[110px] origin-top"
-                        style={{
-                            background:
-                                "linear-gradient(180deg,#A1122F 0%,#8B0000 50%,#5C0000 100%)",
-                            clipPath: "polygon(0 0,100% 0,50% 70%)",
-                            zIndex: 10,
-                        }}
-                        animate={{
-                            rotateX: opened ? -180 : 0,
-                        }}
-                        transition={{
-                            duration: 1.2,
-                        }}
-                    />
-
+          {/* Top flap decoration */}
+          <div className="absolute top-8 left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-2 md:gap-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="text-xl md:text-3xl opacity-70 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
+                  🪔
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Half of Envelope */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 transition-all duration-[2500ms] ease-out origin-top ${
+            envelopeOpen ? "translate-y-full" : ""
+          }`}
+          style={{
+            height: "50%",
+            background: "linear-gradient(180deg, #A1122F 0%, #8B0E27 20%, #7A0F1C 100%)",
+            boxShadow: "0 -10px 50px rgba(0,0,0,0.5)"
+          }}
+        >
+          {/* Decorative gold border at top */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+
+          {/* Gold ornamental pattern */}
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 opacity-40">
+            <svg width="200" height="40" viewBox="0 0 200 40" fill="none">
+              <path d="M10 20 Q50 30 100 20 Q150 10 190 20" stroke="#D4AF37" strokeWidth="2" fill="none" opacity="0.6"/>
+              <circle cx="100" cy="20" r="4" fill="#FFD700"/>
+              <circle cx="50" cy="25" r="3" fill="#D4AF37"/>
+              <circle cx="150" cy="15" r="3" fill="#D4AF37"/>
+            </svg>
+          </div>
+
+          {/* Bottom decoration */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-2 md:gap-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="text-xl md:text-3xl opacity-70 animate-pulse" style={{ animationDelay: `${i * 0.2 + 0.5}s` }}>
+                  🪔
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Center Seal with Bengali Couple */}
+        <div
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 transition-all duration-1000 ease-out ${
+            sealBreaking ? "scale-110 opacity-0" : "scale-100 opacity-100"
+          }`}
+        >
+          <div
+            className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden"
+            style={{
+              border: "6px solid #D4AF37",
+              boxShadow: "0 0 60px rgba(212,175,55,0.8), 0 20px 80px rgba(0,0,0,0.6)",
+              background: "#FFF9E6"
+            }}
+          >
+            <img
+              src="/traditional-bengali-wedding-couple.png"
+              alt="Wedding Seal"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Fallback if image doesn't exist
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.innerHTML = `
+                  <div class="w-full h-full flex items-center justify-center text-6xl font-serif italic" style="color: #7A0F1C; background: linear-gradient(145deg, #FFD700 0%, #E6BE00 40%, #C6A75E 100%);">
+                    H & K
+                  </div>
+                `;
+              }}
+            />
+
+            {/* Gold ring overlays */}
+            <div className="absolute inset-0 rounded-full" style={{
+              border: "3px solid rgba(255,215,0,0.6)",
+              boxShadow: "inset 0 0 40px rgba(255,215,0,0.4)"
+            }} />
+            <div className="absolute inset-4 rounded-full" style={{
+              border: "2px solid rgba(212,175,55,0.4)"
+            }} />
+
+            {/* Wax seal texture effect */}
+            <div className="absolute inset-0 rounded-full bg-gradient-radial from-transparent to-black opacity-10" />
+          </div>
+        </div>
+
+        {/* Golden Sparkles Explosion when seal breaks */}
+        {sealBreaking && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-40">
+            {sparkles.map((_, i) => {
+              const angle = (i / sparkles.length) * 360;
+              const distance = 150 + Math.random() * 150;
+              return (
+                <div
+                  key={i}
+                  className="absolute animate-sparkle-burst"
+                  style={{
+                    left: "0",
+                    top: "0",
+                    animationDelay: `${Math.random() * 0.2}s`,
+                    '--angle': `${angle}deg`,
+                    '--distance': `${distance}px`,
+                  } as any}
+                >
+                  <div className="text-yellow-400 text-3xl drop-shadow-glow">
+                    {i % 3 === 0 ? "✨" : i % 3 === 1 ? "💫" : "⭐"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+      </div>
+
+      {/* Full Page Letter that appears after envelope opens */}
+      <div
+        className={`fixed inset-0 flex items-center justify-center z-50 p-4 transition-all duration-1000 ${
+          letterVisible
+            ? "opacity-100"
+            : "opacity-0 pointer-events-none"
+        }`}
+        style={{
+          background: "rgba(0,0,0,0.7)",
+          backdropFilter: "blur(10px)"
+        }}
+      >
+        {/* Mango Leaves Torana - Top of Letter */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-32 flex justify-center items-start z-10 pointer-events-none">
+          <div className="flex items-center gap-2">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className="animate-leaf-sway"
+                style={{
+                  animationDelay: `${i * 0.1}s`,
+                  filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.3))"
+                }}
+              >
+                <svg width="40" height="70" viewBox="0 0 40 70" fill="none">
+                  <path
+                    d="M20 0 Q24 15 20 30 Q16 45 20 70 L20 70 Q16 45 20 30 Q24 15 20 0Z"
+                    fill="#2D5016"
+                    opacity="0.95"
+                  />
+                  <ellipse cx="20" cy="14" rx="8" ry="16" fill="#3D7022" opacity="0.8" />
+                  <path
+                    d="M20 8 Q22 20 20 32"
+                    stroke="#4A8A2A"
+                    strokeWidth="1.2"
+                    opacity="0.6"
+                    fill="none"
+                  />
+                </svg>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className="relative w-full max-w-2xl h-[80vh] md:h-[85vh] lg:h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden"
+          style={{
+            background: "linear-gradient(160deg, #fffdf4 0%, #fff8e7 50%, #fdf3e3 100%)",
+            border: "3px solid #D4AF37"
+          }}
+        >
+          {/* Loading Spinner Overlay - REMOVED */}
+
+          {/* Decorative borders */}
+          <div className="absolute inset-4 rounded-2xl border-2 border-[#D4AF37] opacity-40 pointer-events-none" />
+          <div className="absolute inset-6 rounded-xl border border-[#D4AF37] opacity-20 pointer-events-none" />
+
+          {/* Corner ornaments */}
+          {["top-6 left-6", "top-6 right-6 rotate-90", "bottom-6 left-6 -rotate-90", "bottom-6 right-6 rotate-180"].map((pos, i) => (
+            <div key={i} className={`absolute ${pos} pointer-events-none z-10`}>
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <path d="M2 2 L14 2 Q18 2 18 6 L18 14" stroke="#D4AF37" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+                <circle cx="2" cy="2" r="2.5" fill="#FFD700"/>
+                <circle cx="18" cy="14" r="2" fill="#C6A75E"/>
+                <path d="M6 2 Q6 6 2 6" stroke="#D4AF37" strokeWidth="1.5" fill="none" opacity="0.6"/>
+              </svg>
+            </div>
+          ))}
+
+          {/* Content - fixed height, no scroll */}
+          <div className="flex-1 flex flex-col justify-between px-6 md:px-12 pt-4 pb-3">
+            <div>
+              {/* Top decoration */}
+              <div className="text-center mb-2">
+                <img src="/ganesh.png" alt="Ganesh" className="mx-auto h-8 mb-1 drop-shadow-lg" />
+                <p className="text-[#B48A2C] italic font-serif text-[9px] tracking-wide">
+                  ॥ Om Shri Ganeshaya Namah ॥ ॥ Om Prajapataye Namah ॥
+                </p>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+                <span className="text-[#D4AF37] text-sm">❧</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
+              </div>
+
+              {/* Main title */}
+              <div className="text-center mb-2">
+                <h1 className="text-xl md:text-3xl italic font-serif mb-0.5" style={{
+                  color: "#A1122F",
+                  textShadow: "0 2px 4px rgba(161,18,47,0.2)"
+                }}>
+                  Subho Bibaho
+                </h1>
+                <p className="text-[9px] tracking-[0.2em] uppercase text-[#C6A75E] font-semibold">
+                  Wedding Invitation
+                </p>
+              </div>
+
+              {/* Bengali Couple Image */}
+              <div className="flex justify-center mb-2">
+                <div className="relative w-24 h-24 md:w-40 md:h-40 rounded-full overflow-hidden" style={{
+                  border: "2px solid #D4AF37",
+                  boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
+                }}>
+                  <img
+                    src="/bengali-bride-groom.webp"
+                    alt="Himasree & Kaustav"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to emoji if image doesn't exist
+                      const target = e.currentTarget;
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `
+                          <div class="w-full h-full flex items-center justify-center gap-2 bg-gradient-to-br from-[#FFF9E6] to-[#FFE4B5]">
+                            <div class="text-2xl md:text-3xl">👰</div>
+                            <div class="text-lg md:text-xl">❤️</div>
+                            <div class="text-2xl md:text-3xl">🤵</div>
+                          </div>
+                        `;
+                      }
+                    }}
+                  />
+                  {/* Gold ring overlay */}
+                  <div className="absolute inset-0 rounded-full pointer-events-none" style={{
+                    border: "2px solid rgba(255,215,0,0.3)",
+                    boxShadow: "inset 0 0 20px rgba(255,215,0,0.2)"
+                  }} />
+                </div>
+              </div>
+
+              {/* Names below image */}
+              <div className="text-center mb-2">
+                <p className="text-[#A1122F] font-serif italic text-sm md:text-lg">
+                  Himasree & Kaustav
+                </p>
+              </div>
+
+              {/* Floral divider */}
+              <div className="flex items-center justify-center gap-1.5 mb-2">
+                <span className="text-[#D4AF37] text-sm">🌸</span>
+                <div className="w-6 h-px bg-[#D4AF37]" />
+                <span className="text-[#D4AF37] text-base">🌺</span>
+                <div className="w-6 h-px bg-[#D4AF37]" />
+                <span className="text-[#D4AF37] text-sm">🌸</span>
+              </div>
+
+              {/* Invitation text */}
+              <div className="text-center mb-2 px-2">
+                <p className="italic text-gray-700 mb-1.5 leading-snug text-[11px] md:text-sm">
+                  With joy in our hearts and blessings of our families, we cordially invite you to celebrate our union.
+                </p>
+                <p className="italic text-gray-700 leading-snug text-[11px] md:text-sm">
+                  Please join us for a day filled with tradition, love, and happiness.
+                </p>
+              </div>
+
+              {/* Icons row */}
+              <div className="flex justify-center gap-2.5 mb-2 text-base md:text-lg">
+                <span title="Ceremony">🪔</span>
+                <span title="Celebration">🎊</span>
+                <span title="Love">🌹</span>
+                <span title="Blessings">🙏</span>
+                <span title="Joy">🎶</span>
+              </div>
+
+              {/* Bottom message */}
+              <div className="text-center mb-2">
+                <p className="italic text-[#A1122F] font-serif text-xs md:text-sm font-semibold">
+                  ✨ Your blessings are our greatest gift ✨
+                </p>
+              </div>
             </div>
 
-            {/* LOADING SPINNER */}
-            {loading && (
-                <motion.div
-                    className="fixed inset-0 flex items-center justify-center z-[60]"
-                    style={{
-                        background: "rgba(245, 237, 229, 0.3)",
-                        backdropFilter: "blur(2px)"
-                    }}
-                >
-                    <div className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl"
-                        style={{
-                            background: "rgba(245, 237, 229, 0.95)",
-                            boxShadow: "0 8px 32px rgba(198, 167, 94, 0.3)",
-                            border: "1px solid rgba(198, 167, 94, 0.4)"
-                        }}
-                    >
-
-                        <motion.div
-                            className="w-16 h-16 border-4 rounded-full"
-                            style={{
-                                borderColor: "#C6A75E",
-                                borderTopColor: "#A1122F",
-                            }}
-                            animate={{ rotate: 360 }}
-                            transition={{
-                                duration: 1,
-                                repeat: Infinity,
-                                ease: "linear"
-                            }}
-                        />
-
-                        <p
-                            className="text-lg font-serif tracking-wide"
-                            style={{ color: "#8B6B2E" }}
-                        >
-                            Loading...
-                        </p>
-
-                    </div>
-                </motion.div>
-            )}
-
+            {/* Elegant Countdown at Bottom */}
+            <div className="mt-auto pt-2 border-t" style={{ borderColor: "rgba(212,175,55,0.3)" }}>
+              <div className="text-center">
+                <p className="text-[#7A0F1C] font-serif italic text-xs md:text-base mb-1">
+                  A beautiful celebration awaits…
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-[#C6A75E] text-[10px] md:text-xs">Opening in</span>
+                  <div
+                    className="text-2xl md:text-4xl font-bold text-[#A1122F] animate-pulse px-2"
+                    style={{ textShadow: "0 2px 8px rgba(161,18,47,0.3)" }}
+                  >
+                    {countdown}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      </div>
+
+      <style>{`
+        @keyframes sparkle-burst {
+          0% {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(
+              calc(cos(var(--angle)) * var(--distance)),
+              calc(sin(var(--angle)) * var(--distance))
+            ) scale(0);
+            opacity: 0;
+          }
+        }
+
+        .animate-sparkle-burst {
+          animation: sparkle-burst 1.5s ease-out forwards;
+        }
+
+        .drop-shadow-glow {
+          filter: drop-shadow(0 0 8px rgba(255,215,0,0.8));
+        }
+
+
+        @keyframes leaf-sway {
+          0%, 100% { transform: rotate(-5deg); }
+          50% { transform: rotate(5deg); }
+        }
+
+        .animate-leaf-sway {
+          animation: leaf-sway 2s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
 }
-// import { motion } from "framer-motion";
-// import { useState } from "react";
-
-// interface EnvelopeIntroProps {
-//     onFinish: () => void;
-// }
-
-// export default function EnvelopeIntro({ onFinish }: EnvelopeIntroProps) {
-//     const [opened, setOpened] = useState(false);
-//     const [loading, setLoading] = useState(false);
-
-//     const handleOpen = () => {
-//         if (opened) return;
-
-//         setOpened(true);
-
-//         // Show loading spinner after letter is displayed
-//         setTimeout(() => {
-//             setLoading(true);
-//         }, 7000);
-
-//         // Transition to next screen
-//         setTimeout(() => {
-//             onFinish();
-//         }, 8500);
-//     };
-
-//     return (
-//         <div
-//             className="fixed inset-0 flex items-center justify-center z-50"
-//             style={{
-//                 background:
-//                     "linear-gradient(135deg,#F5EDE5 0%,#EFE6D8 50%,#F5EDE5 100%)",
-//             }}
-//         >
-//             {/* Decorative Background Patterns */}
-//             <div className="absolute inset-0 overflow-hidden opacity-20">
-//                 {/* Paisley/Mandala Pattern Decorations */}
-//                 <svg className="absolute w-full h-full">
-//                     <defs>
-//                         <pattern id="paisley" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
-//                             <path d="M40 20 Q30 30 40 50 Q50 60 60 50 Q70 40 60 20 Q50 10 40 20"
-//                                   fill="none" stroke="#C6A75E" strokeWidth="1" opacity="0.6"/>
-//                             <circle cx="50" cy="35" r="15" fill="none" stroke="#A1122F" strokeWidth="0.8" opacity="0.5"/>
-//                             <path d="M45 30 L55 30 M50 25 L50 45" stroke="#C6A75E" strokeWidth="0.5" opacity="0.4"/>
-//                         </pattern>
-//                     </defs>
-//                     <rect width="100%" height="100%" fill="url(#paisley)"/>
-//                 </svg>
-
-//                 {/* Corner Decorative Elements */}
-//                 {[0, 1, 2, 3].map((i) => (
-//                     <motion.div
-//                         key={i}
-//                         className={`absolute w-32 h-32 ${
-//                             i === 0 ? 'top-4 left-4' :
-//                             i === 1 ? 'top-4 right-4' :
-//                             i === 2 ? 'bottom-4 left-4' : 'bottom-4 right-4'
-//                         }`}
-//                         initial={{ opacity: 0, scale: 0.8 }}
-//                         animate={{ opacity: 0.3, scale: 1 }}
-//                         transition={{ delay: 0.2 + i * 0.1, duration: 0.8 }}
-//                     >
-//                         <svg viewBox="0 0 100 100" className="w-full h-full">
-//                             <circle cx="50" cy="50" r="40" fill="none" stroke="#C6A75E" strokeWidth="1.5"/>
-//                             <circle cx="50" cy="50" r="30" fill="none" stroke="#A1122F" strokeWidth="1"/>
-//                             <path d="M50 20 L50 35 M50 65 L50 80 M20 50 L35 50 M65 50 L80 50"
-//                                   stroke="#C6A75E" strokeWidth="2"/>
-//                             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
-//                                 const rad = (angle * Math.PI) / 180;
-//                                 const x1 = 50 + 20 * Math.cos(rad);
-//                                 const y1 = 50 + 20 * Math.sin(rad);
-//                                 const x2 = 50 + 25 * Math.cos(rad);
-//                                 const y2 = 50 + 25 * Math.sin(rad);
-//                                 return <circle key={angle} cx={x2} cy={y2} r="2" fill="#A1122F"/>;
-//                             })}
-//                         </svg>
-//                     </motion.div>
-//                 ))}
-//             </div>
-
-//             {/* Container for Ganesh and Envelope - Centered Together */}
-//             <div className="relative flex flex-col items-center gap-8">
-//                 {/* GANESH ICON - Above Envelope */}
-//                 <motion.div
-//                     className="relative z-10"
-//                     initial={{ opacity: 0, y: -20, scale: 0.8 }}
-//                     animate={{
-//                         opacity: opened ? 0 : 1,
-//                         y: opened ? -40 : 0,
-//                         scale: opened ? 0.7 : 1
-//                     }}
-//                     transition={{
-//                         opacity: { duration: 0.6 },
-//                         y: { duration: 0.8 },
-//                         scale: { duration: 0.6 }
-//                     }}
-//                 >
-//                     <motion.img
-//                         src="/Ganeshji.png"
-//                         className="w-48 h-48 drop-shadow-lg object-contain"
-//                         animate={{
-//                             filter: opened ? [
-//                                 "drop-shadow(0 4px 8px rgba(198,167,94,0.3))"
-//                             ] : [
-//                                 "drop-shadow(0 4px 8px rgba(198,167,94,0.3))",
-//                                 "drop-shadow(0 6px 12px rgba(198,167,94,0.5))",
-//                                 "drop-shadow(0 4px 8px rgba(198,167,94,0.3))"
-//                             ]
-//                         }}
-//                         transition={{ duration: 2, repeat: opened ? 0 : Infinity, ease: "easeInOut" }}
-//                     />
-//                 </motion.div>
-
-//                 <div
-//                     className="relative w-[360px] h-[230px] cursor-pointer"
-//                     onClick={handleOpen}
-//                 >
-
-//                 {/* ENVELOPE BODY */}
-
-//                 <div
-//                     className="absolute inset-0 rounded-lg"
-//                     style={{
-//                         background:
-//                             "linear-gradient(145deg,#8B0000 0%,#6B0000 60%,#3B0000 100%)",
-//                         boxShadow: "0 40px 120px rgba(0,0,0,0.35)",
-//                         border: "2px solid #C6A75E",
-//                     }}
-//                 />
-
-//                 {/* INVITATION LETTER */}
-
-//                 <motion.div
-//                     className="absolute left-1/2 -translate-x-1/2 rounded-lg shadow-2xl overflow-hidden"
-//                     style={{
-//                         top: 45,
-//                         width: "500px",
-//                         height: "650px",
-//                         background: "linear-gradient(135deg, #FFFFFF 0%, #FFF9F0 50%, #FFFBF5 100%)",
-//                         border: "4px double #C6A75E",
-//                         zIndex: 20,
-//                     }}
-//                     initial={{ opacity: 0, y: 0, scale: 0.5 }}
-//                     animate={{
-//                         opacity: opened ? 1 : 0,
-//                         y: opened ? -350 : 0,
-//                         scale: opened ? 1 : 0.5,
-//                     }}
-//                     transition={{
-//                         duration: 1.4,
-//                         delay: 1.2,
-//                         ease: [0.16, 1, 0.3, 1]
-//                     }}
-//                 >
-//                     <div className="relative w-full h-full flex flex-col items-center justify-center text-center px-12 py-10">
-
-//                         {/* TOP FLORAL BACKGROUND - Top Third Coverage */}
-//                         <img
-//                             src="/top.png"
-//                             className="absolute top-0 left-0 w-full pointer-events-none opacity-50"
-//                             style={{
-//                                 height: "40%",
-//                                 objectFit: "cover",
-//                                 objectPosition: "top center"
-//                             }}
-//                         />
-
-//                         {/* BOTTOM FLORAL BACKGROUND - Bottom Third Coverage */}
-//                         <img
-//                             src="/bottom.png"
-//                             className="absolute bottom-0 left-0 w-full pointer-events-none opacity-50"
-//                             style={{
-//                                 height: "40%",
-//                                 objectFit: "cover",
-//                                 objectPosition: "bottom center"
-//                             }}
-//                         />
-
-//                         {/* BENGALI TITLE */}
-//                         <motion.p
-//                             className="font-serif text-5xl font-extrabold relative z-10 mb-3"
-//                             style={{ color: "#A1122F", textShadow: "0 1px 2px rgba(139,0,0,0.1)" }}
-//                             initial={{ opacity: 0, y: 10 }}
-//                             animate={{ opacity: opened ? 1 : 0, y: opened ? 0 : 10 }}
-//                             transition={{ delay: 2.6 }}
-//                         >
-//                             শুভ বিবাহ
-//                         </motion.p>
-
-//                         <motion.p
-//                             className="text-[15px] tracking-[0.25em] uppercase mb-2 relative z-10 italic font-semibold"
-//                             style={{ color: "#8B6B2E" }}
-//                             initial={{ opacity: 0 }}
-//                             animate={{ opacity: opened ? 1 : 0 }}
-//                             transition={{ delay: 2.8 }}
-//                         >
-//                             Shubho Bibaho
-//                         </motion.p>
-
-//                         <motion.p
-//                             className="text-[12px] tracking-[0.2em] uppercase mb-6 relative z-10 font-semibold"
-//                             style={{ color: "#6B5B47" }}
-//                             initial={{ opacity: 0 }}
-//                             animate={{ opacity: opened ? 1 : 0 }}
-//                             transition={{ delay: 3.0 }}
-//                         >
-//                             Wedding Invitation
-//                         </motion.p>
-
-//                         <motion.p
-//                             className="text-[13px] italic leading-relaxed relative z-10 font-medium"
-//                             style={{ color: "#6B5B47" }}
-//                             initial={{ opacity: 0 }}
-//                             animate={{ opacity: opened ? 1 : 0 }}
-//                             transition={{ delay: 3.2 }}
-//                         >
-//                             With blessings of our families
-//                         </motion.p>
-
-//                     </div>
-//                 </motion.div>
-
-//                 {/* ENVELOPE FLAP */}
-
-//                 <motion.div
-//                     className="absolute top-0 left-0 right-0 h-[110px] origin-top"
-//                     style={{
-//                         background:
-//                             "linear-gradient(180deg,#A1122F 0%,#8B0000 50%,#5C0000 100%)",
-//                         clipPath: "polygon(0 0,100% 0,50% 70%)",
-//                         zIndex: 10,
-//                         transformStyle: "preserve-3d"
-//                     }}
-//                     animate={{
-//                         rotateX: opened ? -180 : 0,
-//                     }}
-//                     transition={{
-//                         duration: 1.2,
-//                     }}
-//                 />
-
-//                 {/* WAX SEAL */}
-
-//                 {!opened && (
-//                     <motion.div
-//                         className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
-//                         style={{ top: "75px", zIndex: 30 }}
-//                         animate={{ opacity: opened ? 0 : 1 }}
-//                         transition={{ duration: 0.4 }}
-//                     >
-//                         <div
-//                             className="w-24 h-24 rounded-full flex items-center justify-center font-serif"
-//                             style={{
-//                                 background:
-//                                     "linear-gradient(145deg,#FFD700 0%,#E6BE00 40%,#C6A75E 70%,#8B6B2E 100%)",
-//                                 color: "#7A0F1C",
-//                                 fontSize: "22px",
-//                                 boxShadow:
-//                                     "0 12px 40px rgba(198,167,94,0.5), inset 0 3px 6px rgba(255,255,255,0.6), inset 0 -4px 8px rgba(0,0,0,0.25)",
-//                                 border: "2px solid #B9975B",
-//                             }}
-//                         >
-//                             HK
-//                         </div>
-//                     </motion.div>
-//                 )}
-
-//                 {/* TAP TEXT */}
-
-//                 {!opened && (
-//                     <p
-//                         className="absolute bottom-[-40px] w-full text-center text-lg tracking-widest"
-//                         style={{ color: "#8B6B2E" }}
-//                     >
-//                         Tap to Open the Invitation
-//                     </p>
-//                 )}
-//             </div>
-//             </div>
-
-//             {/* LOADING SPINNER */}
-//             {loading && (
-//                 <motion.div
-//                     className="fixed inset-0 flex items-center justify-center z-[60]"
-//                     style={{
-//                         background: "rgba(245, 237, 229, 0.3)",
-//                         backdropFilter: "blur(2px)"
-//                     }}
-//                     initial={{ opacity: 0 }}
-//                     animate={{ opacity: 1 }}
-//                     transition={{ duration: 0.5 }}
-//                 >
-//                     <div className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl" style={{
-//                         background: "rgba(245, 237, 229, 0.95)",
-//                         boxShadow: "0 8px 32px rgba(198, 167, 94, 0.3)",
-//                         border: "1px solid rgba(198, 167, 94, 0.4)"
-//                     }}>
-//                         {/* Spinner */}
-//                         <motion.div
-//                             className="w-16 h-16 border-4 rounded-full"
-//                             style={{
-//                                 borderColor: "#C6A75E",
-//                                 borderTopColor: "#A1122F",
-//                                 boxShadow: "0 0 20px rgba(198,167,94,0.3)"
-//                             }}
-//                             animate={{ rotate: 360 }}
-//                             transition={{
-//                                 duration: 1,
-//                                 repeat: Infinity,
-//                                 ease: "linear"
-//                             }}
-//                         />
-
-//                         {/* Loading Text */}
-//                         <motion.p
-//                             className="text-lg font-serif tracking-wide"
-//                             style={{ color: "#8B6B2E" }}
-//                             animate={{ opacity: [0.5, 1, 0.5] }}
-//                             transition={{
-//                                 duration: 1.5,
-//                                 repeat: Infinity,
-//                                 ease: "easeInOut"
-//                             }}
-//                         >
-//                             Loading...
-//                         </motion.p>
-//                     </div>
-//                 </motion.div>
-//             )}
-//         </div>
-//     );
-// }
