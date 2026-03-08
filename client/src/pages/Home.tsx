@@ -35,6 +35,7 @@ const EventsSection = lazy(() => import("@/components/home/EventsSection"));
 import FindByInviteSection from "@/components/home/FindByInviteSection";
 import ContactInfoSection from "@/components/home/ContactInfoSection";
 import FooterSection from "@/components/home/FooterSection";
+import RsvpSuccessModal from "@/components/rsvp/RsvpSuccessModal";
 
 const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
   // Use wedding theme colors for consistent palette across both sides
@@ -540,6 +541,8 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [showGuestSelectionPopup, setShowGuestSelectionPopup] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successStatus, setSuccessStatus] = useState<"confirmed" | "declined" | null>(null);
 
   const form = useForm<PublicRsvpForm>({
     resolver: zodResolver(publicRsvpFormSchema),
@@ -727,20 +730,9 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
       }
     },
     onSuccess: (result) => {
-      // Show appropriate success message
-      if (result.rsvpStatus === "confirmed") {
-        toast({
-          title: "RSVP Confirmed! 🎉",
-          description: "We look forward to seeing you at the celebration!",
-          duration: 5000,
-        });
-      } else {
-        toast({
-          title: "Thank You",
-          description: "We appreciate you letting us know.",
-          duration: 5000,
-        });
-      }
+      // Show premium confirmation modal
+      setSuccessStatus(result.rsvpStatus);
+      setShowSuccess(true);
 
       // Reset all states
       setIsUpdating(false);
@@ -1143,6 +1135,13 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Premium Success Modal */}
+        <RsvpSuccessModal
+          open={showSuccess}
+          status={successStatus}
+          onClose={() => setShowSuccess(false)}
+        />
       </div>
     </section>
   );
@@ -1581,6 +1580,7 @@ export default function Home() {
             <VenueSection venueList={venueList} />
             <WardrobePlannerSection events={allEvents} />
             <Suspense fallback={<div className="py-24 md:py-32" />}>
+              {/*<StorySection milestones={milestones} coupleStory={config.coupleStory} />*/}
               <StorySection milestones={milestones} />
             </Suspense>
             <RsvpSection
