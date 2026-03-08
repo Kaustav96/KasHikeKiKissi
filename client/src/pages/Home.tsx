@@ -533,7 +533,7 @@ const publicRsvpFormSchema = z.object({
 );
 type PublicRsvpForm = z.infer<typeof publicRsvpFormSchema>;
 
-function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingEvent[]; prefillGuest?: any; onRsvpSuccess?: () => void }) {
+function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: WeddingEvent[]; config?: WeddingConfig | null; prefillGuest?: any; onRsvpSuccess?: () => void }) {
   const { toast } = useToast();
   const { side, setSide } = useWeddingTheme();
   const [checkingName, setCheckingName] = useState(false);
@@ -546,12 +546,14 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
 
   const form = useForm<PublicRsvpForm>({
     resolver: zodResolver(publicRsvpFormSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       rsvpStatus: undefined as any,
       adultsCount: 1,
       childrenCount: 0,
-      foodPreference: "" as any,
+      foodPreference: undefined,
       eventsAttending: [],
       dietaryRequirements: "",
       message: "",
@@ -745,7 +747,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
         rsvpStatus: undefined as any,
         adultsCount: 1,
         childrenCount: 0,
-        foodPreference: "" as any,
+        foodPreference: undefined,
         eventsAttending: [],
         dietaryRequirements: "",
         message: "",
@@ -825,6 +827,8 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
                       form.setValue("eventsAttending", []);
                       form.setValue("foodPreference", undefined);
                     }
+                    // Trigger validation after status change
+                    form.trigger(["rsvpStatus", "eventsAttending", "foodPreference"]);
                   }}
                   className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
                   style={{
@@ -1140,6 +1144,7 @@ function RsvpSection({ events, prefillGuest, onRsvpSuccess }: { events: WeddingE
         <RsvpSuccessModal
           open={showSuccess}
           status={successStatus}
+          config={config || null}
           onClose={() => setShowSuccess(false)}
         />
       </div>
@@ -1580,11 +1585,12 @@ export default function Home() {
             <VenueSection venueList={venueList} />
             <WardrobePlannerSection events={allEvents} />
             <Suspense fallback={<div className="py-24 md:py-32" />}>
-              {/*<StorySection milestones={milestones} coupleStory={config.coupleStory} />*/}
+              {/*<StorySection milestones={milestones} coupleStory={config?.coupleStory} />*/}
               <StorySection milestones={milestones} />
             </Suspense>
             <RsvpSection
               events={allEvents}
+              config={config}
               prefillGuest={pendingRsvpGuest}
               onRsvpSuccess={() => {
                 // Auto-refresh search if there's an active query

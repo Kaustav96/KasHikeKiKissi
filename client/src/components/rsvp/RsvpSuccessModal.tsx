@@ -1,14 +1,93 @@
 import { motion, AnimatePresence } from "framer-motion";
 import KHCrest from "@/components/KHCrest";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Calendar } from "lucide-react";
+import type { WeddingConfig } from "@shared/schema";
 
 interface Props {
   open: boolean;
   status: "confirmed" | "declined" | null;
+  config: WeddingConfig | null;
   onClose: () => void;
 }
 
-export default function RsvpSuccessModal({ open, status, onClose }: Props) {
+// Generate ICS calendar file
+function generateCalendarFile(config: WeddingConfig): string {
+  if (!config.weddingDate) {
+    throw new Error('Wedding date not set');
+  }
+
+  const weddingDate = new Date(config.weddingDate);
+
+  // ICS requires DTSTART and DTEND in format: YYYYMMDDTHHmmss
+  // Assuming wedding starts at 6 PM and lasts 4 hours
+  const startDate = new Date(weddingDate);
+  startDate.setHours(18, 0, 0, 0);
+
+  const endDate = new Date(startDate);
+  endDate.setHours(22, 0, 0, 0);
+
+  const formatICSDateTime = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}${month}${day}T${hours}${minutes}${seconds}`;
+  };
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Wedding Invitation//Kaustav & Himasree//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `DTSTART:${formatICSDateTime(startDate)}`,
+    `DTEND:${formatICSDateTime(endDate)}`,
+    `DTSTAMP:${formatICSDateTime(new Date())}`,
+    `SUMMARY:Kaustav & Himasree's Wedding`,
+    `DESCRIPTION:Join us in celebrating the wedding of Kaustav & Himasree`,
+    `LOCATION:${config.venueName || 'Wedding Venue'}${config.venueAddress ? ', ' + config.venueAddress : ''}`,
+    'STATUS:CONFIRMED',
+    'SEQUENCE:0',
+    `UID:wedding-${Date.now()}@kaustav-himasree.com`,
+    'BEGIN:VALARM',
+    'TRIGGER:-P1D',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Wedding Tomorrow - Kaustav & Himasree',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+}
+
+// Download calendar file
+function downloadCalendar(config: WeddingConfig) {
+  const icsContent = generateCalendarFile(config);
+  if (!icsContent) return;
+
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'kaustav-himasree-wedding.ics';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+export default function RsvpSuccessModal({ open, status, config, onClose }: Props) {
+  // Debug logging
+  if (open) {
+    console.log('[RsvpSuccessModal] Props:', {
+      status,
+      hasConfig: !!config,
+      weddingDate: config?.weddingDate,
+      shouldShowCalendar: status === "confirmed" && !!config?.weddingDate
+    });
+  }
+
   return (
     <AnimatePresence>
       {open && (
@@ -119,21 +198,52 @@ export default function RsvpSuccessModal({ open, status, onClose }: Props) {
               <div className="w-12 h-px bg-gradient-to-l from-transparent via-[var(--wedding-accent)] to-transparent" />
             </div>
 
-            <motion.button
-              onClick={onClose}
-              className="px-6 py-2.5 rounded-lg text-sm font-medium transition-all relative z-10 hover:shadow-lg"
-              style={{
-                background: "var(--wedding-accent)",
-                color: "var(--wedding-bg)",
-              }}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
-              Close
-            </motion.button>
+            {/* Action buttons */}
+            <div className="flex flex-col gap-3 relative z-10">
+              {/* Add to Calendar - only for confirmed RSVPs with wedding date set */}
+              {status === "confirmed" && config?.weddingDate && (
+                <motion.button
+                  onClick={() => downloadCalendar(config)}
+                  className="w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all hover:shadow-lg flex items-center justify-center gap-2"
+                  style={{
+                    background: "var(--wedding-accent)",
+                    color: "var(--wedding-bg)",
+                  }}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <Calendar size={16} />
+                  Add to Calendar
+                </motion.button>
+              )}
+
+              {/* Close button */}
+              <motion.button
+                onClick={onClose}
+                className="w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all relative hover:shadow-md"
+                style={{
+                  background: status === "confirmed" && config?.weddingDate
+                    ? "transparent"
+                    : "var(--wedding-accent)",
+                  color: status === "confirmed" && config?.weddingDate
+                    ? "var(--wedding-text)"
+                    : "var(--wedding-bg)",
+                  border: status === "confirmed" && config?.weddingDate
+                    ? "1px solid var(--wedding-border)"
+                    : "none",
+                }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: status === "confirmed" && config?.weddingDate ? 0.7 : 0.6 }}
+              >
+                Close
+              </motion.button>
+            </div>
           </motion.div>
         </motion.div>
       )}

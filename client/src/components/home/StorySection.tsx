@@ -258,7 +258,7 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                                     border: "2px solid var(--wedding-accent)"
                                 }}
                             >
-                                <motion.span hidden
+                                <motion.span
                                     className="relative z-10 flex items-center gap-3"
                                     whileHover={{ scale: 1.04 }}
                                 >
@@ -283,7 +283,7 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                                     key={milestone.id}
                                     ref={(el) => (milestoneRefs.current[idx] = el)}
                                     className={`flex flex-col gap-6 sm:items-start sm:gap-0 ${isRight ? "sm:flex-row-reverse" : "sm:flex-row"
-                                        }`}
+                                    }`}
                                     initial={{ opacity: 0, y: 30 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true, margin: "-60px" }}
@@ -297,7 +297,7 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                                     {/* ── Illustration panel with image preview ── */}
                                     <motion.div
                                         className={`w-full sm:flex-1 rounded-2xl overflow-hidden relative flex-shrink-0 cursor-pointer transition-all duration-300 ${isActive ? "scale-105" : ""
-                                            }`}
+                                        }`}
                                         style={{
                                             background: milestone.imageUrl ? 'transparent' : palette.bg,
                                             boxShadow: isActive
@@ -521,7 +521,7 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                                     {/* ── Text panel ── */}
                                     <motion.div
                                         className={`w-full sm:flex-1 py-0 sm:py-6 ${isRight ? "sm:text-right" : "sm:text-left"
-                                            }`}
+                                        }`}
                                         initial={{ opacity: 0, x: isRight ? 30 : -30 }}
                                         whileInView={{ opacity: 1, x: 0 }}
                                         viewport={{ once: true }}
@@ -565,6 +565,12 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
 
             {/* Image Modal */}
             <Dialog open={!!selectedMilestone} onOpenChange={(open) => !open && setSelectedMilestone(null)}>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                >
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     {selectedMilestone && (
                         <>
@@ -609,12 +615,13 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                         </>
                     )}
                 </DialogContent>
+                </motion.div>
             </Dialog>
 
             {/* Couple Story Modal */}
             <Dialog open={isCoupleStoryOpen} onOpenChange={setIsCoupleStoryOpen}>
                 <DialogContent
-                    className="max-w-2xl max-h-[85vh] overflow-y-auto"
+                    className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl"
                     style={{
                         background: "var(--wedding-card-bg)",
                         border: "2px solid var(--wedding-accent)",
@@ -626,9 +633,21 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                             style={{ color: "var(--wedding-text)" }}
                         >
                             <div className="flex items-center justify-center gap-3 mb-2">
-                                <Heart size={24} style={{ color: "var(--wedding-accent)" }} fill="var(--wedding-accent)" />
+                                <motion.div
+                                    className="absolute -top-4 right-6"
+                                    animate={{ y: [0, -8, 0] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                >
+                                    <Heart size={14} style={{ color: "var(--wedding-accent)" }} fill="var(--wedding-accent)" />
+                                </motion.div>
                                 <span>Our Love Story</span>
-                                <Heart size={24} style={{ color: "var(--wedding-accent)" }} fill="var(--wedding-accent)" />
+                                <motion.div
+                                    className="absolute -top-4 right-6"
+                                    animate={{ y: [0, -8, 0] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                >
+                                    <Heart size={14} style={{ color: "var(--wedding-accent)" }} fill="var(--wedding-accent)" />
+                                </motion.div>
                             </div>
                             <SimpleDivider />
                         </DialogTitle>
@@ -651,13 +670,21 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                         </div>
 
                         {/* Story content */}
-                        <div className="prose prose-sm sm:prose-base mx-auto max-w-2xl relative z-10">
-                            <p
-                                className="text-sm sm:text-base leading-relaxed whitespace-pre-line text-center"
-                                style={{ color: "var(--wedding-text)", opacity: 0.95 }}
-                            >
-                                {coupleStory}
-                            </p>
+                        {/*<div className="prose prose-sm sm:prose-base mx-auto max-w-2xl relative z-10">*/}
+                        {/*    <p*/}
+                        {/*        className="text-sm sm:text-base leading-relaxed whitespace-pre-line text-center"*/}
+                        {/*        style={{ color: "var(--wedding-text)", opacity: 0.95 }}*/}
+                        {/*    >*/}
+                        {/*        {coupleStory}*/}
+                        {/*    </p>*/}
+                        {/*</div>*/}
+                        <div
+                            className="text-sm sm:text-base leading-relaxed whitespace-pre-line space-y-4 text-center"
+                            style={{ color: "var(--wedding-text)", opacity: 0.95 }}
+                        >
+                            {coupleStory?.split("\n").map((para, i) => (
+                                <p key={i}>{para}</p>
+                            ))}
                         </div>
 
                         {/* Bottom decorative accent */}
