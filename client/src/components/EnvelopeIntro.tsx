@@ -183,7 +183,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
 
         {/* Center Seal with Bengali Couple */}
         <div
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 transition-all duration-1000 ease-out ${
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center transition-all duration-1000 ease-out ${
             sealBreaking ? "scale-110 opacity-0" : "scale-100 opacity-100"
           }`}
         >
@@ -222,6 +222,59 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
             {/* Wax seal texture effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-radial from-transparent to-black opacity-10" />
           </div>
+
+          {/* Responsive Hint Text */}
+          <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 1 }}
+              className="mt-6 sm:mt-8 md:mt-10 flex flex-col items-center text-center px-4 w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto"
+          >
+            <motion.p
+                animate={{ opacity: [0.5, 0.9, 0.5] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="
+      text-[11px]
+      sm:text-sm
+      md:text-base
+      font-light
+      tracking-wide
+      leading-relaxed
+    "
+                style={{
+                  color: "#FFD700",
+                  textShadow:
+                      "0 2px 12px rgba(0,0,0,0.5), 0 0 20px rgba(255,215,0,0.3)"
+                }}
+            >
+              Tap the seal to begin your experience
+            </motion.p>
+
+            <motion.div
+                animate={{ opacity: [0.4, 0.7, 0.4] }}
+                transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+                className="
+      flex
+      items-center
+      justify-center
+      gap-2
+      mt-1
+      text-[10px]
+      sm:text-xs
+      md:text-sm
+      tracking-wider
+    "
+                style={{
+                  color: "#D4AF37",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.5)"
+                }}
+            >
+              <span className="text-sm sm:text-base">🎵</span>
+              <span className="whitespace-nowrap">
+      Music will start automatically
+    </span>
+            </motion.div>
+          </motion.div>
         </div>
 
         {/* Golden Sparkles Explosion when seal breaks */}
