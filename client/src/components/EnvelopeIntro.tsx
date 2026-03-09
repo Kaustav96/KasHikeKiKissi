@@ -100,7 +100,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
   const handleStartMusic = async () => {
     const success = await fadeIn();
     if (success) {
-      setShowMusicPrompt(false);
+      setShowMusicPrompt(false); // Hide the "Tap to Start Music" text
     }
   };
 
@@ -466,12 +466,13 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
         <AnimatePresence>
           {letterVisible && (
             <motion.button
-              onClick={togglePlayPause}
-              className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
+              onClick={handleStartMusic}
+              className="fixed bottom-6 right-6 z-50 rounded-full shadow-xl border-2 transition-all"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,253,244,0.95) 0%, rgba(255,248,231,0.95) 100%)',
                 borderColor: '#D4AF37',
                 color: '#D4AF37',
+                padding: showMusicPrompt ? '12px 20px' : '16px',
               }}
               title={isPlaying ? "Pause music" : "Play music"}
               initial={{ opacity: 0, scale: 0 }}
@@ -481,80 +482,34 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <motion.div
-                animate={{ rotate: isPlaying ? 360 : 0 }}
-                transition={{
-                  duration: 3,
-                  repeat: isPlaying ? Infinity : 0,
-                  ease: "linear",
-                }}
-              >
-                <Music size={22} />
-              </motion.div>
-            </motion.button>
-          )}
-        </AnimatePresence>
+              <div className="flex items-center gap-2">
+                <motion.div
+                  animate={{ rotate: isPlaying ? 360 : 0 }}
+                  transition={{
+                    duration: 3,
+                    repeat: isPlaying ? Infinity : 0,
+                    ease: "linear",
+                  }}
+                >
+                  <Music size={22} />
+                </motion.div>
 
-        {/* Music Start Prompt Overlay (shows when autoplay is blocked) */}
-        <AnimatePresence>
-          {showMusicPrompt && letterVisible && (
-            <motion.div
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <motion.button
-                onClick={handleStartMusic}
-                className="relative p-8 rounded-2xl shadow-2xl border-2 transition-all hover:scale-105 active:scale-95"
-                style={{
-                  background: 'linear-gradient(135deg, #A1122F 0%, #7A0F1C 100%)',
-                  borderColor: '#D4AF37',
-                }}
-                initial={{ scale: 0.8, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <div className="flex flex-col items-center gap-4">
-                  {/* Animated Music Icon */}
-                  <motion.div
-                    className="p-4 rounded-full bg-white/10"
-                    animate={{
-                      scale: [1, 1.1, 1],
-                      rotate: [0, 5, -5, 0],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <Music size={48} className="text-white" />
-                  </motion.div>
-
-                  {/* Text */}
-                  <div className="text-center">
-                    <p className="text-white font-serif text-xl md:text-2xl font-bold mb-2">
+                {/* Show "Tap to Start" text when autoplay is blocked */}
+                <AnimatePresence>
+                  {showMusicPrompt && !isPlaying && (
+                    <motion.span
+                      className="text-sm font-medium whitespace-nowrap"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: "auto", opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       Tap to Start Music
-                    </p>
-                    <p className="text-white/80 text-sm md:text-base">
-                      Enhance your experience with our wedding playlist
-                    </p>
-                  </div>
-
-                  {/* Decorative Elements */}
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-8 h-px bg-gradient-to-r from-transparent to-white/40" />
-                    <span className="text-white/60 text-xs">✦</span>
-                    <div className="w-8 h-px bg-gradient-to-l from-transparent to-white/40" />
-                  </div>
-                </div>
-              </motion.button>
-            </motion.div>
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.button>
           )}
         </AnimatePresence>
       </div>
