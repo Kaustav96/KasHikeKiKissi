@@ -13,7 +13,6 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
   const [letterVisible, setLetterVisible] = useState(false);
   const [countdown, setCountdown] = useState(5);
-  const [showMusicPrompt, setShowMusicPrompt] = useState(false);
   const { fadeIn, isPlaying, togglePlayPause, setMusicUrl } = useMusic();
 
   const sparkles = Array.from({ length: 20 });
@@ -57,16 +56,11 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           console.log('[EnvelopeIntro] Setting music URL:', musicUrl);
           setMusicUrl(musicUrl);
           // Small delay to ensure URL is set before fading in
-          const tryAutoplay = async () => {
-            const success = await fadeIn();
-            // If autoplay was blocked (mobile), show prompt
-            if (!success) {
-              console.log('[EnvelopeIntro] Autoplay blocked, showing user prompt');
-              setShowMusicPrompt(true);
-            }
-          };
           setTimeout(() => {
-            tryAutoplay();
+            // Try to autoplay - if it fails (mobile), user can use the button
+            fadeIn().catch(() => {
+              console.log('[EnvelopeIntro] Autoplay blocked - user can use music button');
+            });
           }, 100);
         }
       }, 500);
@@ -96,13 +90,6 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
     return () => clearInterval(interval);
   }, [letterVisible, onFinish]);
 
-  // Handle user tap to start music (for mobile devices)
-  const handleStartMusic = async () => {
-    const success = await fadeIn();
-    if (success) {
-      setShowMusicPrompt(false); // Hide the "Tap to Start Music" text
-    }
-  };
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -466,13 +453,12 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
         <AnimatePresence>
           {letterVisible && (
             <motion.button
-              onClick={handleStartMusic}
-              className="fixed bottom-6 right-6 z-50 rounded-full shadow-xl border-2 transition-all"
+              onClick={togglePlayPause}
+              className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,253,244,0.95) 0%, rgba(255,248,231,0.95) 100%)',
                 borderColor: '#D4AF37',
                 color: '#D4AF37',
-                padding: showMusicPrompt ? '12px 20px' : '16px',
               }}
               title={isPlaying ? "Pause music" : "Play music"}
               initial={{ opacity: 0, scale: 0 }}
@@ -482,33 +468,16 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <div className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: isPlaying ? 360 : 0 }}
-                  transition={{
-                    duration: 3,
-                    repeat: isPlaying ? Infinity : 0,
-                    ease: "linear",
-                  }}
-                >
-                  <Music size={22} />
-                </motion.div>
-
-                {/* Show "Tap to Start" text when autoplay is blocked */}
-                <AnimatePresence>
-                  {showMusicPrompt && !isPlaying && (
-                    <motion.span
-                      className="text-sm font-medium whitespace-nowrap"
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: "auto", opacity: 1 }}
-                      exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      Tap to Start Music
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
+              <motion.div
+                animate={{ rotate: isPlaying ? 360 : 0 }}
+                transition={{
+                  duration: 3,
+                  repeat: isPlaying ? Infinity : 0,
+                  ease: "linear",
+                }}
+              >
+                <Music size={22} />
+              </motion.div>
             </motion.button>
           )}
         </AnimatePresence>

@@ -508,29 +508,26 @@ const publicRsvpFormSchema = z.object({
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
   side: z.enum(["groom", "bride", "both"]),
-}).refine(
-  (data) => {
-    if (data.rsvpStatus === "confirmed") {
-      return data.eventsAttending.length > 0;
+}).superRefine((data, ctx) => {
+  // Use superRefine to validate all conditional fields together
+  // This ensures all errors appear simultaneously on submit
+  if (data.rsvpStatus === "confirmed") {
+    if (data.eventsAttending.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select at least one event to attend",
+        path: ["eventsAttending"],
+      });
     }
-    return true;
-  },
-  {
-    message: "Please select at least one event to attend",
-    path: ["eventsAttending"],
-  }
-).refine(
-  (data) => {
-    if (data.rsvpStatus === "confirmed") {
-      return !!data.foodPreference;
+    if (!data.foodPreference) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select your food preference",
+        path: ["foodPreference"],
+      });
     }
-    return true;
-  },
-  {
-    message: "Please select your food preference",
-    path: ["foodPreference"],
   }
-);
+});
 type PublicRsvpForm = z.infer<typeof publicRsvpFormSchema>;
 
 function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: WeddingEvent[]; config?: WeddingConfig | null; prefillGuest?: any; onRsvpSuccess?: () => void }) {
@@ -546,8 +543,8 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
 
   const form = useForm<PublicRsvpForm>({
     resolver: zodResolver(publicRsvpFormSchema),
-    mode: "onChange",
-    reValidateMode: "onChange",
+    mode: "onSubmit", // Only validate on submit
+    reValidateMode: "onChange", // After first submit, revalidate on change
     defaultValues: {
       name: "",
       rsvpStatus: undefined as any,
@@ -827,8 +824,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                       form.setValue("eventsAttending", []);
                       form.setValue("foodPreference", undefined);
                     }
-                    // Trigger validation after status change
-                    form.trigger(["rsvpStatus", "eventsAttending", "foodPreference"]);
+                    // Don't trigger validation here - let it happen on submit
                   }}
                   className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
                   style={{
@@ -858,7 +854,10 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                     {...form.register("name")}
                     onChange={(e) => {
                       const newName = e.target.value;
-                      form.setValue("name", newName);
+                      // Validate after form has been submitted once, to clear errors
+                      form.setValue("name", newName, {
+                        shouldValidate: form.formState.isSubmitted,
+                      });
 
                       // AGGRESSIVE state clearing: if name doesn't match selected guest, clear everything
                       if (selectedGuest && newName.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
@@ -929,7 +928,10 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                                 ? current.filter((id) => id !== ev.id)
                                 : [...current, ev.id];
 
-                              form.setValue("eventsAttending", next, { shouldValidate: true });
+                              // Only validate after form has been submitted once
+                              form.setValue("eventsAttending", next, {
+                                shouldValidate: form.formState.isSubmitted
+                              });
                             }}
                             className="sr-only"
                           />
@@ -955,6 +957,13 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                     </label>
                     <select
                       {...form.register("foodPreference")}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Only validate after form has been submitted once, to clear errors
+                        form.setValue("foodPreference", value as any, {
+                          shouldValidate: form.formState.isSubmitted,
+                        });
+                      }}
                       className="w-full px-4 py-2.5 rounded-lg text-sm"
                       style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
                       data-testid="select-food"
