@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
+import { useMusic } from "@/context/MusicContext";
+import { Music } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   onFinish?: () => void;
+  config?: any;
 }
 
-export default function EnvelopeIntro({ onFinish }: Props) {
+export default function EnvelopeIntro({ onFinish, config }: Props) {
   const [sealBreaking, setSealBreaking] = useState(false);
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
   const [letterVisible, setLetterVisible] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const { fadeIn, isPlaying, togglePlayPause, setMusicUrl } = useMusic();
 
   const sparkles = Array.from({ length: 20 });
 
@@ -27,6 +32,38 @@ export default function EnvelopeIntro({ onFinish }: Props) {
 
     return () => clearTimeout(openTimer);
   }, [onFinish]);
+
+  // Start music when letter becomes visible
+  useEffect(() => {
+    if (letterVisible && config) {
+      // Small delay for smooth transition
+      const musicTimer = setTimeout(() => {
+        // Get the first music URL from config (prioritize background music)
+        let musicUrl = '';
+
+        if (Array.isArray(config.backgroundMusicUrl) && config.backgroundMusicUrl.length) {
+          const firstTrack = config.backgroundMusicUrl[0];
+          musicUrl = typeof firstTrack === 'object' ? firstTrack.url : firstTrack;
+        } else if (config.groomMusicUrls?.length) {
+          const firstTrack = config.groomMusicUrls[0];
+          musicUrl = typeof firstTrack === 'object' ? firstTrack.url : firstTrack;
+        } else if (config.brideMusicUrls?.length) {
+          const firstTrack = config.brideMusicUrls[0];
+          musicUrl = typeof firstTrack === 'object' ? firstTrack.url : firstTrack;
+        }
+
+        if (musicUrl) {
+          console.log('[EnvelopeIntro] Setting music URL:', musicUrl);
+          setMusicUrl(musicUrl);
+          // Small delay to ensure URL is set before fading in
+          setTimeout(() => {
+            fadeIn();
+          }, 100);
+        }
+      }, 500);
+      return () => clearTimeout(musicTimer);
+    }
+  }, [letterVisible, config, fadeIn, setMusicUrl]);
 
   // Countdown timer that starts when letter is visible
   useEffect(() => {
@@ -408,6 +445,39 @@ export default function EnvelopeIntro({ onFinish }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Stylish Bottom-Right Music Button */}
+        <AnimatePresence>
+          {letterVisible && (
+            <motion.button
+              onClick={togglePlayPause}
+              className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,253,244,0.95) 0%, rgba(255,248,231,0.95) 100%)',
+                borderColor: '#D4AF37',
+                color: '#D4AF37',
+              }}
+              title={isPlaying ? "Pause music" : "Play music"}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.div
+                animate={{ rotate: isPlaying ? 360 : 0 }}
+                transition={{
+                  duration: 3,
+                  repeat: isPlaying ? Infinity : 0,
+                  ease: "linear",
+                }}
+              >
+                <Music size={22} />
+              </motion.div>
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       <style>{`

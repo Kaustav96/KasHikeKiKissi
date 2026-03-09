@@ -20,8 +20,14 @@
 
 import cron from "node-cron";
 import { storage } from "../storage";
-import { sendReminder } from "./whatsapp";
-import { sendTelegramReminder, notifyAdminOfReminderBatch, isTelegramAvailable } from "./telegram";
+// import { sendReminder } from "./whatsapp";
+// import { sendTelegramReminder, notifyAdminOfReminderBatch, isTelegramAvailable } from "./telegram";
+
+// WhatsApp and Telegram services are disabled - uncomment when services are implemented
+const sendReminder = async (...args: any[]) => { throw new Error("WhatsApp service not implemented"); };
+const sendTelegramReminder = async (...args: any[]) => { throw new Error("Telegram service not implemented"); };
+const notifyAdminOfReminderBatch = async (...args: any[]) => { console.log("Admin notification skipped"); };
+const isTelegramAvailable = () => false;
 
 interface ReminderTiming {
   messageType: "reminder_30d" | "reminder_7d" | "reminder_1d" | "morning" | "start" | "thankyou";
@@ -114,8 +120,10 @@ async function processReminders(): Promise<void> {
       return;
     }
 
-    if (!config.whatsappEnabled) {
-      console.log("[Reminders] WhatsApp automation is disabled. Skipping.");
+    // Check if WhatsApp is enabled (optional property)
+    const whatsappEnabled = (config as any).whatsappEnabled;
+    if (!whatsappEnabled) {
+      console.log("[Reminders] WhatsApp automation is disabled or not configured. Skipping.");
       return;
     }
 
@@ -130,7 +138,10 @@ async function processReminders(): Promise<void> {
     // Fetch all confirmed guests who opted in to WhatsApp
     const allGuests = await storage.getGuests();
     const eligibleGuests = allGuests.filter(
-      (g) => g.rsvpStatus === "confirmed" && g.whatsappOptIn && g.phone
+      (g) => {
+        const guest = g as any;
+        return g.rsvpStatus === "confirmed" && guest.whatsappOptIn && guest.phone;
+      }
     );
 
     console.log(`[Reminders] Checking ${eligibleGuests.length} eligible guests...`);
@@ -146,9 +157,10 @@ async function processReminders(): Promise<void> {
       let whatsappSuccess = 0;
       let whatsappFailed = 0;
 
-      const whatsappPromises = eligibleGuests.map((guest) =>
-        sendReminder(
-          { id: guest.id, name: guest.name, phone: guest.phone },
+      const whatsappPromises = eligibleGuests.map((guest) => {
+        const guestWithPhone = guest as any;
+        return sendReminder(
+          { id: guest.id, name: guest.name, phone: guestWithPhone.phone },
           timing.messageType,
           timing.templateName,
           [weddingDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })]
@@ -156,11 +168,11 @@ async function processReminders(): Promise<void> {
           .then(() => {
             whatsappSuccess++;
           })
-          .catch((err) => {
+          .catch((err: Error) => {
             whatsappFailed++;
             console.error(`[Reminders] WhatsApp failed for guest ${guest.name}:`, err);
-          })
-      );
+          });
+      });
 
       await Promise.allSettled(whatsappPromises);
       console.log(`[Reminders] WhatsApp batch complete: ${whatsappSuccess} sent, ${whatsappFailed} failed`);
@@ -173,7 +185,7 @@ async function processReminders(): Promise<void> {
           whatsappFailed,
           eligibleGuests.length,
           'whatsapp'
-        ).catch(err => console.error('[Reminders] Failed to notify admin (WhatsApp):', err));
+        ).catch((err: Error) => console.error('[Reminders] Failed to notify admin (WhatsApp):', err));
       }
 
       // ========== Telegram Sending ==========
@@ -189,7 +201,7 @@ async function processReminders(): Promise<void> {
             .then(() => {
               telegramSuccess++;
             })
-            .catch((err) => {
+            .catch((err: Error) => {
               telegramFailed++;
               console.error(`[Reminders] Telegram failed for guest ${guest.name}:`, err);
             })
@@ -206,7 +218,7 @@ async function processReminders(): Promise<void> {
             telegramFailed,
             eligibleGuests.length,
             'telegram'
-          ).catch(err => console.error('[Reminders] Failed to notify admin (Telegram):', err));
+          ).catch((err: Error) => console.error('[Reminders] Failed to notify admin (Telegram):', err));
         }
       } else {
         console.log('[Reminders] Telegram bot not available, skipping Telegram reminders');

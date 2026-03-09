@@ -1349,7 +1349,7 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
 });
 
 export default function Home() {
-  const { setMusicUrl, fadeIn, stop, setOnTrackEnd } = useMusic();
+  const { setMusicUrl, fadeIn, stop, setOnTrackEnd, hasStarted, isPlaying } = useMusic();
   const { setSide, side } = useWeddingTheme();
 
   const [envelopeOpened, setEnvelopeOpened] = useState(false);
@@ -1444,29 +1444,48 @@ export default function Home() {
     const wasBackgroundMusic = isBackgroundMusicRef.current;
     isBackgroundMusicRef.current = isBackgroundMusic;
 
+    // CRITICAL FIX: If music is CURRENTLY PLAYING and we're using background music,
+    // NEVER restart it - always preserve the playing state
+    // This is the highest priority check to prevent unwanted restarts
+    if (isPlaying && isBackgroundMusic) {
+      console.log('[Home] Music is playing, preserving playback. Playlist changed:', playlistChanged);
+      // Update the ref so future comparisons work correctly
+      currentPlaylistRef.current = playlist;
+      return;
+    }
+
+    // If music has started but is paused, preserve the paused state
+    if (hasStarted && !isPlaying && isBackgroundMusic && !playlistChanged) {
+      console.log('[Home] Music is paused, preserving paused state at current position');
+      currentPlaylistRef.current = playlist;
+      return;
+    }
+
     // Start music if:
-    // 1. Fresh selection (user just picked a side) OR
+    // 1. Fresh selection (user just picked a side) AND playlist changed OR
     // 2. (Playlist changed AND not background music transition)
-    // This keeps background music continuous when switching sides, but restarts on fresh selection
+    // This keeps background music continuous when switching sides
     const shouldStartMusic =
-      isFreshSelection ||
+      (isFreshSelection && playlistChanged) ||
       (playlistChanged && (!isBackgroundMusic || !wasBackgroundMusic));
 
     if (shouldStartMusic) {
+      console.log('[Home] Starting music. Fresh:', isFreshSelection, 'Changed:', playlistChanged);
       currentPlaylistRef.current = playlist;
       currentTrackIndexRef.current = 0;
       stop();
       setMusicUrl(playlist[0]);
 
-      // Fade in music 1 second after side selection
+      // Fade in music after side selection
       setTimeout(() => {
         fadeIn();
       }, 1000);
-    } else if (!playlistChanged) {
-      // Update ref even if playlist didn't change
+    } else {
+      // Update ref even if we didn't start music
+      console.log('[Home] Not starting music. Updating ref only.');
       currentPlaylistRef.current = playlist;
     }
-  }, [playlist, isBackgroundMusic, sideSelected, stop, setMusicUrl, fadeIn]);
+  }, [playlist, isBackgroundMusic, sideSelected, stop, setMusicUrl, fadeIn, hasStarted, isPlaying]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -1524,7 +1543,7 @@ export default function Home() {
   /* ================= ENTRANCE SEQUENCE: ENVELOPE -> SIDE SELECTION -> MAIN ================= */
 
   if (!envelopeOpened) {
-    return <EnvelopeIntro onFinish={() => setEnvelopeOpened(true)} />;
+    return <EnvelopeIntro onFinish={() => setEnvelopeOpened(true)} config={config} />;
   }
 
   if (!sideSelected) {
@@ -1549,7 +1568,7 @@ export default function Home() {
 
       <ViewingSideOverlay
         onBackToSelection={() => {
-          stop();
+          // Don't stop music - let it continue playing
           setSideSelected(false);
           prevSideSelectedRef.current = false; // Reset for next selection
         }}

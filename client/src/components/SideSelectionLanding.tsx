@@ -1,5 +1,7 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import KHCrest from "./KHCrest";
+import { Music } from "lucide-react";
+import { useMusic } from "@/context/MusicContext";
 
 function FloralDivider() {
   return (
@@ -30,6 +32,8 @@ interface SideSelectionLandingProps {
 }
 
 export default function SideSelectionLanding({ onSelectSide }: SideSelectionLandingProps) {
+  const { isPlaying, togglePlayPause } = useMusic();
+
   return (
     <motion.div
       className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden"
@@ -481,6 +485,34 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
           </svg>
         </div>
       ))}
+
+      {/* Music Control Button */}
+      <motion.button
+        onClick={togglePlayPause}
+        className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,253,244,0.95) 0%, rgba(255,248,231,0.95) 100%)',
+          borderColor: '#D4AF37',
+          color: '#D4AF37',
+        }}
+        title={isPlaying ? "Pause music" : "Play music"}
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <motion.div
+          animate={{ rotate: isPlaying ? 360 : 0 }}
+          transition={{
+            duration: 3,
+            repeat: isPlaying ? Infinity : 0,
+            ease: "linear",
+          }}
+        >
+          <Music size={22} />
+        </motion.div>
+      </motion.button>
     </motion.div>
   );
 }

@@ -238,14 +238,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
-      console.log('[MUSIC] Toggle: Playing');
+      console.log('[MUSIC] Toggle: Resuming from', audio.currentTime);
+      // Resume from current position (don't reset currentTime)
       audio.volume = 0.6;
       audio.play().then(() => {
         setIsPlaying(true);
         setHasStarted(true);
       }).catch((err) => console.error('[ERROR] Toggle play failed:', err));
     } else {
-      console.log('[MUSIC] Toggle: Pausing');
+      console.log('[MUSIC] Toggle: Pausing at', audio.currentTime);
       audio.pause();
       setIsPlaying(false);
     }
