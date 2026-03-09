@@ -1431,9 +1431,20 @@ export default function Home() {
   useEffect(() => {
     if (!playlist.length || !sideSelected) return;
 
-    // Check if this is a fresh side selection (sideSelected just became true)
+    // ALWAYS update this ref first to track that side has been selected
+    // This prevents isFreshSelection from being true on multiple effect runs
     const isFreshSelection = !prevSideSelectedRef.current && sideSelected;
     prevSideSelectedRef.current = sideSelected;
+
+    // CRITICAL: If music has already been started (playing OR paused) and we're using background music,
+    // NEVER restart it - preserve the current state (playing or paused position)
+    // This is the highest priority check and must come first
+    if (hasStarted && isBackgroundMusic) {
+      console.log('[Home] Music already started, preserving state. Playing:', isPlaying, 'Fresh:', isFreshSelection);
+      // Update the ref so future comparisons work correctly
+      currentPlaylistRef.current = playlist;
+      return; // Exit immediately - music state is preserved
+    }
 
     // Check if playlist actually changed (compare URLs)
     const playlistChanged =
@@ -1444,22 +1455,6 @@ export default function Home() {
     const wasBackgroundMusic = isBackgroundMusicRef.current;
     isBackgroundMusicRef.current = isBackgroundMusic;
 
-    // CRITICAL FIX: If music is CURRENTLY PLAYING and we're using background music,
-    // NEVER restart it - always preserve the playing state
-    // This is the highest priority check to prevent unwanted restarts
-    if (isPlaying && isBackgroundMusic) {
-      console.log('[Home] Music is playing, preserving playback. Playlist changed:', playlistChanged);
-      // Update the ref so future comparisons work correctly
-      currentPlaylistRef.current = playlist;
-      return;
-    }
-
-    // If music has started but is paused, preserve the paused state
-    if (hasStarted && !isPlaying && isBackgroundMusic && !playlistChanged) {
-      console.log('[Home] Music is paused, preserving paused state at current position');
-      currentPlaylistRef.current = playlist;
-      return;
-    }
 
     // Start music if:
     // 1. Fresh selection (user just picked a side) AND playlist changed OR

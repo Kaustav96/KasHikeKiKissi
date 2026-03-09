@@ -10,7 +10,7 @@ interface MusicContextType {
   togglePlayPause: () => void;
   toggleMute: () => void;
   setMusicUrl: (url: string) => void;
-  fadeIn: () => void;
+  fadeIn: () => Promise<boolean>; // Returns true if successful, false if blocked
   setOnTrackEnd: (callback: (() => void) | null) => void;
 }
 
@@ -24,7 +24,7 @@ const MusicContext = createContext<MusicContextType>({
   togglePlayPause: () => {},
   toggleMute: () => {},
   setMusicUrl: () => {},
-  fadeIn: () => {},
+  fadeIn: async () => false,
   setOnTrackEnd: () => {},
 });
 
@@ -156,12 +156,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const fadeIn = useCallback(() => {
+  const fadeIn = useCallback(async (): Promise<boolean> => {
     try {
       const audio = audioRef.current;
       if (!audio || !audio.src || audio.src === window.location.href) {
         console.log('[MUSIC] FadeIn skipped: no audio or src');
-        return;
+        return false;
       }
 
       console.log('[MUSIC] FadeIn starting:', audio.src);
@@ -174,7 +174,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       const playPromise = audio.play();
 
       if (playPromise !== undefined) {
-        playPromise.then(() => {
+        try {
+          await playPromise;
           console.log('[OK] Music playing successfully');
           setIsPlaying(true);
           setHasStarted(true);
@@ -188,15 +189,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             if (!audio.muted) audio.volume = vol;
             if (vol >= 0.6) clearInterval(interval);
           }, 100);
-        }).catch((err) => {
-          console.error('[ERROR] Music play failed:', err);
-          // Common on mobile without user interaction
-        });
+          return true; // Success
+        } catch (err) {
+          console.log('[MUSIC] Autoplay blocked (requires user interaction):', err);
+          return false; // Blocked - need user interaction
+        }
       }
+      return false;
     } catch (error) {
       console.error('[ERROR] FadeIn error:', error);
+      return false;
     }
-  }, [isMuted]);
+  }, [isMuted]) as () => Promise<boolean>;
 
   const play = useCallback(() => {
     try {
