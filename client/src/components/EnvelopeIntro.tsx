@@ -12,7 +12,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
   const [sealBreaking, setSealBreaking] = useState(false);
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
   const [letterVisible, setLetterVisible] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  // const [countdown, setCountdown] = useState(5);
   const { fadeIn, isPlaying, togglePlayPause, setMusicUrl } = useMusic();
 
   const sparkles = Array.from({ length: 20 });
@@ -66,27 +66,27 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
     }
   }, [letterVisible, config, fadeIn, setMusicUrl]);
 
-  // Countdown timer that starts when letter is visible
-  useEffect(() => {
-    if (!letterVisible) return;
-
-    const interval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          // Navigate when countdown reaches 0
-          setTimeout(() => {
-            if (onFinish) onFinish();
-            else window.location.href = "/side-selection";
-          }, 1000);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [letterVisible, onFinish]);
+  // // Countdown timer that starts when letter is visible
+  // useEffect(() => {
+  //   if (!letterVisible) return;
+  //
+  //   const interval = setInterval(() => {
+  //     setCountdown((prev) => {
+  //       if (prev <= 1) {
+  //         clearInterval(interval);
+  //         // Navigate when countdown reaches 0
+  //         setTimeout(() => {
+  //           if (onFinish) onFinish();
+  //           else window.location.href = "/side-selection";
+  //         }, 1000);
+  //         return 0;
+  //       }
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
+  //
+  //   return () => clearInterval(interval);
+  // }, [letterVisible, onFinish]);
 
 
   return (
@@ -98,7 +98,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           backgroundImage: "url('/lux-bg.jpeg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
-          filter: "blur(4px)",
+          filter: "blur(3px)",
           transform: "scale(1.1)"
         }}
       />
@@ -187,8 +187,13 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
         >
           <motion.div
             onClick={handleSealTap}
-            whileHover={{ scale: 1.05 }}
+            whileHover={{
+              scale: 1.08,
+              boxShadow: "0 0 80px rgba(255,215,0,1), 0 20px 80px rgba(0,0,0,0.6)"
+            }}
             whileTap={{ scale: 0.95 }}
+            animate={{ scale: [1, 1.03, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
             className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden cursor-pointer"
             style={{
               border: "6px solid #D4AF37",
@@ -224,56 +229,101 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
             <div className="absolute inset-0 rounded-full bg-gradient-radial from-transparent to-black opacity-10" />
           </motion.div>
 
-          {/* Responsive Hint Text */}
+          {/* Luxurious Hint Text with Elegant Box */}
           <motion.div
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 1 }}
-              className="mt-6 sm:mt-8 md:mt-10 flex flex-col items-center text-center px-4 w-full max-w-xs sm:max-w-sm md:max-w-md mx-auto"
+              transition={{ delay: 0.3, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-8 sm:mt-10 md:mt-12 flex flex-col items-center text-center px-4 w-full max-w-sm sm:max-w-md mx-auto"
           >
-            <motion.p
-                animate={{ opacity: [0.5, 0.9, 0.5] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="
-      text-[11px]
-      sm:text-sm
-      md:text-base
-      font-light
-      tracking-wide
-      leading-relaxed
-    "
-                style={{
-                  color: "#FFD700",
-                  textShadow:
-                      "0 2px 12px rgba(0,0,0,0.5), 0 0 20px rgba(255,215,0,0.3)"
-                }}
-            >
-              Tap the seal to begin your experience
-            </motion.p>
-
             <motion.div
-                animate={{ opacity: [0.4, 0.7, 0.4] }}
-                transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-                className="
-      flex
-      items-center
-      justify-center
-      gap-2
-      mt-1
-      text-[10px]
-      sm:text-xs
-      md:text-sm
-      tracking-wider
-    "
-                style={{
-                  color: "#D4AF37",
-                  textShadow: "0 2px 8px rgba(0,0,0,0.5)"
-                }}
+              animate={{
+                boxShadow: [
+                  "0 8px 32px rgba(212,175,55,0.3), 0 0 60px rgba(255,215,0,0.15)",
+                  "0 8px 40px rgba(212,175,55,0.4), 0 0 80px rgba(255,215,0,0.25)",
+                  "0 8px 32px rgba(212,175,55,0.3), 0 0 60px rgba(255,215,0,0.15)"
+                ]
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="relative px-8 py-6 sm:px-10 sm:py-8 rounded-xl backdrop-blur-sm"
+              style={{
+                background: "linear-gradient(135deg, rgba(139,18,47,0.85) 0%, rgba(122,15,28,0.90) 50%, rgba(139,18,47,0.85) 100%)",
+                border: "2px solid rgba(212,175,55,0.6)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
+              }}
             >
-              <span className="text-sm sm:text-base">🎵</span>
-              <span className="whitespace-nowrap">
-      Music will start automatically
-    </span>
+              {/* Corner ornaments */}
+              <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-[#FFD700] opacity-60" />
+              <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-[#FFD700] opacity-60" />
+              <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-[#FFD700] opacity-60" />
+              <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-[#FFD700] opacity-60" />
+
+              {/* Top decorative line */}
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="w-12 h-px bg-gradient-to-r from-transparent via-[#FFD700] to-transparent opacity-60" />
+                <span className="text-[#FFD700] text-xs opacity-80">✦</span>
+                <div className="w-12 h-px bg-gradient-to-l from-transparent via-[#FFD700] to-transparent opacity-60" />
+              </div>
+
+              {/* Main luxurious text */}
+              <motion.div
+                  animate={{
+                    opacity: [0.85, 1, 0.85]
+                  }}
+                  transition={{
+                    duration: 3.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+              >
+                <p
+                  className="
+                    text-base
+                    sm:text-lg
+                    md:text-xl
+                    font-serif
+                    tracking-[0.2em]
+                    leading-relaxed
+                    uppercase
+                    mb-2
+                  "
+                  style={{
+                    color: "#FFF5E1",
+                    textShadow: "0 2px 12px rgba(0,0,0,0.5), 0 0 30px rgba(255,215,0,0.3)",
+                    fontWeight: 400
+                  }}
+                >
+                  👆
+                  Tap the Royal Seal
+                </p>
+                <p
+                  className="
+                    text-xs
+                    sm:text-sm
+                    font-light
+                    tracking-[0.15em]
+                    italic
+                  "
+                  style={{
+                    color: "#F5DEB3",
+                    textShadow: "0 1px 8px rgba(0,0,0,0.4)",
+                    fontFamily: "'Playfair Display', serif"
+                  }}
+                >
+                  to open the invitation.
+                </p>
+              </motion.div>
+
+              {/* Bottom decorative line */}
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <div className="w-12 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-60" />
+                <span className="text-[#D4AF37] text-xs opacity-80">✦</span>
+                <div className="w-12 h-px bg-gradient-to-l from-transparent via-[#D4AF37] to-transparent opacity-60" />
+              </div>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -351,12 +401,25 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           </div>
         </div>
 
-        <div
-          className="relative w-full max-w-2xl h-[80vh] md:h-[85vh] lg:h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden"
-          style={{
-            background: "linear-gradient(160deg, #fffdf4 0%, #fff8e7 50%, #fdf3e3 100%)",
-            border: "3px solid #D4AF37"
-          }}
+        <motion.div
+            className="relative w-full max-w-2xl h-[80vh] md:h-[85vh] lg:h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden"
+            style={{
+              background: "linear-gradient(160deg, #fffdf4 0%, #fff8e7 50%, #fdf3e3 100%)",
+              border: "3px solid #D4AF37"
+            }}
+            animate={{
+              y: [0, -6, 0],
+              boxShadow: [
+                "0 25px 50px rgba(0,0,0,0.28)",
+                "0 30px 60px rgba(0,0,0,0.35)",
+                "0 25px 50px rgba(0,0,0,0.28)"
+              ]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
         >
           {/* Loading Spinner Overlay - REMOVED */}
 
@@ -377,26 +440,26 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           ))}
 
           {/* Content - fixed height, no scroll */}
-          <div className="flex-1 flex flex-col justify-between px-6 md:px-12 pt-4 pb-3">
+          <div className="flex-1 flex flex-col justify-between px-4 sm:px-6 md:px-12 pt-3 md:pt-4 pb-2 md:pb-3">
             <div>
               {/* Top decoration */}
-              <div className="text-center mb-2">
-                <img src="/ganesh.png" alt="Ganesh" className="mx-auto h-8 mb-1 drop-shadow-lg" />
-                <p className="text-[#B48A2C] italic font-serif text-[9px] tracking-wide">
+              <div className="text-center mb-1.5 md:mb-2">
+                <img src="/ganesh.png" alt="Ganesh" className="mx-auto h-6 sm:h-7 md:h-8 mb-1 drop-shadow-lg" />
+                <p className="text-[#B48A2C] italic font-serif text-[8px] sm:text-[9px] tracking-wide">
                   ॥ Om Shri Ganeshaya Namah ॥ ॥ Om Prajapataye Namah ॥
                 </p>
               </div>
 
               {/* Divider */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1.5 md:mb-2">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
                 <span className="text-[#D4AF37] text-sm">❧</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
               </div>
 
               {/* Main title */}
-              <div className="text-center mb-2">
-                <h1 className="text-xl md:text-3xl italic font-serif mb-0.5" style={{
+              <div className="text-center mb-1.5 md:mb-2">
+                <h1 className="text-lg sm:text-xl md:text-3xl italic font-serif mb-0.5" style={{
                   color: "#A1122F",
                   textShadow: "0 2px 4px rgba(161,18,47,0.2)"
                 }}>
@@ -408,8 +471,8 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               </div>
 
               {/* Bengali Couple Image */}
-              <div className="flex justify-center mb-2">
-                <div className="relative w-24 h-24 md:w-40 md:h-40 rounded-full overflow-hidden" style={{
+              <div className="flex justify-center mb-1.5 md:mb-2">
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-40 md:h-40 rounded-full overflow-hidden" style={{
                   border: "2px solid #D4AF37",
                   boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
                 }}>
@@ -486,31 +549,86 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
             </div>
 
             {/* Elegant Countdown at Bottom */}
-            <div className="mt-auto pt-2 border-t" style={{ borderColor: "rgba(212,175,55,0.3)" }}>
-              <div className="text-center">
-                <p className="text-[#7A0F1C] font-serif italic text-xs md:text-base mb-1">
-                  A beautiful celebration awaits…
-                </p>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-[#C6A75E] text-[10px] md:text-xs">Opening in</span>
-                  <div
-                    className="text-2xl md:text-4xl font-bold text-[#A1122F] animate-pulse px-2"
-                    style={{ textShadow: "0 2px 8px rgba(161,18,47,0.3)" }}
-                  >
-                    {countdown}
-                  </div>
-                </div>
+            {/*<div className="mt-auto pt-2 border-t" style={{ borderColor: "rgba(212,175,55,0.3)" }}>*/}
+            {/*  <div className="text-center">*/}
+            {/*    <p className="text-[#7A0F1C] font-serif italic text-xs md:text-base mb-1">*/}
+            {/*      A beautiful celebration awaits…*/}
+            {/*    </p>*/}
+            {/*    <div className="flex items-center justify-center gap-2">*/}
+            {/*      <span className="text-[#C6A75E] text-[10px] md:text-xs">Opening in</span>*/}
+            {/*      <div*/}
+            {/*        className="text-2xl md:text-4xl font-bold text-[#A1122F] animate-pulse px-2"*/}
+            {/*        style={{ textShadow: "0 2px 8px rgba(161,18,47,0.3)" }}*/}
+            {/*      >*/}
+            {/*        {countdown}*/}
+            {/*      </div>*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
+            {/* Begin Celebration Button */}
+
+            <div
+                // className="mt-auto pt-4 border-t text-center"
+                className="mt-6 pt-4 border-t text-center"
+                style={{ borderColor: "rgba(212,175,55,0.3)" }}
+            >
+              <p className="text-[#7A0F1C] font-serif italic text-sm md:text-lg mb-4">
+                The celebration begins here...
+              </p>
+              <div className="flex items-center justify-center mb-3">
+                <span className="text-[#D4AF37] text-lg">❦</span>
               </div>
+              <motion.button
+                  onClick={() => {
+                    if (onFinish) onFinish();
+                    else window.location.href = "/side-selection";
+                  }}
+                  className="relative px-8 py-4 md:px-16 md:py-5 rounded-full font-serif tracking-wide text-sm md:text-lg overflow-hidden"
+                  style={{
+                    background: "linear-gradient(135deg,#D4AF37,#FFD700,#C6A75E)",
+                    color: "#7A0F1C",
+                    boxShadow: "0 10px 40px rgba(212,175,55,0.55)"
+                  }}
+                  whileHover={{ scale: 1.07 }}
+                  whileTap={{ scale: 0.96 }}
+              >
+                {/* Shimmer animation */}
+                <motion.div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                          "linear-gradient(120deg, transparent, rgba(255,255,255,0.6), transparent)"
+                    }}
+                    animate={{ x: ["-120%", "200%"] }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 3,
+                      ease: "linear"
+                    }}
+                />
+
+                <span className="relative z-10 flex items-center gap-3 justify-center whitespace-nowrap">
+      Enter the Celebration
+
+      <motion.span
+          animate={{ x: [0, 8, 0] }}
+          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+          className="text-xl font-bold"
+      >
+        →
+      </motion.span>
+    </span>
+              </motion.button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Stylish Bottom-Right Music Button */}
         <AnimatePresence>
           {letterVisible && (
             <motion.button
               onClick={togglePlayPause}
-              className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
+              className="fixed bottom-10 right-8 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,253,244,0.95) 0%, rgba(255,248,231,0.95) 100%)',
                 borderColor: '#D4AF37',
@@ -575,3 +693,4 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
     </div>
   );
 }
+
