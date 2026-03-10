@@ -279,7 +279,23 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
+                  className="flex flex-col items-center"
               >
+                {/* Pointing finger emoji above */}
+                <motion.div
+                  animate={{
+                    y: [0, -8, 0]
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="text-3xl sm:text-4xl md:text-5xl mb-2"
+                >
+                  👆
+                </motion.div>
+
                 <p
                   className="
                     text-base
@@ -297,7 +313,6 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                     fontWeight: 400
                   }}
                 >
-                  👆
                   Tap the Royal Seal
                 </p>
                 <p
@@ -470,48 +485,98 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                 </p>
               </div>
 
-              {/* Bengali Couple Image */}
-              <div className="flex justify-center mb-1.5 md:mb-2">
-                <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-40 md:h-40 rounded-full overflow-hidden" style={{
-                  border: "2px solid #D4AF37",
-                  boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
-                }}>
-                  <img
-                    src="/bengali_wedding_couple.png"
-                    alt="Himasree & Kaustav"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback to emoji if image doesn't exist
-                      const target = e.currentTarget;
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `
-                          <div class="w-full h-full flex items-center justify-center gap-2 bg-gradient-to-br from-[#FFF9E6] to-[#FFE4B5]">
-                            <div class="text-2xl md:text-3xl">👰</div>
-                            <div class="text-lg md:text-xl">❤️</div>
-                            <div class="text-2xl md:text-3xl">🤵</div>
-                          </div>
-                        `;
-                      }
-                    }}
-                  />
-                  {/* Gold ring overlay */}
-                  <div className="absolute inset-0 rounded-full pointer-events-none" style={{
-                    border: "2px solid rgba(255,215,0,0.3)",
-                    boxShadow: "inset 0 0 20px rgba(255,215,0,0.2)"
-                  }} />
+              {/* Couple Section - 2 Columns with Photos */}
+              <div className="flex items-start justify-center gap-3 sm:gap-4 md:gap-6 mb-1.5 md:mb-2 px-2">
+                {/* Bride Column */}
+                <div className="flex-1 flex flex-col items-center max-w-[45%]">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full overflow-hidden mb-1.5" style={{
+                    border: "2px solid #D4AF37",
+                    boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
+                  }}>
+                    <img
+                      src="/bride.png"
+                      alt="Himasree"
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: "65% center" }}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `
+                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FFF9E6] to-[#FFE4B5]">
+                              <div class="text-2xl md:text-3xl">👰</div>
+                            </div>
+                          `;
+                        }
+                      }}
+                    />
+                    {/* Gold ring overlay */}
+                    <div className="absolute inset-0 rounded-full pointer-events-none" style={{
+                      border: "2px solid rgba(255,215,0,0.3)",
+                      boxShadow: "inset 0 0 20px rgba(255,215,0,0.2)"
+                    }} />
+                  </div>
+                  <p className="text-[#A1122F] font-serif italic text-sm sm:text-base md:text-lg font-semibold text-center">
+                    Himasree
+                  </p>
+                </div>
+
+                {/* Heart Connector */}
+                <div className="flex-shrink-0 flex items-center pt-6 sm:pt-8 md:pt-12">
+                  <svg width="24" height="32" viewBox="0 0 24 32" className="w-5 h-6 sm:w-6 sm:h-8 md:w-8 md:h-10">
+                    <defs>
+                      <linearGradient id="coupleHeartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#D4AF37" />
+                        <stop offset="50%" stopColor="#FFD700" />
+                        <stop offset="100%" stopColor="#D4AF37" />
+                      </linearGradient>
+                    </defs>
+                    {/* Heart shape */}
+                    <path
+                      d="M12 28 C12 28, 3 21, 3 14 C3 9, 6 6, 9 6 C10.5 6, 12 7.5, 12 9 C12 7.5, 13.5 6, 15 6 C18 6, 21 9, 21 14 C21 21, 12 28, 12 28 Z"
+                      fill="url(#coupleHeartGrad)"
+                      opacity="0.9"
+                    />
+                  </svg>
+                </div>
+
+                {/* Groom Column */}
+                <div className="flex-1 flex flex-col items-center max-w-[45%]">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full overflow-hidden mb-1.5" style={{
+                    border: "2px solid #D4AF37",
+                    boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
+                  }}>
+                    <img
+                      src="/groom.png"
+                      alt="Kaustav"
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: "35% center" }}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `
+                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#FFF9E6] to-[#FFE4B5]">
+                              <div class="text-2xl md:text-3xl">🤵</div>
+                            </div>
+                          `;
+                        }
+                      }}
+                    />
+                    {/* Gold ring overlay */}
+                    <div className="absolute inset-0 rounded-full pointer-events-none" style={{
+                      border: "2px solid rgba(255,215,0,0.3)",
+                      boxShadow: "inset 0 0 20px rgba(255,215,0,0.2)"
+                    }} />
+                  </div>
+                  <p className="text-[#A1122F] font-serif italic text-sm sm:text-base md:text-lg font-semibold text-center">
+                    Kaustav
+                  </p>
                 </div>
               </div>
 
-              {/* Names below image */}
-              <div className="text-center mb-1 md:mb-2">
-                <p className="text-[#A1122F] font-serif italic text-sm md:text-lg">
-                  Himasree & Kaustav
-                </p>
-              </div>
-
               {/* Floral divider */}
-              <div className="flex items-center justify-center gap-1.5 mb-1 md:mb-2">
+              <div className="flex items-center justify-center gap-1.5 mb-1 md:mb-1.5">
                 <span className="text-[#D4AF37] text-sm">🌸</span>
                 <div className="w-6 h-px bg-[#D4AF37]" />
                 <span className="text-[#D4AF37] text-base">🌺</span>
@@ -519,8 +584,120 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                 <span className="text-[#D4AF37] text-sm">🌸</span>
               </div>
 
+              {/* Parents Details - Below Couple Names */}
+              <div className="mb-1 md:mb-1.5 px-1 sm:px-2">
+                <div className="flex items-start justify-center gap-2 sm:gap-3 md:gap-4">
+                  {/* Bride's Parents - Left */}
+                  <div className="flex-1 text-center relative">
+                    {/* Decorative flourish top */}
+                    <div className="flex justify-center mb-1">
+                      <svg width="20" height="8" viewBox="0 0 20 8" className="w-4 h-2 sm:w-5 sm:h-2">
+                        <path d="M0 4 Q5 0 10 4 Q15 8 20 4" stroke="#D4AF37" strokeWidth="1" fill="none" opacity="0.6"/>
+                      </svg>
+                    </div>
+
+                    <p
+                      className="font-serif text-[9px] sm:text-[10px] md:text-xs font-semibold mb-1 tracking-wider"
+                      style={{
+                        background: "linear-gradient(135deg, #7A0F1C 0%, #A1122F 50%, #7A0F1C 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text"
+                      }}
+                    >
+                      Daughter of
+                    </p>
+
+                    <div className="space-y-0.5">
+                      <p className="text-[#4A4A4A] font-serif text-[9px] sm:text-[10px] md:text-[11px] leading-tight font-medium" style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                      }}>
+                        Mr. Himadri Dam
+                      </p>
+                      <p className="text-[#D4AF37] text-[8px] sm:text-[9px] font-light">
+                        &
+                      </p>
+                      <p className="text-[#4A4A4A] font-serif text-[9px] sm:text-[10px] md:text-[11px] leading-tight font-medium" style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                      }}>
+                        Mrs. Pinki Dam
+                      </p>
+                    </div>
+
+                    {/* Decorative flourish bottom */}
+                    <div className="flex justify-center mt-1">
+                      <svg width="20" height="8" viewBox="0 0 20 8" className="w-4 h-2 sm:w-5 sm:h-2">
+                        <path d="M0 4 Q5 8 10 4 Q15 0 20 4" stroke="#D4AF37" strokeWidth="1" fill="none" opacity="0.6"/>
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Elegant Separator with ornament */}
+                  <div className="flex flex-col items-center justify-center px-1 gap-1">
+                    <div className="w-px h-5 sm:h-6 bg-gradient-to-b from-transparent via-[#D4AF37] to-[#D4AF37] opacity-50" />
+                    <svg width="12" height="12" viewBox="0 0 12 12" className="w-3 h-3">
+                      <circle cx="6" cy="6" r="4" fill="none" stroke="#D4AF37" strokeWidth="1" opacity="0.6"/>
+                      <circle cx="6" cy="6" r="2" fill="#D4AF37" opacity="0.4"/>
+                    </svg>
+                    <div className="w-px h-5 sm:h-6 bg-gradient-to-b from-[#D4AF37] to-transparent opacity-50" />
+                  </div>
+
+                  {/* Groom's Parents - Right */}
+                  <div className="flex-1 text-center relative">
+                    {/* Decorative flourish top */}
+                    <div className="flex justify-center mb-1">
+                      <svg width="20" height="8" viewBox="0 0 20 8" className="w-4 h-2 sm:w-5 sm:h-2">
+                        <path d="M0 4 Q5 0 10 4 Q15 8 20 4" stroke="#D4AF37" strokeWidth="1" fill="none" opacity="0.6"/>
+                      </svg>
+                    </div>
+
+                    <p
+                      className="font-serif text-[9px] sm:text-[10px] md:text-xs font-semibold mb-1 tracking-wider"
+                      style={{
+                        background: "linear-gradient(135deg, #7A0F1C 0%, #A1122F 50%, #7A0F1C 100%)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        backgroundClip: "text"
+                      }}
+                    >
+                      Son of
+                    </p>
+
+                    <div className="space-y-0.5">
+                      <p className="text-[#4A4A4A] font-serif text-[9px] sm:text-[10px] md:text-[11px] leading-tight font-medium" style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                      }}>
+                        Mr. Krishnendu Banerjee
+                      </p>
+                      <p className="text-[#D4AF37] text-[8px] sm:text-[9px] font-light">
+                        &
+                      </p>
+                      <p className="text-[#4A4A4A] font-serif text-[9px] sm:text-[10px] md:text-[11px] leading-tight font-medium" style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                      }}>
+                        Mrs. Anshu Banerjee
+                      </p>
+                    </div>
+
+                    {/* Decorative flourish bottom */}
+                    <div className="flex justify-center mt-1">
+                      <svg width="20" height="8" viewBox="0 0 20 8" className="w-4 h-2 sm:w-5 sm:h-2">
+                        <path d="M0 4 Q5 8 10 4 Q15 0 20 4" stroke="#D4AF37" strokeWidth="1" fill="none" opacity="0.6"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Divider before invitation text */}
+              <div className="flex items-center gap-2 mb-1 md:mb-1.5">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-40" />
+                <span className="text-[#D4AF37] text-xs">✦</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-40" />
+              </div>
+
               {/* Invitation text */}
-              <div className="text-center mb-1 md:mb-2 px-2">
+              <div className="text-center mb-1 md:mb-1.5 px-2">
                 <p className="italic text-gray-700 mb-1 leading-snug text-[10px] sm:text-[11px] md:text-sm">
                   With immense joy and the blessings of our families,
                   we invite you to celebrate our sacred union.
@@ -531,63 +708,34 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                 </p>
               </div>
 
-              {/* Icons row */}
-              <div className="flex justify-center gap-2 mb-1 md:mb-2 text-sm md:text-base">
-                <span title="Ceremony">🪔</span>
-                <span title="Celebration">🎊</span>
-                <span title="Love">🌹</span>
-                <span title="Blessings">🙏</span>
-                <span title="Joy">🎶</span>
-              </div>
-
               {/* Bottom message */}
-              <div className="text-center mb-1 md:mb-2">
-                <p className="italic text-[#A1122F] font-serif text-[10px] sm:text-xs md:text-sm font-semibold">
+              <div className="text-center mb-0.5 md:mb-1">
+                <p className="italic text-[#A1122F] font-serif text-[9px] sm:text-[10px] md:text-xs font-semibold">
                   ✨ Your blessings are our greatest gift ✨
                 </p>
               </div>
             </div>
 
-            {/* Elegant Countdown at Bottom */}
-            {/*<div className="mt-auto pt-2 border-t" style={{ borderColor: "rgba(212,175,55,0.3)" }}>*/}
-            {/*  <div className="text-center">*/}
-            {/*    <p className="text-[#7A0F1C] font-serif italic text-xs md:text-base mb-1">*/}
-            {/*      A beautiful celebration awaits…*/}
-            {/*    </p>*/}
-            {/*    <div className="flex items-center justify-center gap-2">*/}
-            {/*      <span className="text-[#C6A75E] text-[10px] md:text-xs">Opening in</span>*/}
-            {/*      <div*/}
-            {/*        className="text-2xl md:text-4xl font-bold text-[#A1122F] animate-pulse px-2"*/}
-            {/*        style={{ textShadow: "0 2px 8px rgba(161,18,47,0.3)" }}*/}
-            {/*      >*/}
-            {/*        {countdown}*/}
-            {/*      </div>*/}
-            {/*    </div>*/}
-            {/*  </div>*/}
-            {/*</div>*/}
-            {/* Begin Celebration Button */}
+            {/* Begin Celebration Button - No whitespace */}
             <div
-                className="mt-2 md:mt-6 pt-2 md:pt-4 border-t text-center"
+                className="pt-1 sm:pt-1.5 md:pt-2 border-t text-center"
                 style={{ borderColor: "rgba(212,175,55,0.3)" }}
             >
-              <p className="text-[#7A0F1C] font-serif italic text-xs sm:text-sm md:text-lg mb-2 md:mb-4">
+              <p className="text-[#7A0F1C] font-serif italic text-[9px] sm:text-[10px] md:text-sm mb-1 sm:mb-1.5 md:mb-2">
                 The celebration begins here...
               </p>
-              {/*<div className="flex items-center justify-center mb-2 md:mb-3">*/}
-              {/*  <span className="text-[#D4AF37] text-base md:text-lg">❦</span>*/}
-              {/*</div>*/}
               <motion.button
                   onClick={() => {
                     if (onFinish) onFinish();
                     else window.location.href = "/side-selection";
                   }}
-                  className="relative px-6 py-3 sm:px-8 sm:py-4 md:px-16 md:py-5 rounded-full font-serif tracking-wide text-xs sm:text-sm md:text-lg overflow-hidden"
+                  className="relative px-5 py-2.5 sm:px-6 sm:py-3 md:px-12 md:py-4 rounded-full font-serif tracking-wide text-[10px] sm:text-xs md:text-base overflow-hidden"
                   style={{
                     background: "linear-gradient(135deg,#D4AF37,#FFD700,#C6A75E)",
                     color: "#7A0F1C",
-                    boxShadow: "0 10px 40px rgba(212,175,55,0.55)"
+                    boxShadow: "0 6px 24px rgba(212,175,55,0.45)"
                   }}
-                  whileHover={{ scale: 1.07 }}
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.96 }}
               >
                 {/* Shimmer animation */}
@@ -605,13 +753,13 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                     }}
                 />
 
-                <span className="relative z-10 flex items-center gap-2 sm:gap-3 justify-center whitespace-nowrap">
+                <span className="relative z-10 flex items-center gap-1.5 sm:gap-2 md:gap-3 justify-center whitespace-nowrap">
       Enter the Celebration
 
       <motion.span
-          animate={{ x: [0, 8, 0] }}
+          animate={{ x: [0, 6, 0] }}
           transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-          className="text-base sm:text-xl font-bold"
+          className="text-sm sm:text-base md:text-xl font-bold"
       >
         →
       </motion.span>
