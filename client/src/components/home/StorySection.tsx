@@ -15,6 +15,9 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
     const [selectedMilestone, setSelectedMilestone] = useState<StoryMilestone | null>(null);
     const controls = useAnimation();
     const animationRef = useRef<{ startTime: number; pausedAt: number } | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const [isUserScrolling, setIsUserScrolling] = useState(false);
+    const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Duplicate milestones for seamless infinite scroll
     const duplicatedMilestones = useMemo(() => [...milestones, ...milestones, ...milestones], [milestones]);
@@ -52,35 +55,81 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
             controls.stop();
             // Lock body scroll
             document.body.style.overflow = 'hidden';
-        } else if (animationRef.current && animationRef.current.pausedAt > 0) {
-            // Calculate how much time has elapsed in the animation
-            const elapsed = (animationRef.current.pausedAt - animationRef.current.startTime) % 60000;
-            const progress = elapsed / 60000; // 0 to 1
-            const currentPercent = -33.33 - (progress * 33.33); // -33.33 to -66.66
+        } else if (animationRef.current && animationRef.current.pausedAt > 0 && !isUserScrolling) {
+            // Small delay to ensure smooth transition
+            const resumeTimer = setTimeout(() => {
+                if (!isUserScrolling && !selectedMilestone) {
+                    // Calculate how much time has elapsed in the animation
+                    const elapsed = (animationRef.current!.pausedAt - animationRef.current!.startTime) % 60000;
+                    const progress = elapsed / 60000; // 0 to 1
+                    const currentPercent = -33.33 - (progress * 33.33); // -33.33 to -66.66
 
-            // Resume from current position
-            controls.start({
-                x: [`${currentPercent}%`, "-66.66%"],
-                transition: {
-                    duration: 60 * (1 - progress),
-                    ease: "linear",
-                    repeat: Infinity,
-                    repeatType: "loop",
+                    // Resume from current position
+                    controls.start({
+                        x: [`${currentPercent}%`, "-66.66%"],
+                        transition: {
+                            duration: 60 * (1 - progress),
+                            ease: "linear",
+                            repeat: Infinity,
+                            repeatType: "loop",
+                        }
+                    });
+
+                    // Reset start time for next pause
+                    animationRef.current!.startTime = Date.now() - elapsed;
+                    animationRef.current!.pausedAt = 0;
                 }
-            });
-
-            // Reset start time for next pause
-            animationRef.current.startTime = Date.now() - elapsed;
-            animationRef.current.pausedAt = 0;
+            }, 100); // Small delay for smooth transition
 
             // Unlock body scroll
             document.body.style.overflow = '';
+
+            return () => clearTimeout(resumeTimer);
         }
 
         return () => {
             document.body.style.overflow = '';
         };
-    }, [selectedMilestone, controls]);
+    }, [selectedMilestone, controls, isUserScrolling]);
+
+    // Handle user scrolling - pause animation temporarily
+    const handleWheel = useCallback(() => {
+        if (!scrollContainerRef.current) return;
+
+        // Pause auto-animation immediately
+        if (!isUserScrolling) {
+            setIsUserScrolling(true);
+            if (animationRef.current && !selectedMilestone) {
+                animationRef.current.pausedAt = Date.now();
+            }
+            controls.stop();
+        }
+
+        // Clear existing timeout
+        if (userScrollTimeoutRef.current) {
+            clearTimeout(userScrollTimeoutRef.current);
+        }
+
+        // Resume auto-animation after user stops scrolling for 1 second (reduced from 2)
+        userScrollTimeoutRef.current = setTimeout(() => {
+            setIsUserScrolling(false);
+        }, 1000);
+    }, [controls, selectedMilestone, isUserScrolling]);
+
+    // Attach wheel event listener
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        container.addEventListener('wheel', handleWheel as any, { passive: true });
+
+        return () => {
+            container.removeEventListener('wheel', handleWheel as any);
+            if (userScrollTimeoutRef.current) {
+                clearTimeout(userScrollTimeoutRef.current);
+            }
+        };
+    }, [handleWheel]);
 
     const getMilestoneVisuals = useCallback((title: string, index: number) => {
         const t = title.toLowerCase();
@@ -174,7 +223,18 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
             </div>
 
             {/* Horizontal Scrolling Milestones */}
-            <div className="relative w-full overflow-hidden py-10">
+            <div
+                ref={scrollContainerRef}
+                className="relative w-full overflow-x-auto overflow-y-hidden py-10 scroll-smooth"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+                {/* Hide scrollbar with CSS */}
+                <style>{`
+                    #story .overflow-x-auto::-webkit-scrollbar {
+                        display: none;
+                    }
+                `}</style>
+
                 {/* Left fade gradient */}
                 <div className="absolute inset-y-0 left-0 w-32 md:w-48 bg-gradient-to-r from-[var(--wedding-alt-bg)] to-transparent z-10 pointer-events-none" />
 
@@ -187,6 +247,24 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                     animate={controls}
                     initial={{ x: "-33.33%" }}
                     style={{ width: "fit-content" }}
+                    drag="x"
+                    dragConstraints={{ left: -2000, right: 0 }}
+                    dragElastic={0.05}
+                    onDragStart={() => {
+                        setIsUserScrolling(true);
+                        if (animationRef.current && !selectedMilestone) {
+                            animationRef.current.pausedAt = Date.now();
+                        }
+                        controls.stop();
+                    }}
+                    onDragEnd={() => {
+                        if (userScrollTimeoutRef.current) {
+                            clearTimeout(userScrollTimeoutRef.current);
+                        }
+                        userScrollTimeoutRef.current = setTimeout(() => {
+                            setIsUserScrolling(false);
+                        }, 1000);
+                    }}
                 >
                     {duplicatedMilestones.map((milestone, idx) => {
                         const { palette } = getMilestoneVisuals(milestone.title, idx);

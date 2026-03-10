@@ -416,7 +416,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
         </div>
 
         <motion.div
-            className="relative w-full max-w-2xl h-[80vh] md:h-[85vh] lg:h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden"
+            className="relative w-[95vw] sm:w-[90vw] md:w-full max-w-2xl h-[85vh] sm:h-[88vh] md:h-[90vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden"
             style={{
               background: "linear-gradient(160deg, #fffdf4 0%, #fff8e7 50%, #fdf3e3 100%)",
               border: "3px solid #D4AF37"
@@ -454,26 +454,26 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           ))}
 
           {/* Content - fixed height, no scroll */}
-          <div className="flex-1 flex flex-col justify-between px-4 sm:px-6 md:px-12 pt-3 md:pt-4 pb-2 md:pb-3">
-            <div>
+          <div className="flex-1 flex flex-col justify-between px-3 sm:px-5 md:px-10 pt-2 sm:pt-3 md:pt-4 pb-2 sm:pb-2.5 md:pb-3 overflow-hidden">
+            <div className="flex-1 flex flex-col justify-evenly overflow-hidden">
               {/* Top decoration */}
-              <div className="text-center mb-1.5 md:mb-2">
-                <img src="/ganesh.png" alt="Ganesh" className="mx-auto h-6 sm:h-7 md:h-8 mb-1 drop-shadow-lg" />
-                <p className="text-[#B48A2C] italic font-serif text-[8px] sm:text-[9px] tracking-wide">
+              <div className="text-center mb-1 sm:mb-1.5">
+                <img src="/ganesh.png" alt="Ganesh" className="mx-auto h-7 sm:h-9 md:h-11 mb-0.5 sm:mb-1 drop-shadow-lg" />
+                <p className="text-[#B48A2C] italic font-serif text-[9px] sm:text-[10px] md:text-xs tracking-wide">
                   ॥ Om Shri Ganeshaya Namah ॥ ॥ Om Prajapataye Namah ॥
                 </p>
               </div>
 
               {/* Divider */}
-              <div className="flex items-center gap-2 mb-1.5 md:mb-2">
+              <div className="flex items-center gap-2 mb-1 sm:mb-1.5">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
                 <span className="text-[#D4AF37] text-sm">❧</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
               </div>
 
               {/* Main title */}
-              <div className="text-center mb-1.5 md:mb-2">
-                <h1 className="text-lg sm:text-xl md:text-3xl italic font-serif mb-0.5" style={{
+              <div className="text-center mb-1 sm:mb-1.5">
+                <h1 className="text-base sm:text-lg md:text-2xl italic font-serif mb-0.5" style={{
                   color: "#A1122F",
                   textShadow: "0 2px 4px rgba(161,18,47,0.2)"
                 }}>
@@ -485,10 +485,10 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               </div>
 
               {/* Couple Section - 2 Columns with Photos */}
-              <div className="flex items-start justify-center gap-3 sm:gap-4 md:gap-6 mb-1.5 md:mb-2 px-2">
+              <div className="flex items-start justify-center gap-2 sm:gap-3 md:gap-5 mb-1 sm:mb-1.5 px-1 sm:px-2">
                 {/* Bride Column */}
                 <div className="flex-1 flex flex-col items-center max-w-[45%]">
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full overflow-hidden mb-1.5" style={{
+                  <div className="relative w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full overflow-hidden mb-1" style={{
                     border: "2px solid #D4AF37",
                     boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
                   }}>
@@ -515,14 +515,14 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                       boxShadow: "inset 0 0 20px rgba(255,215,0,0.2)"
                     }} />
                   </div>
-                  <p className="text-[#A1122F] font-serif italic text-sm sm:text-base md:text-lg font-semibold text-center">
+                  <p className="text-[#A1122F] font-serif italic text-xs sm:text-sm md:text-base font-semibold text-center leading-tight">
                     Himasree
                   </p>
                 </div>
 
                 {/* Heart Connector */}
-                <div className="flex-shrink-0 flex items-center pt-6 sm:pt-8 md:pt-12">
-                  <svg width="24" height="32" viewBox="0 0 24 32" className="w-5 h-6 sm:w-6 sm:h-8 md:w-8 md:h-10">
+                <div className="flex-shrink-0 flex items-center pt-5 sm:pt-7 md:pt-10">
+                  <svg width="24" height="32" viewBox="0 0 24 32" className="w-4 h-5 sm:w-5 sm:h-6 md:w-7 md:h-9">
                     <defs>
                       <linearGradient id="coupleHeartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" stopColor="#D4AF37" />
@@ -541,7 +541,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
 
                 {/* Groom Column */}
                 <div className="flex-1 flex flex-col items-center max-w-[45%]">
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-full overflow-hidden mb-1.5" style={{
+                  <div className="relative w-14 h-14 sm:w-18 sm:h-18 md:w-28 md:h-28 rounded-full overflow-hidden mb-1" style={{
                     border: "2px solid #D4AF37",
                     boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
                   }}>
@@ -568,7 +568,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                       boxShadow: "inset 0 0 20px rgba(255,215,0,0.2)"
                     }} />
                   </div>
-                  <p className="text-[#A1122F] font-serif italic text-sm sm:text-base md:text-lg font-semibold text-center">
+                  <p className="text-[#A1122F] font-serif italic text-xs sm:text-sm md:text-base font-semibold text-center leading-tight">
                     Kaustav
                   </p>
                 </div>
@@ -697,19 +697,19 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
 
               {/* Invitation text */}
               <div className="text-center mb-1 md:mb-1.5 px-2">
-                <p className="italic text-gray-700 mb-1 leading-snug text-[10px] sm:text-[11px] md:text-sm">
+                <p className="italic text-gray-700 mb-0.5 sm:mb-1 leading-snug text-[9.5px] sm:text-[10.5px] md:text-sm">
                   With immense joy and the blessings of our families,
                   we invite you to celebrate our sacred union.
                 </p>
-                <p className="italic text-gray-700 leading-snug text-[10px] sm:text-[11px] md:text-sm">
+                <p className="italic text-gray-700 leading-snug text-[9.5px] sm:text-[10.5px] md:text-sm">
                   Join us as we begin this beautiful journey together
                   filled with love, tradition, and happiness.
                 </p>
               </div>
 
               {/* Bottom message */}
-              <div className="text-center mb-0.5 md:mb-1">
-                <p className="italic text-[#A1122F] font-serif text-[9px] sm:text-[10px] md:text-xs font-semibold">
+              <div className="text-center mb-0.5">
+                <p className="italic text-[#A1122F] font-serif text-[8.5px] sm:text-[9.5px] md:text-xs font-semibold">
                   ✨ Your blessings are our greatest gift ✨
                 </p>
               </div>
@@ -717,10 +717,10 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
 
             {/* Begin Celebration Button - No whitespace */}
             <div
-                className="pt-1 sm:pt-1.5 md:pt-2 border-t text-center"
+                className="pt-1 sm:pt-1.5 md:pt-2 border-t text-center flex-shrink-0"
                 style={{ borderColor: "rgba(212,175,55,0.3)" }}
             >
-              <p className="text-[#7A0F1C] font-serif italic text-[9px] sm:text-[10px] md:text-sm mb-1 sm:mb-1.5 md:mb-2">
+              <p className="text-[#7A0F1C] font-serif italic text-[8.5px] sm:text-[9.5px] md:text-sm mb-1 sm:mb-1.5">
                 The celebration begins here...
               </p>
               <motion.button
@@ -728,7 +728,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                     if (onFinish) onFinish();
                     else window.location.href = "/side-selection";
                   }}
-                  className="relative px-5 py-2.5 sm:px-6 sm:py-3 md:px-12 md:py-4 rounded-full font-serif tracking-wide text-[10px] sm:text-xs md:text-base overflow-hidden"
+                  className="relative px-4 py-2 sm:px-6 sm:py-2.5 md:px-10 md:py-3.5 rounded-full font-serif tracking-wide text-[9.5px] sm:text-[10.5px] md:text-base overflow-hidden"
                   style={{
                     background: "linear-gradient(135deg,#D4AF37,#FFD700,#C6A75E)",
                     color: "#7A0F1C",
@@ -752,17 +752,16 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                     }}
                 />
 
-                <span className="relative z-10 flex items-center gap-1.5 sm:gap-2 md:gap-3 justify-center whitespace-nowrap">
-      Enter the Celebration
-
-      <motion.span
-          animate={{ x: [0, 6, 0] }}
-          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-          className="text-sm sm:text-base md:text-xl font-bold"
-      >
-        →
-      </motion.span>
-    </span>
+                <span className="relative z-10 flex items-center gap-1 sm:gap-1.5 md:gap-2.5 justify-center whitespace-nowrap">
+                  Enter the Celebration
+                  <motion.span
+                      animate={{ x: [0, 6, 0] }}
+                      transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                      className="text-xs sm:text-sm md:text-lg font-bold"
+                  >
+                    →
+                  </motion.span>
+                </span>
               </motion.button>
             </div>
           </div>
@@ -773,7 +772,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           {letterVisible && (
             <motion.button
               onClick={togglePlayPause}
-              className="fixed bottom-10 right-8 z-50 p-4 rounded-full shadow-xl border-2 transition-all"
+              className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 md:bottom-10 md:right-10 z-50 p-3 sm:p-3.5 md:p-4 rounded-full shadow-xl border-2 transition-all"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,253,244,0.95) 0%, rgba(255,248,231,0.95) 100%)',
                 borderColor: '#D4AF37',
@@ -795,7 +794,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                   ease: "linear",
                 }}
               >
-                <Music size={22} />
+                <Music size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
               </motion.div>
             </motion.button>
           )}
