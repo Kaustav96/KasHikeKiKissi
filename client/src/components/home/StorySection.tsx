@@ -16,19 +16,23 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
     const controls = useAnimation();
     const animationRef = useRef<{ startTime: number; pausedAt: number } | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const motionDivRef = useRef<HTMLDivElement | null>(null);
     const [isUserScrolling, setIsUserScrolling] = useState(false);
     const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Duplicate milestones for seamless infinite scroll
-    const duplicatedMilestones = useMemo(() => [...milestones, ...milestones, ...milestones], [milestones]);
+    // Duplicate milestones for seamless infinite scroll (5 copies for smooth infinite experience)
+    const duplicatedMilestones = useMemo(() => {
+        return [...milestones, ...milestones, ...milestones, ...milestones, ...milestones];
+    }, [milestones]);
 
     // Initialize animation on mount
     useEffect(() => {
         const startAnimation = () => {
             animationRef.current = { startTime: Date.now(), pausedAt: 0 };
 
+            // With 5 copies, animate from -20% to -80% for smooth infinite loop
             controls.start({
-                x: ["-33.33%", "-66.66%"],
+                x: ["-20%", "-80%"],
                 transition: {
                     duration: 60,
                     ease: "linear",
@@ -62,11 +66,11 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                     // Calculate how much time has elapsed in the animation
                     const elapsed = (animationRef.current!.pausedAt - animationRef.current!.startTime) % 60000;
                     const progress = elapsed / 60000; // 0 to 1
-                    const currentPercent = -33.33 - (progress * 33.33); // -33.33 to -66.66
+                    const currentPercent = -20 - (progress * 60); // -20 to -80
 
                     // Resume from current position
                     controls.start({
-                        x: [`${currentPercent}%`, "-66.66%"],
+                        x: [`${currentPercent}%`, "-80%"],
                         transition: {
                             duration: 60 * (1 - progress),
                             ease: "linear",
@@ -92,10 +96,8 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
         };
     }, [selectedMilestone, controls, isUserScrolling]);
 
-    // Handle user scrolling - pause animation temporarily
-    const handleWheel = useCallback(() => {
-        if (!scrollContainerRef.current) return;
-
+    // Handle user interaction (wheel/touch) - pause animation temporarily
+    const handleUserInteraction = useCallback(() => {
         // Pause auto-animation immediately
         if (!isUserScrolling) {
             setIsUserScrolling(true);
@@ -110,26 +112,37 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
             clearTimeout(userScrollTimeoutRef.current);
         }
 
-        // Resume auto-animation after user stops scrolling for 1 second (reduced from 2)
+        // Resume auto-animation after user stops scrolling for 1 second
         userScrollTimeoutRef.current = setTimeout(() => {
             setIsUserScrolling(false);
         }, 1000);
     }, [controls, selectedMilestone, isUserScrolling]);
 
-    // Attach wheel event listener
+    // Attach interaction event listeners
     useEffect(() => {
         const container = scrollContainerRef.current;
         if (!container) return;
 
-        container.addEventListener('wheel', handleWheel as any, { passive: true });
+        // For desktop mouse wheel
+        const handleWheel = () => handleUserInteraction();
+
+        // For mobile touch
+        const handleTouchStart = () => handleUserInteraction();
+        const handleTouchMove = () => handleUserInteraction();
+
+        container.addEventListener('wheel', handleWheel, { passive: true });
+        container.addEventListener('touchstart', handleTouchStart, { passive: true });
+        container.addEventListener('touchmove', handleTouchMove, { passive: true });
 
         return () => {
-            container.removeEventListener('wheel', handleWheel as any);
+            container.removeEventListener('wheel', handleWheel);
+            container.removeEventListener('touchstart', handleTouchStart);
+            container.removeEventListener('touchmove', handleTouchMove);
             if (userScrollTimeoutRef.current) {
                 clearTimeout(userScrollTimeoutRef.current);
             }
         };
-    }, [handleWheel]);
+    }, [handleUserInteraction]);
 
     const getMilestoneVisuals = useCallback((title: string, index: number) => {
         const t = title.toLowerCase();
@@ -225,12 +238,11 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
             {/* Horizontal Scrolling Milestones */}
             <div
                 ref={scrollContainerRef}
-                className="relative w-full overflow-x-auto overflow-y-hidden py-10 scroll-smooth"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                className="relative w-full overflow-hidden py-10"
             >
                 {/* Hide scrollbar with CSS */}
                 <style>{`
-                    #story .overflow-x-auto::-webkit-scrollbar {
+                    #story .overflow-hidden::-webkit-scrollbar {
                         display: none;
                     }
                 `}</style>
@@ -243,13 +255,15 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
 
                 {/* Scrolling container */}
                 <motion.div
+                    ref={motionDivRef}
                     className="flex gap-6"
                     animate={controls}
-                    initial={{ x: "-33.33%" }}
+                    initial={{ x: "-20%" }}
                     style={{ width: "fit-content" }}
                     drag="x"
-                    dragConstraints={{ left: -2000, right: 0 }}
-                    dragElastic={0.05}
+                    dragConstraints={{ left: -10000, right: 0 }}
+                    dragElastic={0.1}
+                    dragTransition={{ bounceStiffness: 300, bounceDamping: 30 }}
                     onDragStart={() => {
                         setIsUserScrolling(true);
                         if (animationRef.current && !selectedMilestone) {
