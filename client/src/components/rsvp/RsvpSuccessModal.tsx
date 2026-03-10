@@ -78,15 +78,6 @@ function downloadCalendar(config: WeddingConfig) {
 }
 
 export default function RsvpSuccessModal({ open, status, config, onClose }: Props) {
-  // Debug logging
-  if (open) {
-    console.log('[RsvpSuccessModal] Props:', {
-      status,
-      hasConfig: !!config,
-      weddingDate: config?.weddingDate,
-      shouldShowCalendar: status === "confirmed" && !!config?.weddingDate
-    });
-  }
 
   return (
     <AnimatePresence>

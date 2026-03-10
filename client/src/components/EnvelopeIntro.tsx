@@ -51,13 +51,12 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
         }
 
         if (musicUrl) {
-          console.log('[EnvelopeIntro] Setting music URL:', musicUrl);
           setMusicUrl(musicUrl);
           // Small delay to ensure URL is set before fading in
           setTimeout(() => {
             // Try to autoplay - if it fails (mobile), user can use the button
             fadeIn().catch(() => {
-              console.log('[EnvelopeIntro] Autoplay blocked - user can use music button');
+              // Autoplay blocked on mobile - user can use music button
             });
           }, 100);
         }

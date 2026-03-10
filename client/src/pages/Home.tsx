@@ -19,7 +19,7 @@ import ViewingSideOverlay from "@/components/ViewingSideOverlay";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import FloatingContact from "@/components/FloatingContact";
-import { MandalaHalfOrnament, GoldMedallion } from "@/components/RoyalOrnaments";
+import { MandalaHalfOrnament } from "@/components/RoyalOrnaments";
 import type { WeddingConfig, WeddingEvent, Venue } from "@shared/schema.ts";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1449,7 +1449,7 @@ export default function Home() {
     // NEVER restart it - preserve the current state (playing or paused position)
     // This is the highest priority check and must come first
     if (hasStarted && isBackgroundMusic) {
-      console.log('[Home] Music already started, preserving state. Playing:', isPlaying, 'Fresh:', isFreshSelection);
+      // Music already started, preserve its current state
       // Update the ref so future comparisons work correctly
       currentPlaylistRef.current = playlist;
       return; // Exit immediately - music state is preserved

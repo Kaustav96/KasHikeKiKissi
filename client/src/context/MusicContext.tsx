@@ -60,9 +60,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     audio.setAttribute('webkit-playsinline', 'true');
     audioRef.current = audio;
 
-    // Debug: Log audio loading progress for large files
-    audio.addEventListener('loadstart', () => console.log('[MUSIC] Audio loading started'));
-    audio.addEventListener('canplay', () => console.log('[MUSIC] Audio can start playing'));
+    // Error logging only
     audio.addEventListener('error', (e) => console.error('[ERROR] Audio error:', e));
 
     audio.addEventListener("pause", () => setIsPlaying(false));
@@ -80,11 +78,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       if (!audioRef.current) return;
 
       if (document.hidden && !audioRef.current.paused) {
-        console.log('[MUSIC] Pausing music (tab hidden)');
         wasPlayingRef.current = true;
         audioRef.current.pause();
       } else if (!document.hidden && wasPlayingRef.current) {
-        console.log('[MUSIC] Resuming music (tab visible)');
         // Clear any pending resume timeouts
         if (resumeTimeoutRef.current) {
           clearTimeout(resumeTimeoutRef.current);
@@ -101,14 +97,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
     const handleBlur = () => {
       if (!audioRef.current || audioRef.current.paused) return;
-      console.log('[MUSIC] Pausing music (window blur)');
       wasPlayingRef.current = true;
       audioRef.current.pause();
     };
 
     const handleFocus = () => {
       if (!audioRef.current || !wasPlayingRef.current) return;
-      console.log('[MUSIC] Resuming music (window focus)');
 
       // Clear any pending resume
       if (resumeTimeoutRef.current) {
@@ -147,7 +141,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           console.warn('[WARN] Invalid music URL format:', url);
           return;
         }
-        console.log('[MUSIC] Setting music URL:', url);
         audioRef.current.src = url;
         audioRef.current.load();
       }
@@ -160,11 +153,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     try {
       const audio = audioRef.current;
       if (!audio || !audio.src || audio.src === window.location.href) {
-        console.log('[MUSIC] FadeIn skipped: no audio or src');
         return false;
       }
 
-      console.log('[MUSIC] FadeIn starting:', audio.src);
       // Reset state for fresh start
       audio.volume = 0;
       audio.muted = isMuted;
@@ -176,7 +167,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       if (playPromise !== undefined) {
         try {
           await playPromise;
-          console.log('[OK] Music playing successfully');
           setIsPlaying(true);
           setHasStarted(true);
           let vol = 0;
@@ -206,13 +196,10 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     try {
       const audio = audioRef.current;
       if (!audio || !audio.src || audio.src === window.location.href) {
-        console.log('[MUSIC] Play skipped: no audio or src');
         return;
       }
-      console.log('[MUSIC] Playing music:', audio.src);
       audio.volume = 0.6;
       audio.play().then(() => {
-        console.log('[OK] Music playing successfully');
         setIsPlaying(true);
         setHasStarted(true);
       }).catch((err) => {
@@ -250,7 +237,6 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         setHasStarted(true);
       }).catch((err) => console.error('[ERROR] Toggle play failed:', err));
     } else {
-      console.log('[MUSIC] Toggle: Pausing at', audio.currentTime);
       audio.pause();
       setIsPlaying(false);
     }
