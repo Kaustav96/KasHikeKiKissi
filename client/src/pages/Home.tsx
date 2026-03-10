@@ -97,15 +97,15 @@ const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: ANIMATION_CONSTANTS.duration.slow, ease: ANIMATION_CONSTANTS.easing.smooth, delay: ANIMATION_CONSTANTS.delay.medium }}
       >
-        {/* Central medallion above names */}
+        {/* Central crest above names */}
         <div className="flex justify-center mb-8">
           <motion.div
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: ANIMATION_CONSTANTS.duration.slow, delay: ANIMATION_CONSTANTS.delay.long, ease: ANIMATION_CONSTANTS.easing.smooth }}
-            whileHover={{ scale: 1.05, rotate: 6 }}
+            whileHover={{ scale: 1.05, rotate: 3 }}
           >
-            <GoldMedallion size={90} />
+            <KHCrest size={110} />
           </motion.div>
         </div>
 

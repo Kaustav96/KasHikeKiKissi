@@ -17,21 +17,19 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
 
   const sparkles = Array.from({ length: 20 });
 
-  // Auto-open envelope after 2 seconds
-  useEffect(() => {
-    const openTimer = setTimeout(() => {
-      // Break seal (smoother transition - no shake, just fade)
-      setSealBreaking(true);
+  // Handle seal tap - user-triggered opening
+  const handleSealTap = () => {
+    if (sealBreaking) return; // Prevent multiple taps
 
-      // Show letter immediately when seal starts breaking
-      setLetterVisible(true);
+    // Break seal (smoother transition - no shake, just fade)
+    setSealBreaking(true);
 
-      // Open envelope after seal disappears (1s)
-      setTimeout(() => setEnvelopeOpen(true), 1000);
-    }, 2000);
+    // Show letter immediately when seal starts breaking
+    setLetterVisible(true);
 
-    return () => clearTimeout(openTimer);
-  }, [onFinish]);
+    // Open envelope after seal disappears (1s)
+    setTimeout(() => setEnvelopeOpen(true), 1000);
+  };
 
   // Start music when letter becomes visible
   useEffect(() => {
@@ -181,14 +179,17 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
           </div>
         </div>
 
-        {/* Center Seal with Bengali Couple */}
-        <div
+        {/* Center Seal with Bengali Couple - Interactive */}
+        <motion.div
           className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex flex-col items-center transition-all duration-1000 ease-out ${
             sealBreaking ? "scale-110 opacity-0" : "scale-100 opacity-100"
           }`}
         >
-          <div
-            className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden"
+          <motion.div
+            onClick={handleSealTap}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden cursor-pointer"
             style={{
               border: "6px solid #D4AF37",
               boxShadow: "0 0 60px rgba(212,175,55,0.8), 0 20px 80px rgba(0,0,0,0.6)",
@@ -221,7 +222,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
 
             {/* Wax seal texture effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-radial from-transparent to-black opacity-10" />
-          </div>
+          </motion.div>
 
           {/* Responsive Hint Text */}
           <motion.div
@@ -275,7 +276,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
     </span>
             </motion.div>
           </motion.div>
-        </div>
+        </motion.div>
 
         {/* Golden Sparkles Explosion when seal breaks */}
         {sealBreaking && (
@@ -402,7 +403,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                   Subho Bibaho
                 </h1>
                 <p className="text-[9px] tracking-[0.2em] uppercase text-[#C6A75E] font-semibold">
-                  Wedding Invitation
+                  An Auspicious Celebration
                 </p>
               </div>
 
@@ -413,7 +414,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                   boxShadow: "0 4px 20px rgba(212,175,55,0.4)"
                 }}>
                   <img
-                    src="/bengali-bride-groom.webp"
+                    src="/bengali_wedding_couple.png"
                     alt="Himasree & Kaustav"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -458,10 +459,12 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               {/* Invitation text */}
               <div className="text-center mb-2 px-2">
                 <p className="italic text-gray-700 mb-1.5 leading-snug text-[11px] md:text-sm">
-                  With joy in our hearts and blessings of our families, we cordially invite you to celebrate our union.
+                  With immense joy and the blessings of our families,
+                  we invite you to celebrate our sacred union.
                 </p>
                 <p className="italic text-gray-700 leading-snug text-[11px] md:text-sm">
-                  Please join us for a day filled with tradition, love, and happiness.
+                  Join us as we begin this beautiful journey together
+                  filled with love, tradition, and happiness.
                 </p>
               </div>
 
