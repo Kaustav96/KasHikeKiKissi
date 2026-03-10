@@ -504,14 +504,14 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               </div>
 
               {/* Names below image */}
-              <div className="text-center mb-2">
+              <div className="text-center mb-1 md:mb-2">
                 <p className="text-[#A1122F] font-serif italic text-sm md:text-lg">
                   Himasree & Kaustav
                 </p>
               </div>
 
               {/* Floral divider */}
-              <div className="flex items-center justify-center gap-1.5 mb-2">
+              <div className="flex items-center justify-center gap-1.5 mb-1 md:mb-2">
                 <span className="text-[#D4AF37] text-sm">🌸</span>
                 <div className="w-6 h-px bg-[#D4AF37]" />
                 <span className="text-[#D4AF37] text-base">🌺</span>
@@ -520,19 +520,19 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               </div>
 
               {/* Invitation text */}
-              <div className="text-center mb-2 px-2">
-                <p className="italic text-gray-700 mb-1.5 leading-snug text-[11px] md:text-sm">
+              <div className="text-center mb-1 md:mb-2 px-2">
+                <p className="italic text-gray-700 mb-1 leading-snug text-[10px] sm:text-[11px] md:text-sm">
                   With immense joy and the blessings of our families,
                   we invite you to celebrate our sacred union.
                 </p>
-                <p className="italic text-gray-700 leading-snug text-[11px] md:text-sm">
+                <p className="italic text-gray-700 leading-snug text-[10px] sm:text-[11px] md:text-sm">
                   Join us as we begin this beautiful journey together
                   filled with love, tradition, and happiness.
                 </p>
               </div>
 
               {/* Icons row */}
-              <div className="flex justify-center gap-2.5 mb-2 text-base md:text-lg">
+              <div className="flex justify-center gap-2 mb-1 md:mb-2 text-sm md:text-base">
                 <span title="Ceremony">🪔</span>
                 <span title="Celebration">🎊</span>
                 <span title="Love">🌹</span>
@@ -541,8 +541,8 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
               </div>
 
               {/* Bottom message */}
-              <div className="text-center mb-2">
-                <p className="italic text-[#A1122F] font-serif text-xs md:text-sm font-semibold">
+              <div className="text-center mb-1 md:mb-2">
+                <p className="italic text-[#A1122F] font-serif text-[10px] sm:text-xs md:text-sm font-semibold">
                   ✨ Your blessings are our greatest gift ✨
                 </p>
               </div>
@@ -566,24 +566,22 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
             {/*  </div>*/}
             {/*</div>*/}
             {/* Begin Celebration Button */}
-
             <div
-                // className="mt-auto pt-4 border-t text-center"
-                className="mt-6 pt-4 border-t text-center"
+                className="mt-2 md:mt-6 pt-2 md:pt-4 border-t text-center"
                 style={{ borderColor: "rgba(212,175,55,0.3)" }}
             >
-              <p className="text-[#7A0F1C] font-serif italic text-sm md:text-lg mb-4">
+              <p className="text-[#7A0F1C] font-serif italic text-xs sm:text-sm md:text-lg mb-2 md:mb-4">
                 The celebration begins here...
               </p>
-              <div className="flex items-center justify-center mb-3">
-                <span className="text-[#D4AF37] text-lg">❦</span>
-              </div>
+              {/*<div className="flex items-center justify-center mb-2 md:mb-3">*/}
+              {/*  <span className="text-[#D4AF37] text-base md:text-lg">❦</span>*/}
+              {/*</div>*/}
               <motion.button
                   onClick={() => {
                     if (onFinish) onFinish();
                     else window.location.href = "/side-selection";
                   }}
-                  className="relative px-8 py-4 md:px-16 md:py-5 rounded-full font-serif tracking-wide text-sm md:text-lg overflow-hidden"
+                  className="relative px-6 py-3 sm:px-8 sm:py-4 md:px-16 md:py-5 rounded-full font-serif tracking-wide text-xs sm:text-sm md:text-lg overflow-hidden"
                   style={{
                     background: "linear-gradient(135deg,#D4AF37,#FFD700,#C6A75E)",
                     color: "#7A0F1C",
@@ -607,13 +605,13 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
                     }}
                 />
 
-                <span className="relative z-10 flex items-center gap-3 justify-center whitespace-nowrap">
+                <span className="relative z-10 flex items-center gap-2 sm:gap-3 justify-center whitespace-nowrap">
       Enter the Celebration
 
       <motion.span
           animate={{ x: [0, 8, 0] }}
           transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-          className="text-xl font-bold"
+          className="text-base sm:text-xl font-bold"
       >
         →
       </motion.span>
