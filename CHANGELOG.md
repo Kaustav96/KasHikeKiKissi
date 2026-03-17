@@ -28,6 +28,7 @@
 21. [Phase 21 — Music State Management & UI Consistency](#phase-21)
 22. [Phase 22 — Mobile Autoplay Fix & User Interaction](#phase-22)
 23. [Phase 23 — Music State Preservation & RSVP Validation Overhaul](#phase-23)
+24. [Phase 24 — Cinematic Flow Redesign: Split Selection & Royal Seal](#phase-24)
 
 ---
 
@@ -1608,6 +1609,517 @@ const handleStartMusic = async () => {
 - ✅ No compilation errors
 - ✅ Better performance (less state management)
 - ✅ Follows React Hook Form best practices
+
+---
+
+## Phase 24 — Cinematic Flow Redesign: Split Selection & Royal Seal <a id="phase-24"></a>
+
+**Date:** March 14, 2026  
+**Goal:** Complete redesign of the entrance experience with a cinematic split-screen selection, royal seal page, and dramatic door-opening animation for a truly premium wedding invitation feel.
+
+### 🎬 New User Flow
+
+**Previous Flow:**
+```
+Envelope Animation → Side Selection Screen → Main Website
+```
+
+**New Cinematic Flow:**
+```
+1️⃣ Split Side Selection (full-screen vertical split - both halves clickable)
+   ↓
+2️⃣ Royal Seal Page (centered seal with tap interaction)
+   ↓
+3️⃣ Door Opening Animation (cinematic split reveal with staggered timing)
+   ↓
+4️⃣ Main Website (invitation card as prominent hero section)
+```
+
+### 🎨 Design System — Royal Navy & Gold
+
+#### Background Palette
+```css
+Main Background: #0F1B2E (Deep Royal Navy)
+Mid Gradient:    #14233C (Royal Blue)
+Dark Shade:      #0C1626 (Navy Black)
+Full Gradient:   linear-gradient(180deg, #0F1B2E 0%, #14233C 60%, #0C1626 100%)
+```
+
+#### Gold Accent System
+```css
+Primary Gold:    #D4AF37 (Classic Royal Gold)
+Highlight Gold:  #F5D77A (Bright Shimmer)
+Shadow Gold:     #9E7C1B (Deep Bronze)
+Gradient:        linear-gradient(135deg, #F5D77A, #D4AF37)
+```
+
+#### Side-Specific Colors
+```css
+Bride Side:      linear-gradient(145deg, #9F2A3B, #8B1E2D, #5E141F)
+Bride Hover:     #B52E43
+Groom Side:      linear-gradient(145deg, #16233B, #0A1220)
+Groom Hover:     Brighter navy with gold glow
+```
+
+#### Invitation Card
+```css
+Card Background: #F7F1E1 (Warm Parchment)
+Border:          #D4AF37 (3px solid gold)
+Shadow:          0 20px 60px rgba(0,0,0,0.5), 0 0 100px rgba(212,175,55,0.3)
+Inner Border:    rgba(212,175,55,0.3) (subtle double border effect)
+```
+
+### ✨ Component Details
+
+#### 1. SplitSideSelection Component
+**File:** `client/src/components/SplitSideSelection.tsx`
+
+**Features:**
+- Full viewport split: 50% bride (left) / 50% groom (right)
+- Hover expansion: Active side → 60%, inactive → 40%
+- Gold vertical divider with glow effect
+- Centered overlay text spans both sides
+- Entire panel is clickable area (not just button)
+- Decorative SVG patterns unique to each side
+- Floating emoji decorations appear on hover (🌹💍✨ for bride, ⚜️👔✨ for groom)
+- Radial vignette for depth
+- Smooth 400ms transitions
+
+**Interaction Flow:**
+```
+User hovers bride side → Expands to 60% + background lightens + decorations appear
+User clicks → setSide("bride") → proceed to seal
+```
+
+**Typography:**
+- Titles: Serif 5xl-6xl font
+- Subtitles: Tracking-wide uppercase
+- Center text: Small caps with 0.4em letter spacing
+
+#### 2. RoyalSealPage Component
+**File:** `client/src/components/RoyalSealPage.tsx`
+
+**Features:**
+- Centered royal seal with responsive sizing:
+  - Mobile: 240px (w-60)
+  - Small: 288px (w-72)
+  - Medium: 320px (w-80)
+  - Large: 384px (w-96)
+- Seal image: `/traditional-bengali-wedding-couple.png`
+- Pulsing glow animation (infinite loop, 2s duration)
+- Hover scale: 1.08 with enhanced glow
+- Gold ring overlays (double border effect)
+- Animated sparkle instruction (✨)
+- **NEW:** Current side display at top
+- **NEW:** Bride/Groom selection buttons at bottom
+- "Back" button (top-left) to return to split selection
+- Navy gradient background with subtle texture
+- Radial gold glow behind seal
+- Fully responsive with proper spacing
+
+**Props:**
+- `currentSide: "bride" | "groom"` - Shows current selection
+- `onSealClick: () => void` - Trigger door animation
+- `onSwitchSide: () => void` - Return to split selection
+- `onSelectSide: (side) => void` - Switch side without going back
+
+**Interaction:**
+- Tap seal → Trigger door animation
+- Tap "Back" → Return to split selection
+- Tap "Bride's Side" or "Groom's Side" → Switch side instantly
+- Current side button is disabled and shows "(Current)"
+
+**Layout:**
+```
+┌──────────────────────────────┐
+│ ← Back    Selected Side      │  ← Top
+│           Bride's/Groom's    │
+├──────────────────────────────┤
+│                              │
+│        [Royal Seal]          │  ← Center (my-auto)
+│     Tap to open...           │
+│           ✨                  │
+│                              │
+├──────────────────────────────┤
+│  Or choose a different side  │
+│  [Bride] | [Groom]           │  ← Bottom
+└──────────────────────────────┘
+```
+
+**Animations:**
+- Seal entrance: scale 0.8→1 over 0.8s
+- Glow pulse: boxShadow animation loop
+- Instruction bounce: y-axis motion
+- Sparkle float: 8px up-down loop
+- Button hover: scale 1.05 with shadow
+
+#### 3. DoorOpeningAnimation Component
+**File:** `client/src/components/DoorOpeningAnimation.tsx`
+
+**Features:**
+- Two full-screen door panels
+- Left door: Bride gradient colors
+- Right door: Groom gradient colors
+- Staggered opening: Left starts → Right starts 150ms later
+- Gold edge highlights on door edges
+- Central golden burst effect (scales + fades)
+- Auto-completes after 1.6s
+
+**Animation Sequence:**
+```
+t = 0ms:    Left door starts sliding left
+t = 150ms:  Right door starts sliding right
+t = 0-800ms: Golden burst expands and fades
+t = 1600ms: onComplete() callback fired → Show main site
+```
+
+**Technical:**
+- `z-index: 100` (above everything)
+- `pointer-events: none` (doesn't block content)
+- Smooth cubic bezier easing: `[0.16, 1, 0.3, 1]`
+
+#### 4. InvitationCardHero Component
+**File:** `client/src/components/InvitationCardHero.tsx`
+
+**Features:**
+- Prominent centered invitation card
+- Navy background (matches seal page)
+- KH Crest at top (100px)
+- Couple names in gold gradient text
+- Ornamental gold dividers
+- Date & venue in decorative box
+- Corner bracket ornaments
+- 12 floating golden particles
+- Subtle texture overlay (5% opacity)
+
+**Card Structure:**
+```
+┌─────────────────────────────┐
+│   [KH Crest]                │
+│                             │
+│  You Are Cordially Invited  │
+│   The Wedding Celebration   │
+│          ───✦───            │
+│           of                │
+│                             │
+│   Himasree & Kaustav        │
+│   (Gold Gradient Text)      │
+│                             │
+│  ┌───────────────────┐      │
+│  │  Date & Venue     │      │
+│  │  (Decorative Box) │      │
+│  └───────────────────┘      │
+│                             │
+│  With the blessings of...   │
+│       ✨ 🙏 ✨              │
+└─────────────────────────────┘
+```
+
+**Animation:**
+- Card entrance: scale 0.9→1, opacity 0→1, y: 30→0
+- Staged reveals: Crest (+0.3s) → Title (+0.4s) → Names (+0.6s) → Date (+0.8s)
+- Particles: Independent y-axis float loops
+
+### 🔄 Navigation & State Flow
+
+**State Management in Home.tsx:**
+```typescript
+// Step tracking
+splitSelectionDone: boolean  → User selected side from split screen
+sealClicked: boolean         → User tapped seal
+doorsOpening: boolean        → Door animation in progress
+showMainSite: boolean        → Main website visible
+
+// Navigation
+setSide(side)                → Update theme
+setSplitSelectionDone(true)  → Move to seal
+setSealClicked(true)         → Start door animation
+setShowMainSite(true)        → Reveal main site
+```
+
+**Back Navigation:**
+```typescript
+// From main site back button:
+setShowMainSite(false)
+setSealClicked(false)
+// → Returns to seal page (not split selection)
+```
+
+**Side Switching:**
+```typescript
+// From seal page "Switch Side":
+setSplitSelectionDone(false)
+// → Returns to split selection
+```
+
+### 🎵 Music Integration
+
+**No Changes to Music System:**
+- Music logic remains unchanged
+- Starts when showMainSite = true
+- Preserves state across navigation
+- Respects user pause/play preferences
+
+### 📱 Responsive Design Updates
+
+**Split Selection - Desktop/Tablet (≥768px):**
+- Horizontal split: 50/50 (expands 60/40 on hover)
+- Vertical divider moves with panels
+- Full-size bride/groom images (192px → 224px → 256px)
+- Hover expansion and animations
+- Text positioned at top, never overlaps panels
+
+**Split Selection - Mobile (<768px):**
+- Vertical stacking: Bride (top) / Groom (bottom)
+- Sticky header with couple names at top
+- Horizontal gold divider between panels
+- Each panel takes 50% of remaining height
+- Smaller images (144px) for better fit
+- No hover effects (tap only)
+- Proper spacing prevents overlap
+
+**Seal Page - All Devices:**
+- Responsive seal sizing:
+  - Mobile: 240px (w-60)
+  - Small: 288px (w-72)
+  - Medium: 320px (w-80)
+  - Large: 384px (w-96)
+- Current side shown at top
+- Bride/Groom selection buttons at bottom
+- Mobile: Buttons stack vertically with full width
+- Desktop: Buttons side-by-side
+- Back button always accessible (top-left)
+- Never overlaps seal or content
+- Touch-friendly button sizes (min 44px height)
+
+**Invitation Card:**
+- Responsive padding: 24px → 32px → 40px → 48px
+- Font scaling: text-2xl → text-4xl → text-5xl → text-6xl
+- Card ornaments scale with viewport
+- Particles adjust size for mobile
+- No horizontal scroll on any device
+- Proper line breaks prevent overflow
+- Font sizes scale with viewport
+- Card maintains aspect ratio
+- No content overflow
+
+### 🎯 UX Psychology
+
+**Why This Flow Works:**
+
+1. **Split Selection Creates Investment**
+   - User makes active choice immediately
+   - Hover interaction is playful and engaging
+   - Clear visual distinction between sides
+
+2. **Seal Page Builds Anticipation**
+   - Familiar wax seal metaphor
+   - Interactive element creates ceremony
+   - "Switch Side" provides control
+
+3. **Door Animation Delivers Payoff**
+   - Dramatic reveal feels earned
+   - Staggered timing creates sophistication
+   - Golden burst adds celebration
+
+4. **Invitation Card Anchors Experience**
+   - Premium first impression on main site
+   - Sets tone for entire website
+   - Natural scroll into content below
+
+### 🔧 Technical Architecture
+
+**Component Hierarchy:**
+```
+Home.tsx (orchestrator)
+  ├─ SplitSideSelection (step 1)
+  ├─ RoyalSealPage (step 2)
+  ├─ DoorOpeningAnimation (step 3)
+  │   └─ InvitationCardHero (prepared behind)
+  └─ Main Site (step 4)
+      ├─ Header
+      ├─ ViewingSideOverlay
+      ├─ InvitationCardHero
+      ├─ Other Sections...
+      └─ FloatingContact
+```
+
+**State Flow Diagram:**
+```
+Page Load
+   ↓
+splitSelectionDone = false → Show SplitSideSelection
+   ↓ [user clicks side]
+splitSelectionDone = true, sealClicked = false → Show RoyalSealPage
+   ↓ [user taps seal]
+sealClicked = true, doorsOpening = true → Show DoorOpeningAnimation
+   ↓ [animation completes 1.6s]
+doorsOpening = false, showMainSite = true → Show Main Website
+```
+
+### 📦 Files Changed Summary
+
+**New Files (4):**
+- `client/src/components/SplitSideSelection.tsx` - Full-screen split landing
+- `client/src/components/RoyalSealPage.tsx` - Interactive seal screen
+- `client/src/components/DoorOpeningAnimation.tsx` - Cinematic reveal
+- `client/src/components/InvitationCardHero.tsx` - Premium card hero
+
+**Modified Files (2):**
+- `client/src/pages/Home.tsx` - New flow state management
+- `CHANGELOG.md` - This documentation
+
+**Deprecated (Not Removed):**
+- `EnvelopeIntro.tsx` - May be useful reference
+- `SideSelectionLanding.tsx` - Previous design preserved
+
+### 🎨 Design Principles Applied
+
+1. **Visual Hierarchy**
+   - Dark backgrounds make gold pop
+   - Card stands out with high contrast
+   - Proper spacing prevents crowding
+
+2. **Motion Design**
+   - Ease curves feel natural
+   - Staggered delays create rhythm
+   - Scale + opacity feels premium
+
+3. **Royal Aesthetic**
+   - Navy + gold = traditional luxury
+   - Serif fonts = elegance
+   - Ornamental details = celebration
+
+4. **User Control**
+   - Clear instructions at each step
+   - Back/switch options always available
+   - No forced delays (except animations)
+
+### ✅ Quality Assurance
+
+**Code Quality:**
+- ✅ No TypeScript errors
+- ✅ Proper component separation
+- ✅ Clean state management
+- ✅ Reusable patterns
+- ✅ Well-documented code
+
+**Performance:**
+- ✅ Lightweight animations
+- ✅ Optimized SVG decorations
+- ✅ Minimal re-renders
+- ✅ Fast state transitions
+
+**Accessibility:**
+- ✅ Hover states visible
+- ✅ Focus states defined
+- ✅ Tap targets large enough
+- ✅ Clear call-to-action text
+
+**Responsive:**
+- ✅ Mobile layouts tested
+- ✅ No horizontal scroll
+- ✅ Readable text at all sizes
+- ✅ Touch interactions work
+
+### 🚀 Future Enhancement Opportunities
+
+1. **Sound Effects**
+   - Door opening sound
+   - Seal crack audio
+   - Ambient background
+
+2. **Advanced Animations**
+   - Particle systems
+   - 3D transforms
+   - Parallax scrolling
+
+3. **Personalization**
+   - Different seal images per side
+   - Custom backgrounds per family
+   - Animated family crests
+
+4. **Analytics**
+   - Track which side users select
+   - Monitor seal interaction rate
+   - Measure time on each screen
+
+---
+
+### 🔄 Update: Responsive Behavior & Seal Page Enhancements
+
+**Date:** March 14, 2026 (Same Day)
+
+#### Changes Made:
+
+**1. Split Selection - Mobile Stacking**
+- Desktop/Tablet: Horizontal split (unchanged)
+- Mobile (<768px): NEW vertical stacking
+  - Sticky header at top with couple names
+  - Bride panel in top half
+  - Gold horizontal divider
+  - Groom panel in bottom half
+  - Each panel exactly 50% of remaining viewport height
+  - No overlap with header text
+
+**2. Royal Seal Page - Selection Options**
+- Added bride/groom selection buttons at bottom
+- Shows current selected side at top
+- Buttons disable current side (shows "Current")
+- Mobile: Buttons stack vertically
+- Desktop: Buttons side-by-side
+- "Back" button renamed and repositioned (top-left)
+- Proper spacing prevents overlap
+
+**3. Text Positioning**
+- Desktop: Text at top (32px → 48px → 64px from top)
+- Mobile: Sticky header ensures text always visible
+- Text never overlaps with clickable panels
+- Horizontal centering maintained across all sizes
+
+**4. Moving Divider**
+- Desktop: Vertical divider moves with panel width changes
+- Mobile: Horizontal divider (static, centered)
+- Smooth animation synced with panel transitions
+
+**5. Image Integration**
+- Replaced emoji icons with actual PNG images:
+  - `/bride.png` for Bride's Side
+  - `/groom.png` for Groom's Side
+- Circular images with white border
+- Responsive sizing
+- Hover animation (pulsing scale + glow)
+
+**6. Removed Elements**
+- Floating decorative emojis (roses, rings, sparkles, etc.)
+- Cleaner, more elegant look
+- Better performance
+
+#### Responsive Breakpoints:
+
+```css
+Mobile:   < 768px  (md breakpoint)
+Tablet:   ≥ 768px
+Desktop:  ≥ 1024px (lg breakpoint)
+XL:       ≥ 1280px (xl breakpoint)
+```
+
+#### Files Modified:
+- `client/src/components/SplitSideSelection.tsx` - Added mobile layout
+- `client/src/components/RoyalSealPage.tsx` - Added selection buttons
+- `client/src/components/InvitationCardHero.tsx` - Full responsive scaling
+- `client/src/pages/Home.tsx` - Updated RoyalSealPage props
+- `CHANGELOG.md` - This documentation
+
+#### Testing Requirements:
+- [ ] Test split selection on mobile (vertical stack)
+- [ ] Test split selection on desktop (horizontal split)
+- [ ] Verify text never overlaps panels
+- [ ] Test divider movement on desktop
+- [ ] Test seal page side switching
+- [ ] Verify buttons don't overlap seal
+- [ ] Test all screen sizes (320px to 1920px)
+- [ ] Verify touch targets are large enough (≥44px)
 
 ---
 

@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { ANIMATION_CONSTANTS } from "@/lib/animations";
 import type { StoryMilestone } from "@shared/schema.ts";
 
-const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] }) => {
+const StorySection = React.memo(({ milestones, coupleStory }: { milestones: StoryMilestone[]; coupleStory?: string }) => {
     if (milestones.length === 0) return null;
 
     const [selectedMilestone, setSelectedMilestone] = useState<StoryMilestone | null>(null);
+    const [showCoupleStory, setShowCoupleStory] = useState(false);
     const controls = useAnimation();
     const animationRef = useRef<{ startTime: number; pausedAt: number } | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -51,7 +52,7 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
 
     // Handle scroll lock when modal opens and preserve position
     useEffect(() => {
-        if (selectedMilestone) {
+        if (selectedMilestone || showCoupleStory) {
             // Pause animation and record current time
             if (animationRef.current) {
                 animationRef.current.pausedAt = Date.now();
@@ -94,7 +95,7 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
         return () => {
             document.body.style.overflow = '';
         };
-    }, [selectedMilestone, controls, isUserScrolling]);
+    }, [selectedMilestone, showCoupleStory, controls, isUserScrolling]);
 
     // Handle user interaction (wheel/touch) - pause animation temporarily
     const handleUserInteraction = useCallback(() => {
@@ -233,6 +234,36 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                     </h2>
                     <SimpleDivider />
                 </motion.div>
+
+                {/* Couple Story Button */}
+                {coupleStory && (
+                    <motion.div
+                        className="text-center mb-6"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: 0.3 }}
+                    >
+                        <motion.button
+                            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-semibold text-sm transition-all"
+                            style={{
+                                background: "var(--wedding-accent)",
+                                color: "var(--wedding-bg)",
+                                border: "1px solid var(--wedding-accent)",
+                                boxShadow: "0 4px 20px rgba(176,132,72,0.25)",
+                            }}
+                            whileHover={{ 
+                                scale: 1.05, 
+                                boxShadow: "0 8px 30px rgba(176,132,72,0.35)" 
+                            }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => setShowCoupleStory(true)}
+                        >
+                            <BookOpen size={16} />
+                            Read Our Full Story
+                        </motion.button>
+                    </motion.div>
+                )}
             </div>
 
             {/* Horizontal Scrolling Milestones */}
@@ -414,6 +445,25 @@ const StorySection = React.memo(({ milestones }: { milestones: StoryMilestone[] 
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Couple Story Modal */}
+            {coupleStory && (
+                <Dialog open={showCoupleStory} onOpenChange={(open) => !open && setShowCoupleStory(false)}>
+                    <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="font-serif text-2xl mb-2" style={{ color: "var(--wedding-text)" }}>
+                                Our Love Story
+                            </DialogTitle>
+                            <SimpleDivider />
+                        </DialogHeader>
+                        <div className="px-2 py-4">
+                            <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--wedding-muted)" }}>
+                                {coupleStory}
+                            </p>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
         </section>
     );
 });

@@ -20,6 +20,25 @@ import { MemoryCache } from "./utils/cache";
 
 const rateLimit = new Map<string, { count: number; reset: number }>();
 
+/**
+ * Parse datetime string as IST timezone and return UTC Date
+ * datetime-local sends "YYYY-MM-DDTHH:mm" which needs to be interpreted as IST
+ */
+function parseISTDateTime(dateTimeStr: string): Date {
+  // Parse the datetime components
+  const match = dateTimeStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) {
+    throw new Error(`Invalid datetime format: ${dateTimeStr}`);
+  }
+
+  const [, year, month, day, hours, minutes] = match;
+
+  // Create UTC date by subtracting IST offset (5 hours 30 minutes)
+  // If user enters 8:30 PM IST, we store 3:00 PM UTC
+  const istDate = new Date(`${year}-${month}-${day}T${hours}:${minutes}:00+05:30`);
+  return istDate;
+}
+
 function normalizeEvents(value: unknown): string[] {
   if (!value) return [];
 
@@ -444,6 +463,7 @@ export async function registerRoutes(
           : normalizeEvents(data.eventsAttending),
       dietaryRequirements: data.dietaryRequirements,
       message: data.message,
+      accommodationRequired: data.rsvpStatus === "declined" ? false : (data.accommodationRequired || false),
     });
 
     res.json({ success: true, rsvpStatus: updated?.rsvpStatus });
@@ -486,6 +506,7 @@ export async function registerRoutes(
             : normalizeEvents(data.eventsAttending),
         dietaryRequirements: data.dietaryRequirements,
         message: data.message,
+        accommodationRequired: data.rsvpStatus === "declined" ? false : (data.accommodationRequired || false),
       });
 
       return res.json({
@@ -514,6 +535,7 @@ export async function registerRoutes(
       message: data.message,
       side: data.side,
       tableNumber: null,
+      accommodationRequired: data.rsvpStatus === "declined" ? false : (data.accommodationRequired || false),
     });
 
     res.status(201).json({
@@ -593,7 +615,7 @@ export async function registerRoutes(
 
   app.patch("/api/admin/config", requireAdmin, async (req, res) => {
     const schema = z.object({
-      weddingDate: z.string().datetime().nullable().optional(),
+      weddingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).nullable().optional(),
       venueName: z.string().max(200).optional(),
       venueAddress: z.string().max(500).optional(),
       venueMapUrl: z.string().url().optional().or(z.literal("")),
@@ -622,7 +644,7 @@ export async function registerRoutes(
 
       if (data.weddingDate !== undefined) {
         updateData.weddingDate =
-          data.weddingDate === null ? null : new Date(data.weddingDate);
+          data.weddingDate === null ? null : parseISTDateTime(data.weddingDate);
       }
 
       if (data.coupleStory !== undefined)
@@ -667,8 +689,8 @@ export async function registerRoutes(
     const schema = z.object({
       title: z.string().min(1).max(200),
       description: z.string().max(2000).default(""),
-      startTime: z.string().datetime(),
-      endTime: z.string().datetime().optional().nullable(),
+      startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+      endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional().nullable(),
       venueName: z.string().max(200).default(""),
       venueAddress: z.string().max(500).default(""),
       venueMapUrl: z.string().url().optional().or(z.literal("")),
@@ -693,8 +715,8 @@ export async function registerRoutes(
 
     const event = await storage.createWeddingEvent({
       ...parsed.data,
-      startTime: new Date(parsed.data.startTime),
-      endTime: parsed.data.endTime ? new Date(parsed.data.endTime) : null,
+      startTime: parseISTDateTime(parsed.data.startTime),
+      endTime: parsed.data.endTime ? parseISTDateTime(parsed.data.endTime) : null,
       venueMapUrl: parsed.data.venueMapUrl || "",
     });
     res.status(201).json(event);
@@ -705,8 +727,8 @@ export async function registerRoutes(
     const schema = z.object({
       title: z.string().min(1).max(200).optional(),
       description: z.string().max(2000).optional(),
-      startTime: z.string().datetime().optional(),
-      endTime: z.string().datetime().nullable().optional(),
+      startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
+      endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).nullable().optional(),
       venueName: z.string().max(200).optional(),
       venueAddress: z.string().max(500).optional(),
       venueMapUrl: z.string().url().optional().or(z.literal("")),
@@ -729,8 +751,8 @@ export async function registerRoutes(
     if (!parsed.success) return res.status(400).json({ error: "Invalid data", details: parsed.error.flatten() });
 
     const updateData: Record<string, unknown> = { ...parsed.data };
-    if (parsed.data.startTime) updateData.startTime = new Date(parsed.data.startTime);
-    if (parsed.data.endTime !== undefined) updateData.endTime = parsed.data.endTime ? new Date(parsed.data.endTime) : null;
+    if (parsed.data.startTime) updateData.startTime = parseISTDateTime(parsed.data.startTime);
+    if (parsed.data.endTime !== undefined) updateData.endTime = parsed.data.endTime ? parseISTDateTime(parsed.data.endTime) : null;
 
     const updated = await storage.updateWeddingEvent(String(req.params.id), updateData as any);
     if (!updated) return res.status(404).json({ error: "Event not found" });

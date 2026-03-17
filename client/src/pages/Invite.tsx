@@ -6,7 +6,6 @@ import { Heart, Check, X, MapPin, Calendar, Clock, Loader2 } from "lucide-react"
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { z } from "zod";
-import KHCrest from "@/components/KHCrest";
 import Header from "@/components/Header";
 import FloatingContact from "@/components/FloatingContact";
 import { useWeddingTheme } from "@/context/ThemeContext";
@@ -22,6 +21,7 @@ const rsvpFormSchema = z.object({
   eventsAttending: z.string(),
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
+  accommodationRequired: z.boolean(),
 }).refine(
   (data) => {
     if (data.rsvpStatus === "confirmed") {
@@ -58,6 +58,7 @@ interface GuestData {
   dietaryRequirements: string;
   message: string;
   side: string;
+  accommodationRequired: boolean;
 }
 
 export default function Invite() {
@@ -98,6 +99,7 @@ export default function Invite() {
       eventsAttending: "",
       dietaryRequirements: "",
       message: "",
+      accommodationRequired: false,
     },
   });
 
@@ -111,6 +113,7 @@ export default function Invite() {
         eventsAttending: guest.eventsAttending || "",
         dietaryRequirements: guest.dietaryRequirements || "",
         message: guest.message || "",
+        accommodationRequired: guest.accommodationRequired || false,
       });
     }
   }, [guest, form]);
@@ -133,7 +136,11 @@ export default function Invite() {
   if (guestLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--wedding-bg)" }}>
-        <KHCrest size={80} className="animate-pulse" />
+        <img 
+          src="/ganesh.png" 
+          alt="Lord Ganesh" 
+          className="w-[80px] h-[80px] object-contain animate-pulse"
+        />
       </div>
     );
   }
@@ -142,7 +149,11 @@ export default function Invite() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--wedding-bg)" }}>
         <div className="text-center p-8">
-          <KHCrest size={80} className="mx-auto mb-6 opacity-50" />
+          <img 
+            src="/ganesh.png" 
+            alt="Lord Ganesh" 
+            className="w-[80px] h-[80px] object-contain mx-auto mb-6 opacity-50"
+          />
           <h1 className="font-serif text-2xl mb-2" style={{ color: "var(--wedding-text)" }}>
             Invite Not Found
           </h1>
@@ -167,7 +178,11 @@ export default function Invite() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <KHCrest size={80} className="mx-auto mb-6" />
+              <img 
+                src="/ganesh.png" 
+                alt="Lord Ganesh" 
+                className="w-[80px] h-[80px] object-contain mx-auto mb-6"
+              />
               <p className="text-xs tracking-[0.3em] uppercase mb-3" style={{ color: "var(--wedding-muted)" }}>
                 You are cordially invited
               </p>
@@ -177,9 +192,99 @@ export default function Invite() {
               <p className="text-sm leading-relaxed mt-4" style={{ color: "var(--wedding-muted)" }}>
                 We would be honoured to have you celebrate the wedding of
               </p>
-              <p className="font-serif text-xl mt-2" style={{ color: "var(--wedding-accent)" }}>
-                Kaustav & Himasree
-              </p>
+              
+              {/* Two-column layout for Bride and Groom */}
+              <div className="grid grid-cols-2 gap-6 mt-8 mb-6 relative">
+                {/* Bride Column - LEFT */}
+                <motion.div
+                  className="text-center"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <img 
+                    src="/bride.png" 
+                    alt="Himasree" 
+                    className="w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full mx-auto mb-4 border-2"
+                    style={{ borderColor: "var(--wedding-accent)" }}
+                  />
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold mb-2" style={{ color: "var(--wedding-accent)" }}>
+                    Himasree
+                  </h3>
+                  <div className="text-xs space-y-1" style={{ color: "var(--wedding-muted)" }}>
+                    <p className="italic">Daughter of</p>
+                    <p className="font-medium">Bandana Chakraborty</p>
+                    <p className="font-medium">Tapan Chakraborty</p>
+                  </div>
+                </motion.div>
+
+                {/* Stylish Vertical Divider */}
+                <div className="absolute left-1/2 top-0 bottom-0 -translate-x-1/2 flex items-center justify-center">
+                  <motion.div
+                    className="flex flex-col items-center"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                    {/* Top flourish */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mb-0.5">
+                      <circle cx="12" cy="12" r="10" stroke="var(--wedding-accent)" strokeWidth="0.5" fill="none" opacity="0.6" />
+                      <path d="M12 4 L13 10 L19 11 L13 12 L12 18 L11 12 L5 11 L11 10 Z" fill="var(--wedding-accent)" opacity="0.8" />
+                    </svg>
+                    
+                    {/* Vertical line */}
+                    <div 
+                      className="w-[1.5px] h-20 sm:h-24 rounded-full"
+                      style={{
+                        background: `linear-gradient(180deg, var(--wedding-accent) 0%, transparent 50%, var(--wedding-accent) 100%)`,
+                        opacity: 0.4
+                      }}
+                    />
+                    
+                    {/* Heart in middle */}
+                    <div 
+                      className="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center"
+                      style={{
+                        background: "var(--wedding-card-bg)",
+                        border: "2px solid var(--wedding-accent)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+                      }}
+                    >
+                      <span className="text-sm">💕</span>
+                    </div>
+                    
+                    {/* Bottom flourish */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mt-0.5">
+                      <circle cx="12" cy="12" r="10" stroke="var(--wedding-accent)" strokeWidth="0.5" fill="none" opacity="0.6" />
+                      <path d="M12 4 L13 10 L19 11 L13 12 L12 18 L11 12 L5 11 L11 10 Z" fill="var(--wedding-accent)" opacity="0.8" />
+                    </svg>
+                  </motion.div>
+                </div>
+
+                {/* Groom Column - RIGHT */}
+                <motion.div
+                  className="text-center"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <img 
+                    src="/groom.png" 
+                    alt="Kaustav" 
+                    className="w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full mx-auto mb-4 border-2"
+                    style={{ borderColor: "var(--wedding-accent)" }}
+                  />
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold mb-2" style={{ color: "var(--wedding-accent)" }}>
+                    Kaustav
+                  </h3>
+                  <div className="text-xs space-y-1" style={{ color: "var(--wedding-muted)" }}>
+                    <p className="italic">Son of</p>
+                    <p className="font-medium">Parbati Kumar</p>
+                    <p className="font-medium">Debashis Kumar</p>
+                  </div>
+                </motion.div>
+              </div>
+
               {config?.weddingDate && (
                 <p className="font-serif text-base mt-3" style={{ color: "var(--wedding-text)" }}>
                   {new Date(config.weddingDate).toLocaleDateString("en-IN", {
@@ -187,6 +292,7 @@ export default function Invite() {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
+                    timeZone: "Asia/Kolkata"
                   })}
                 </p>
               )}
@@ -336,7 +442,7 @@ export default function Invite() {
                     )}
 
                     <div>
-                      <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                      <label className="text-xs tracking-wide uppercase mb-2 block" style={{ color: "var(--wedding-accent)" }}>
                         Food Preference
                       </label>
                       <select
@@ -348,6 +454,33 @@ export default function Invite() {
                         <option value="vegetarian">Vegetarian</option>
                         <option value="non-vegetarian">Non-Vegetarian</option>
                       </select>
+                    </div>
+
+                    <div className="p-4 rounded-lg" style={{ background: "var(--wedding-alt-bg)", border: "1px solid var(--wedding-border)" }}>
+                      <label className="text-xs tracking-wide uppercase mb-3 block font-medium" style={{ color: "var(--wedding-accent)" }}>
+                        🏨 Accommodation Required?
+                      </label>
+                      <div className="flex gap-3">
+                        {([true, false] as const).map((value) => (
+                          <button
+                            key={String(value)}
+                            type="button"
+                            onClick={() => form.setValue("accommodationRequired", value)}
+                            className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
+                            style={{
+                              background: form.watch("accommodationRequired") === value ? "var(--wedding-accent)" : "transparent",
+                              color: form.watch("accommodationRequired") === value ? "#fff" : "var(--wedding-text)",
+                              border: `1px solid ${form.watch("accommodationRequired") === value ? "var(--wedding-accent)" : "var(--wedding-border)"}`,
+                            }}
+                            data-testid={`accommodation-${value ? "yes" : "no"}`}
+                          >
+                            {value ? "Yes" : "No"}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs mt-2" style={{ color: "var(--wedding-muted)" }}>
+                        Let us know if you need accommodation assistance during your stay.
+                      </p>
                     </div>
 
                     <div>

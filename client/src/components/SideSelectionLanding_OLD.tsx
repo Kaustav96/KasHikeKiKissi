@@ -38,25 +38,25 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
     <motion.div
       className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden"
       style={{
-        background: "linear-gradient(180deg, #0F1B2E 0%, #14233C 60%, #0C1626 100%)",
+        background: "linear-gradient(135deg, #4A3C38 0%, #5D4B45 25%, #6B5549 50%, #5D4B45 75%, #4A3C38 100%)",
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.65 }}
     >
-      {/* Animated gradient overlay - royal gold shimmer */}
+      {/* Animated gradient overlay - wedding theme */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(45deg, rgba(212,175,55,0.08) 0%, rgba(245,215,122,0.12) 25%, rgba(158,124,27,0.06) 50%, rgba(245,215,122,0.12) 75%, rgba(212,175,55,0.08) 100%)",
+          background: "linear-gradient(45deg, rgba(139,0,0,0.15) 0%, rgba(176,132,72,0.15) 25%, rgba(198,167,94,0.15) 50%, rgba(176,132,72,0.15) 75%, rgba(139,0,0,0.15) 100%)",
           backgroundSize: "400% 400%",
         }}
         animate={{
           backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
         }}
         transition={{
-          duration: 12,
+          duration: 8,
           repeat: Infinity,
           ease: "linear",
         }}
@@ -65,90 +65,90 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
 
       {/* Luxury Wedding Mandala - top right with hearts & crowns */}
       <motion.div
-        className="hidden md:block absolute -top-32 -right-32 w-[500px] h-[500px] pointer-events-none opacity-[0.08]"
+        className="hidden md:block absolute -top-32 -right-32 w-[500px] h-[500px] pointer-events-none opacity-[0.25]"
         initial={{ rotate: 0, scale: 0.8 }}
         animate={{ rotate: 360, scale: 1 }}
         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
       >
         <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
           {/* Outer ornate rings */}
-          <circle cx="250" cy="250" r="200" fill="none" stroke="#D4AF37" strokeWidth="2" opacity="0.5" />
-          <circle cx="250" cy="250" r="170" fill="none" stroke="#F5D77A" strokeWidth="2.5" opacity="0.6" />
-          <circle cx="250" cy="250" r="140" fill="none" stroke="#D4AF37" strokeWidth="1.5" opacity="0.4" />
+          <circle cx="250" cy="250" r="200" fill="none" stroke="#F4D58D" strokeWidth="2" opacity="0.5" />
+          <circle cx="250" cy="250" r="170" fill="none" stroke="#8B0000" strokeWidth="2.5" opacity="0.6" />
+          <circle cx="250" cy="250" r="140" fill="none" stroke="#F4D58D" strokeWidth="1.5" opacity="0.4" />
 
           {/* 12 Hearts radiating outward - romantic */}
           {[...Array(12)].map((_, i) => (
             <g key={i} transform={`rotate(${i * 30} 250 250)`}>
               <path d="M250 60 C245 55 238 55 235 60 C232 65 232 70 235 75 L250 95 L265 75 C268 70 268 65 265 60 C262 55 255 55 250 60 Z"
-                    fill="#D4AF37" opacity="0.6" />
-              <path d="M250 80 L250 170" stroke="#F5D77A" strokeWidth="1.5" opacity="0.5" />
-              <circle cx="250" cy="100" r="5" fill="#F5D77A" opacity="0.8" />
+                    fill="#8B0000" opacity="0.6" />
+              <path d="M250 80 L250 170" stroke="#F4D58D" strokeWidth="1.5" opacity="0.5" />
+              <circle cx="250" cy="100" r="5" fill="#F4D58D" opacity="0.8" />
               {/* Lotus petals */}
-              <path d="M245 130 Q250 120 255 130 Q250 140 245 130 Z" fill="#D4AF37" opacity="0.6" />
+              <path d="M245 130 Q250 120 255 130 Q250 140 245 130 Z" fill="#C6A75E" opacity="0.6" />
             </g>
           ))}
 
           {/* Central crown - royal */}
           <g transform="translate(250, 250)">
-            <path d="M-15 -5 L-10 -20 L-5 -5 L0 -25 L5 -5 L10 -20 L15 -5 L15 5 L-15 5 Z" fill="#F5D77A" opacity="0.7" />
-            <circle cx="-10" cy="-18" r="2.5" fill="#D4AF37" opacity="0.8" />
-            <circle cx="0" cy="-23" r="3" fill="#D4AF37" opacity="0.8" />
-            <circle cx="10" cy="-18" r="2.5" fill="#D4AF37" opacity="0.8" />
+            <path d="M-15 -5 L-10 -20 L-5 -5 L0 -25 L5 -5 L10 -20 L15 -5 L15 5 L-15 5 Z" fill="#F4D58D" opacity="0.7" />
+            <circle cx="-10" cy="-18" r="2.5" fill="#8B0000" opacity="0.8" />
+            <circle cx="0" cy="-23" r="3" fill="#8B0000" opacity="0.8" />
+            <circle cx="10" cy="-18" r="2.5" fill="#8B0000" opacity="0.8" />
           </g>
         </svg>
       </motion.div>
 
       {/* Interlocking Wedding Rings & Peacock Mandala - bottom left */}
       <motion.div
-        className="hidden md:block absolute -bottom-40 -left-40 w-[550px] h-[550px] pointer-events-none opacity-[0.08]"
+        className="hidden md:block absolute -bottom-40 -left-40 w-[550px] h-[550px] pointer-events-none opacity-[0.22]"
         initial={{ rotate: 0, scale: 0.8 }}
         animate={{ rotate: -360, scale: 1 }}
         transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
       >
         <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
           {/* Ornate outer circles */}
-          <circle cx="250" cy="250" r="220" fill="none" stroke="#D4AF37" strokeWidth="2.5" opacity="0.6" />
-          <circle cx="250" cy="250" r="190" fill="none" stroke="#F5D77A" strokeWidth="2" opacity="0.5" />
+          <circle cx="250" cy="250" r="220" fill="none" stroke="#F4D58D" strokeWidth="2.5" opacity="0.6" />
+          <circle cx="250" cy="250" r="190" fill="none" stroke="#8B0000" strokeWidth="2" opacity="0.5" />
 
           {/* Interlocking wedding rings */}
-          <circle cx="230" cy="250" r="60" fill="none" stroke="#D4AF37" strokeWidth="8" opacity="0.7" />
-          <circle cx="270" cy="250" r="60" fill="none" stroke="#F5D77A" strokeWidth="8" opacity="0.7" />
-          <circle cx="230" cy="250" r="55" fill="none" stroke="#9E7C1B" strokeWidth="2" opacity="0.5" />
-          <circle cx="270" cy="250" r="55" fill="none" stroke="#9E7C1B" strokeWidth="2" opacity="0.5" />
+          <circle cx="230" cy="250" r="60" fill="none" stroke="#F4D58D" strokeWidth="8" opacity="0.7" />
+          <circle cx="270" cy="250" r="60" fill="none" stroke="#8B0000" strokeWidth="8" opacity="0.7" />
+          <circle cx="230" cy="250" r="55" fill="none" stroke="#C6A75E" strokeWidth="2" opacity="0.5" />
+          <circle cx="270" cy="250" r="55" fill="none" stroke="#C6A75E" strokeWidth="2" opacity="0.5" />
 
           {/* 16 Peacock feather motifs - luxury Indian wedding */}
           {[...Array(16)].map((_, i) => (
             <g key={i} transform={`rotate(${i * 22.5} 250 250)`}>
-              <path d="M250 30 L250 90" stroke="#D4AF37" strokeWidth="2" opacity="0.6" />
+              <path d="M250 30 L250 90" stroke="#F4D58D" strokeWidth="2" opacity="0.6" />
               {/* Peacock eye */}
-              <ellipse cx="250" cy="55" rx="12" ry="18" fill="#F5D77A" opacity="0.4" />
-              <ellipse cx="250" cy="55" rx="8" ry="12" fill="#D4AF37" opacity="0.5" />
-              <circle cx="250" cy="55" r="4" fill="#9E7C1B" opacity="0.8" />
+              <ellipse cx="250" cy="55" rx="12" ry="18" fill="#8B0000" opacity="0.4" />
+              <ellipse cx="250" cy="55" rx="8" ry="12" fill="#F4D58D" opacity="0.5" />
+              <circle cx="250" cy="55" r="4" fill="#C6A75E" opacity="0.8" />
               {/* Feather barbs */}
-              <path d="M245 50 Q240 45 238 48 M255 50 Q260 45 262 48" stroke="#D4AF37" strokeWidth="1" opacity="0.5" />
-              <circle cx="250" cy="70" r="3" fill="#D4AF37" opacity="0.7" />
+              <path d="M245 50 Q240 45 238 48 M255 50 Q260 45 262 48" stroke="#F4D58D" strokeWidth="1" opacity="0.5" />
+              <circle cx="250" cy="70" r="3" fill="#8B0000" opacity="0.7" />
             </g>
           ))}
 
           {/* Decorative ring pattern */}
           <path d="M250 250 m-80,0 a80,80 0 1,0 160,0 a80,80 0 1,0 -160,0"
-                fill="none" stroke="#D4AF37" strokeWidth="1.5" opacity="0.4" strokeDasharray="8,4" />
+                fill="none" stroke="#F4D58D" strokeWidth="1.5" opacity="0.4" strokeDasharray="8,4" />
         </svg>
       </motion.div>
 
       {/* Elegant flowing ribbons - wedding banners */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.08]">
+      <div className="absolute inset-0 pointer-events-none opacity-[0.18]">
         <svg className="w-full h-full" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M-100 200 Q200 100 500 300 T1100 400" fill="none" stroke="#D4AF37" strokeWidth="4" opacity="0.8" />
-          <path d="M-100 350 Q300 250 700 350 T1300 450" fill="none" stroke="#F5D77A" strokeWidth="3" opacity="0.7" />
-          <path d="M-50 500 Q400 350 800 500 T1400 600" fill="none" stroke="#9E7C1B" strokeWidth="3.5" opacity="0.75" />
-          <path d="M-100 50 Q250 -50 600 100 T1200 150" fill="none" stroke="#D4AF37" strokeWidth="2.5" opacity="0.6" />
+          <path d="M-100 200 Q200 100 500 300 T1100 400" fill="none" stroke="#F4D58D" strokeWidth="4" opacity="0.8" />
+          <path d="M-100 350 Q300 250 700 350 T1300 450" fill="none" stroke="#8B0000" strokeWidth="3" opacity="0.7" />
+          <path d="M-50 500 Q400 350 800 500 T1400 600" fill="none" stroke="#C6A75E" strokeWidth="3.5" opacity="0.75" />
+          <path d="M-100 50 Q250 -50 600 100 T1200 150" fill="none" stroke="#F4D58D" strokeWidth="2.5" opacity="0.6" />
 
           {/* Add small hearts along the ribbons */}
           <path d="M200 100 C198 97 195 97 193 100 C191 103 191 106 193 109 L200 118 L207 109 C209 106 209 103 207 100 C205 97 202 97 200 100 Z"
-                fill="#D4AF37" opacity="0.5" />
+                fill="#8B0000" opacity="0.5" />
           <path d="M500 300 C498 297 495 297 493 300 C491 303 491 306 493 309 L500 318 L507 309 C509 306 509 303 507 300 C505 297 502 297 500 300 Z"
-                fill="#D4AF37" opacity="0.5" />
+                fill="#8B0000" opacity="0.5" />
         </svg>
       </div>
 
@@ -347,30 +347,30 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
         >
-          <p className="text-[10px] tracking-[0.48em] uppercase mb-4 font-medium" style={{ color: "#F5D77A" }}>
-            With the blessings of our families, we welcome to the celebration of
+          <p className="text-[10px] tracking-[0.48em] uppercase mb-4 font-medium" style={{ color: "#D4AF6A" }}>
+            Welcome to the celebration of
           </p>
           <h1 className="font-serif text-4xl sm:text-5xl font-bold tracking-tight" style={{ color: "#FFF8E7" }}>
-            Himasree <span style={{ color: "#D4AF37" }}>&amp;</span> Kaustav
+            Himasree <span style={{ color: "#F4D58D" }}>&amp;</span> Kaustav
           </h1>
 
           {/* Ornamental rule */}
           <div className="flex items-center justify-center gap-4 my-5">
-            <div className="h-px w-14 sm:w-20 flex-shrink-0" style={{ background: "linear-gradient(to right, transparent, #D4AF37)" }} />
+            <div className="h-px w-14 sm:w-20 flex-shrink-0" style={{ background: "linear-gradient(to right, transparent, #F4D58D)" }} />
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1C7 1 9.5 5.5 13 7C9.5 8.5 7 13 7 13C7 13 4.5 8.5 1 7C4.5 5.5 7 1 7 1Z" fill="#D4AF37" opacity="0.85" />
+              <path d="M7 1C7 1 9.5 5.5 13 7C9.5 8.5 7 13 7 13C7 13 4.5 8.5 1 7C4.5 5.5 7 1 7 1Z" fill="#F4D58D" opacity="0.85" />
             </svg>
-            <div className="h-px w-14 sm:w-20 flex-shrink-0" style={{ background: "linear-gradient(to left, transparent, #D4AF37)" }} />
+            <div className="h-px w-14 sm:w-20 flex-shrink-0" style={{ background: "linear-gradient(to left, transparent, #F4D58D)" }} />
           </div>
 
-          <p className="text-sm leading-relaxed max-w-xs mx-auto" style={{ color: "#F5D77A" }}>
-            Select your side to continue the wedding celebration.
+          <p className="text-sm leading-relaxed max-w-xs mx-auto" style={{ color: "#E8D4B8" }}>
+            Choose your side to step into the celebration
           </p>
         </motion.div>
 
         {/* ── Box Buttons ── */}
         <motion.div
-          className="flex flex-row items-center justify-center gap-3 sm:gap-0 w-full px-4 sm:px-0"
+          className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 sm:gap-0"
           initial={{ y: 22, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
@@ -378,16 +378,16 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
           {/* Bride Button */}
           <motion.button
             onClick={() => setTimeout(() => onSelectSide("bride"), 220)}
-            className="group relative w-full sm:w-[260px] py-5 sm:py-7 rounded-xl overflow-hidden focus:outline-none"
+            className="group relative w-full sm:w-[260px] py-6 sm:py-7 rounded-xl overflow-hidden focus:outline-none"
             style={{
-              background: "linear-gradient(145deg, #9F2A3B 0%, #8B1E2D 60%, #5E141F 100%)",
-              border: "2px solid rgba(212,175,55,0.35)",
-              boxShadow: "0 6px 28px rgba(139,30,45,0.28), inset 0 1px 0 rgba(255,255,255,0.12)",
+              background: "linear-gradient(135deg, #A8173A 0%, #7A0020 60%, #510013 100%)",
+              border: "2px solid rgba(198,167,94,0.35)",
+              boxShadow: "0 6px 28px rgba(120,0,24,0.28), inset 0 1px 0 rgba(255,255,255,0.12)",
             }}
             whileHover={{
               scale: 1.03,
               y: -2,
-              boxShadow: "0 15px 40px rgba(181,46,67,0.4), 0 0 0 2px rgba(212,175,55,0.42), inset 0 1px 0 rgba(255,255,255,0.18)",
+              boxShadow: "0 14px 44px rgba(120,0,24,0.45), 0 0 0 2px rgba(198,167,94,0.42), inset 0 1px 0 rgba(255,255,255,0.18)",
             }}
             whileTap={{ scale: 0.97 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
@@ -395,7 +395,7 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
             {/* Inner border inset */}
             <div
               className="absolute inset-[6px] rounded-lg border pointer-events-none"
-              style={{ borderColor: "rgba(212,175,55,0.18)" }}
+              style={{ borderColor: "rgba(198,167,94,0.18)" }}
             />
             {/* Shimmer on hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none overflow-hidden rounded-xl">
@@ -408,31 +408,34 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
               <span className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-wide">
                 Bride's Side
               </span>
-              <div className="h-px w-10 my-0.5" style={{ background: "rgba(212,175,55,0.55)" }} />
+              <div className="h-px w-10 my-0.5" style={{ background: "rgba(198,167,94,0.55)" }} />
               <span className="text-[10px] tracking-[0.32em] uppercase" style={{ color: "rgba(255,255,255,0.65)" }}>
                 Himasree's Family &amp; Friends
               </span>
             </div>
           </motion.button>
 
-          {/* Floral divider — visible on all screen sizes */}
-          <div className="flex items-center justify-center px-2 sm:px-4 flex-shrink-0">
+          {/* Floral divider — horizontal on mobile, vertical on desktop */}
+          <div className="hidden sm:flex items-center justify-center px-4">
             <FloralDivider />
+          </div>
+          <div className="sm:hidden flex items-center justify-center py-1">
+            <div className="h-px w-16" style={{ background: "linear-gradient(to right, transparent, #F4D58D, transparent)" }} />
           </div>
 
           {/* Groom Button */}
           <motion.button
             onClick={() => setTimeout(() => onSelectSide("groom"), 220)}
-            className="group relative w-full sm:w-[260px] py-5 sm:py-7 rounded-xl overflow-hidden focus:outline-none"
+            className="group relative w-full sm:w-[260px] py-6 sm:py-7 rounded-xl overflow-hidden focus:outline-none"
             style={{
-              background: "linear-gradient(145deg, #16233B 0%, #0A1220 60%, #0A1220 100%)",
-              border: "2px solid rgba(212,175,55,0.40)",
-              boxShadow: "0 6px 28px rgba(10,18,32,0.38), inset 0 1px 0 rgba(255,255,255,0.07)",
+              background: "linear-gradient(135deg, #2E2820 0%, #1C1710 60%, #110D08 100%)",
+              border: "2px solid rgba(176,132,72,0.40)",
+              boxShadow: "0 6px 28px rgba(16,12,6,0.38), inset 0 1px 0 rgba(255,255,255,0.07)",
             }}
             whileHover={{
               scale: 1.03,
               y: -2,
-              boxShadow: "0 15px 40px rgba(212,175,55,0.35), 0 0 0 2px rgba(212,175,55,0.48), inset 0 1px 0 rgba(255,255,255,0.12)",
+              boxShadow: "0 14px 44px rgba(176,132,72,0.32), 0 0 0 2px rgba(176,132,72,0.48), inset 0 1px 0 rgba(255,255,255,0.12)",
             }}
             whileTap={{ scale: 0.97 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
@@ -440,7 +443,7 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
             {/* Inner border inset */}
             <div
               className="absolute inset-[6px] rounded-lg border pointer-events-none"
-              style={{ borderColor: "rgba(212,175,55,0.18)" }}
+              style={{ borderColor: "rgba(176,132,72,0.18)" }}
             />
             {/* Shimmer on hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none overflow-hidden rounded-xl">
@@ -450,11 +453,11 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
               />
             </div>
             <div className="relative flex flex-col items-center gap-1.5">
-              <span className="font-serif text-2xl sm:text-3xl font-bold tracking-wide" style={{ color: "#F5D77A" }}>
+              <span className="font-serif text-2xl sm:text-3xl font-bold tracking-wide" style={{ color: "#D4AF6A" }}>
                 Groom's Side
               </span>
-              <div className="h-px w-10 my-0.5" style={{ background: "rgba(212,175,55,0.55)" }} />
-              <span className="text-[10px] tracking-[0.32em] uppercase" style={{ color: "rgba(245,215,122,0.65)" }}>
+              <div className="h-px w-10 my-0.5" style={{ background: "rgba(176,132,72,0.55)" }} />
+              <span className="text-[10px] tracking-[0.32em] uppercase" style={{ color: "rgba(212,175,106,0.65)" }}>
                 Kaustav's Family &amp; Friends
               </span>
             </div>
@@ -464,7 +467,7 @@ export default function SideSelectionLanding({ onSelectSide }: SideSelectionLand
         {/* Hint */}
         <motion.p
           className="mt-10 text-[10px] italic tracking-wide"
-          style={{ color: "#F5D77A", opacity: 0.75 }}
+          style={{ color: "#D4AF6A", opacity: 0.75 }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.75 }}
           transition={{ delay: 1.2, duration: 0.8 }}

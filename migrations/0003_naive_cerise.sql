@@ -1,0 +1,1 @@
+ALTER TABLE "guests" ADD COLUMN "accommodation_required" boolean DEFAULT false NOT NULL;

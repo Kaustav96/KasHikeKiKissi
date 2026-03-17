@@ -1,5 +1,27 @@
 import { Sun, Music, Sparkles, Heart, Crown } from "lucide-react";
 
+/**
+ * Format date for Indian timezone (IST)
+ */
+export function formatDateIST(date: Date | string, options: Intl.DateTimeFormatOptions) {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleDateString("en-IN", {
+    ...options,
+    timeZone: "Asia/Kolkata"
+  });
+}
+
+/**
+ * Format time for Indian timezone (IST)
+ */
+export function formatTimeIST(date: Date | string, options: Intl.DateTimeFormatOptions) {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleTimeString("en-IN", {
+    ...options,
+    timeZone: "Asia/Kolkata"
+  });
+}
+
 export function getEventIcon(title: string) {
   const t = title.toLowerCase();
   if (t.includes("haldi")) return Sun;

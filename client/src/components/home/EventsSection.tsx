@@ -23,6 +23,7 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
   filteredEvents.forEach((ev) => {
     const dateStr = new Date(ev.startTime).toLocaleDateString("en-IN", {
       year: "numeric", month: "short", day: "numeric",
+      timeZone: "Asia/Kolkata"
     });
     if (!dateMap.has(dateStr)) dateMap.set(dateStr, []);
     dateMap.get(dateStr)!.push(ev);
@@ -178,8 +179,8 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
                     <div className="flex items-center gap-2.5">
                       <Clock size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
                       <span style={{ color: "var(--wedding-text)" }}>
-                        {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                        {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`}
+                        {new Date(event.startTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}
+                        {event.endTime && ` — ${new Date(event.endTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}`}
                       </span>
                     </div>
                     {event.venueName && (

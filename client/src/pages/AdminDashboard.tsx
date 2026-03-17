@@ -505,6 +505,7 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
               <th className="pb-2 pr-2 sm:pr-4">RSVP</th>
               <th className="pb-2 pr-2 sm:pr-4 hidden md:table-cell">Events</th>
               <th className="pb-2 pr-2 sm:pr-4 hidden lg:table-cell">Food</th>
+              <th className="pb-2 pr-2 sm:pr-4 hidden xl:table-cell">Accom</th>
               <th className="pb-2 pr-2 sm:pr-4 hidden xl:table-cell">Invite Link</th>
               <th className="pb-2 pr-3 sm:pr-0"></th>
             </tr>
@@ -546,6 +547,15 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
                   <td className="py-2 pr-2 sm:pr-4 hidden lg:table-cell">
                     <span className="text-xs text-muted-foreground capitalize">
                       {g.foodPreference || "—"}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-2 sm:pr-4 hidden xl:table-cell">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      g.accommodationRequired
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {g.accommodationRequired ? "Yes" : "No"}
                     </span>
                   </td>
                   <td className="py-2 pr-2 sm:pr-4 hidden xl:table-cell">
@@ -604,11 +614,13 @@ function CrudTab({
 
   const preparePayload = (data: Record<string, any>) => {
     const payload = { ...data };
-    dateFields.forEach((f) => {
-      if (payload[f]) {
-        payload[f] = new Date(payload[f]).toISOString();
-      }
-    });
+    // Don't convert datetime-local values - send as-is (YYYY-MM-DDTHH:mm)
+    // Backend's parseISTDateTime() will interpret them as IST
+    // dateFields.forEach((f) => {
+    //   if (payload[f]) {
+    //     payload[f] = new Date(payload[f]).toISOString();
+    //   }
+    // });
     if (payload.sortOrder !== undefined) {
       payload.sortOrder = Number(payload.sortOrder) || 0;
     }
@@ -652,7 +664,14 @@ function CrudTab({
     fields.forEach((field) => {
       let value = item[field.name];
       if (dateFields.includes(field.name) && value) {
-        value = new Date(value).toISOString().slice(0, 16);
+        // Format date for datetime-local input (browser handles timezone)
+        const date = new Date(value);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        value = `${year}-${month}-${day}T${hours}:${minutes}`;
       }
       editData[field.name] = value || "";
     });
@@ -846,7 +865,15 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
     const hasWeddingDate = !!config.weddingDate;
     return {
       weddingDate: hasWeddingDate
-        ? new Date(config.weddingDate!).toISOString().slice(0, 16)
+        ? (() => {
+            const date = new Date(config.weddingDate!);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+          })()
         : "",
       dateToBeDecided: !hasWeddingDate,
       coupleStory: config.coupleStory ?? "",
@@ -878,7 +905,16 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
     const hasWeddingDate = !!config.weddingDate;
     setForm({
       weddingDate: hasWeddingDate
-        ? new Date(config.weddingDate!).toISOString().slice(0, 16)
+        ? (() => {
+            // Format date for datetime-local input (browser handles timezone)
+            const date = new Date(config.weddingDate!);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+          })()
         : "",
       dateToBeDecided: !hasWeddingDate,
       coupleStory: config.coupleStory ?? "",
@@ -1066,7 +1102,9 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
       }
 
       if (!data.dateToBeDecided && data.weddingDate?.trim()) {
-        payload.weddingDate = new Date(data.weddingDate).toISOString();
+        // Send datetime-local value as-is (YYYY-MM-DDTHH:mm)
+        // Backend will interpret it as IST using parseISTDateTime()
+        payload.weddingDate = data.weddingDate;
       } else {
         payload.weddingDate = null;
       }

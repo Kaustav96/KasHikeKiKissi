@@ -12,9 +12,12 @@ import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "rea
 import { z } from "zod";
 import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
-import EnvelopeIntro from "@/components/EnvelopeIntro";
+import SplitSideSelection from "@/components/SplitSideSelection";
+import WelcomeGreeting from "@/components/WelcomeGreeting";
+import RoyalSealGate from "@/components/RoyalSealGate";
+import DoorOpeningAnimation from "@/components/DoorOpeningAnimation";
+import InvitationCardHero from "@/components/InvitationCardHero";
 import Header from "@/components/Header";
-import SideSelectionLanding from "@/components/SideSelectionLanding";
 import ViewingSideOverlay from "@/components/ViewingSideOverlay";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
@@ -105,7 +108,11 @@ const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
             transition={{ duration: ANIMATION_CONSTANTS.duration.slow, delay: ANIMATION_CONSTANTS.delay.long, ease: ANIMATION_CONSTANTS.easing.smooth }}
             whileHover={{ scale: 1.05, rotate: 3 }}
           >
-            <KHCrest size={110} />
+            <img 
+              src="/ganesh.png" 
+              alt="Lord Ganesh" 
+              className="w-[110px] h-[110px] object-contain"
+            />
           </motion.div>
         </div>
 
@@ -199,6 +206,7 @@ const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
+                  timeZone: "Asia/Kolkata"
                 })}
               </p>
               <Countdown targetDate={new Date(config.weddingDate)} />
@@ -213,7 +221,7 @@ const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
             </p>
           )}
 
-          {config.venueName && (
+          {config.venueName && config.venueName !== "To Be Announced" && (
             <p
               className="mt-5 flex items-center justify-center gap-2 text-xs tracking-wider uppercase"
               style={{ color: "var(--wedding-muted)" }}
@@ -504,6 +512,7 @@ const publicRsvpFormSchema = z.object({
   foodPreference: z.enum(["vegetarian", "non-vegetarian"], {
     errorMap: () => ({ message: "Please select your food preference" }),
   }).optional(),
+  accommodationRequired: z.boolean().optional(),
   eventsAttending: z.array(z.string()).default([]),
   dietaryRequirements: z.string().max(500),
   message: z.string().max(1000),
@@ -524,6 +533,13 @@ const publicRsvpFormSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: "Please select your food preference",
         path: ["foodPreference"],
+      });
+    }
+    if (data.accommodationRequired === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select your accommodation preference",
+        path: ["accommodationRequired"],
       });
     }
   }
@@ -551,6 +567,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
       adultsCount: 1,
       childrenCount: 0,
       foodPreference: undefined,
+      accommodationRequired: undefined as any,
       eventsAttending: [],
       dietaryRequirements: "",
       message: "",
@@ -581,6 +598,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
       form.setValue("adultsCount", prefillGuest.adultsCount || 1);
       form.setValue("childrenCount", prefillGuest.childrenCount || 0);
       form.setValue("foodPreference", prefillGuest.foodPreference || "");
+      form.setValue("accommodationRequired", prefillGuest.accommodationRequired || false);
       form.setValue("eventsAttending", Array.isArray(prefillGuest.eventsAttending) ? prefillGuest.eventsAttending : []);
       form.setValue("dietaryRequirements", prefillGuest.dietaryRequirements || "");
       form.setValue("message", prefillGuest.message || "");
@@ -617,6 +635,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
               adultsCount: 1,
               childrenCount: 0,
               foodPreference: "" as any,
+              accommodationRequired: undefined as any,
               eventsAttending: [],
               dietaryRequirements: "",
               message: "",
@@ -636,6 +655,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
             adultsCount: 1,
             childrenCount: 0,
             foodPreference: "" as any,
+            accommodationRequired: undefined as any,
             eventsAttending: [],
             dietaryRequirements: "",
             message: "",
@@ -686,6 +706,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
     form.setValue("adultsCount", guest.adultsCount || 1);
     form.setValue("childrenCount", guest.childrenCount || 0);
     form.setValue("foodPreference", guest.foodPreference || "");
+    form.setValue("accommodationRequired", guest.accommodationRequired || false);
     form.setValue(
       "eventsAttending",
       Array.isArray(guest.eventsAttending)
@@ -745,6 +766,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
         adultsCount: 1,
         childrenCount: 0,
         foodPreference: undefined,
+        accommodationRequired: undefined as any,
         eventsAttending: [],
         dietaryRequirements: "",
         message: "",
@@ -823,6 +845,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                     if (status === "declined") {
                       form.setValue("eventsAttending", []);
                       form.setValue("foodPreference", undefined);
+                      form.setValue("accommodationRequired", undefined as any);
                     }
                     // Don't trigger validation here - let it happen on submit
                   }}
@@ -868,6 +891,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                         form.setValue("adultsCount", 1);
                         form.setValue("childrenCount", 0);
                         form.setValue("foodPreference", "" as any);
+                        form.setValue("accommodationRequired", undefined as any);
                         form.setValue("eventsAttending", []);
                         form.setValue("dietaryRequirements", "");
                         form.setValue("message", "");
@@ -937,7 +961,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                           />
                           <span className="text-sm">{ev.title}</span>
                           <span className="text-[10px] ml-auto opacity-70">
-                            {new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                            {new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" })}
                           </span>
                         </label>
                       );
@@ -974,6 +998,43 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                     </select>
                     {form.formState.errors.foodPreference && (
                       <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.foodPreference.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs tracking-wide uppercase mb-1 block" style={{ color: "var(--wedding-accent)" }}>
+                      Accommodation Required? *
+                    </label>
+                    <select
+                      value={
+                        form.watch("accommodationRequired") === undefined 
+                          ? "" 
+                          : form.watch("accommodationRequired") 
+                          ? "yes" 
+                          : "no"
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "") {
+                          form.setValue("accommodationRequired", undefined as any, {
+                            shouldValidate: form.formState.isSubmitted,
+                          });
+                        } else {
+                          form.setValue("accommodationRequired", value === "yes", {
+                            shouldValidate: form.formState.isSubmitted,
+                          });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 rounded-lg text-sm"
+                      style={{ background: "var(--wedding-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-text)" }}
+                      data-testid="select-accommodation"
+                    >
+                      <option value="">Select your preference</option>
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                    {form.formState.errors.accommodationRequired && (
+                      <p className="text-xs mt-1" style={{ color: "#ef4444" }}>{form.formState.errors.accommodationRequired.message}</p>
                     )}
                   </div>
 
@@ -1167,7 +1228,7 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
   const wardrobeItems = events.map((ev) => {
     const { style, desc, tip, footwear, imageUrl } = getWardrobeTip(ev.title, ev.dressCode);
     const colors = getDressCodeColors(ev.title);
-    const date = new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+    const date = new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
     return {
       id: ev.id,
       event: ev.title,
@@ -1361,8 +1422,12 @@ export default function Home() {
   const { setMusicUrl, fadeIn, stop, setOnTrackEnd, hasStarted, isPlaying } = useMusic();
   const { setSide, side } = useWeddingTheme();
 
-  const [envelopeOpened, setEnvelopeOpened] = useState(false);
-  const [sideSelected, setSideSelected] = useState(false);
+  // New flow states
+  const [splitSelectionDone, setSplitSelectionDone] = useState(false); // Step 1: Split side selection
+  const [greetingShown, setGreetingShown] = useState(false); // Step 2: Welcome greeting
+  const [sealClicked, setSealClicked] = useState(false); // Step 3: Seal clicked
+  const [showMainSite, setShowMainSite] = useState(false); // Step 4: Show main website
+
   const [pendingRsvpGuest, setPendingRsvpGuest] = useState<any>(null);
   const [searchTrigger, setSearchTrigger] = useState<{ fn: () => void; query: string } | null>(null);
   const currentPlaylistRef = useRef<string[]>([]);
@@ -1438,12 +1503,12 @@ export default function Home() {
   /* ================= APPLY PLAYLIST WHEN IT CHANGES ================= */
 
   useEffect(() => {
-    if (!playlist.length || !sideSelected) return;
+    if (!playlist.length || !showMainSite) return;
 
     // ALWAYS update this ref first to track that side has been selected
     // This prevents isFreshSelection from being true on multiple effect runs
-    const isFreshSelection = !prevSideSelectedRef.current && sideSelected;
-    prevSideSelectedRef.current = sideSelected;
+    const isFreshSelection = !prevSideSelectedRef.current && showMainSite;
+    prevSideSelectedRef.current = showMainSite;
 
     // CRITICAL: If music has already been started (playing OR paused) and we're using background music,
     // NEVER restart it - preserve the current state (playing or paused position)
@@ -1489,7 +1554,7 @@ export default function Home() {
       console.log('[Home] Not starting music. Updating ref only.');
       currentPlaylistRef.current = playlist;
     }
-  }, [playlist, isBackgroundMusic, sideSelected, stop, setMusicUrl, fadeIn, hasStarted, isPlaying]);
+  }, [playlist, isBackgroundMusic, showMainSite, stop, setMusicUrl, fadeIn, hasStarted, isPlaying]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -1544,23 +1609,59 @@ export default function Home() {
 
   if (!config) return null;
 
-  /* ================= ENTRANCE SEQUENCE: ENVELOPE -> SIDE SELECTION -> MAIN ================= */
+  /* ================= ENTRANCE SEQUENCE: SPLIT SELECTION -> GREETING -> SEAL -> DOOR ANIMATION -> MAIN ================= */
 
-  if (!envelopeOpened) {
-    return <EnvelopeIntro onFinish={() => setEnvelopeOpened(true)} config={config} />;
-  }
-
-  if (!sideSelected) {
+  // Step 1: Split Side Selection (Landing Page)
+  if (!splitSelectionDone) {
     return (
-      <SideSelectionLanding
+      <SplitSideSelection
         onSelectSide={(selectedSide) => {
           setSide(selectedSide);
-          setSideSelected(true);
+          setSplitSelectionDone(true);
         }}
       />
     );
   }
 
+  // Step 2: Welcome Greeting Animation
+  if (!greetingShown) {
+    return (
+      <WelcomeGreeting
+        side={side}
+        onComplete={() => {
+          setGreetingShown(true);
+        }}
+      />
+    );
+  }
+
+  // Step 3: Royal Seal Gate
+  if (!sealClicked) {
+    return (
+      <RoyalSealGate
+        currentSide={side}
+        onOpen={() => {
+          // After seal opens, show main site directly
+          setSealClicked(true);
+          // Short delay then show main site
+          setTimeout(() => {
+            setShowMainSite(true);
+          }, 900);
+        }}
+        onBackToSelection={() => {
+          // Go back to split selection (reset entire flow)
+          setSplitSelectionDone(false);
+          setGreetingShown(false);
+        }}
+        onSelectSide={(newSide) => {
+          // Allow switching side from seal page without going back
+          setSide(newSide);
+        }}
+      />
+    );
+  }
+
+  // Step 4: Main Wedding Website
   return (
     <motion.div
       key="main"
@@ -1572,9 +1673,11 @@ export default function Home() {
 
       <ViewingSideOverlay
         onBackToSelection={() => {
-          // Don't stop music - let it continue playing
-          setSideSelected(false);
-          prevSideSelectedRef.current = false; // Reset for next selection
+          // Go back to split selection (reset entire flow)
+          setShowMainSite(false);
+          setSealClicked(false);
+          setGreetingShown(false);
+          setSplitSelectionDone(false);
         }}
         onSideChange={(newSide) => {
           setSide(newSide);
@@ -1582,7 +1685,8 @@ export default function Home() {
       />
 
       <main>
-            <HeroSection config={config} />
+        {/* Invitation Card as Hero */}
+        <InvitationCardHero config={config} />
             <FindByInviteSection
               onEditRsvp={(guest) => {
                 setPendingRsvpGuest(guest);
@@ -1608,8 +1712,7 @@ export default function Home() {
             <VenueSection venueList={venueList} />
             <WardrobePlannerSection events={allEvents} />
             <Suspense fallback={<div className="py-24 md:py-32" />}>
-              {/*<StorySection milestones={milestones} coupleStory={config?.coupleStory} />*/}
-              <StorySection milestones={milestones} />
+              <StorySection milestones={milestones} coupleStory={config?.coupleStory} />
             </Suspense>
             <RsvpSection
               events={allEvents}

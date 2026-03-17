@@ -100,6 +100,10 @@ export const guests = pgTable(
       .notNull()
       .default(""),
 
+    accommodationRequired: boolean("accommodation_required")
+      .notNull()
+      .default(false),
+
     inviteSlug: text("invite_slug")
       .notNull()
       .unique(),
@@ -149,6 +153,7 @@ export const rsvpSubmitSchema = z.object({
   eventsAttending: z.array(z.string()).default([]),
   dietaryRequirements: z.string().max(500).default(""),
   message: z.string().max(1000).default(""),
+  accommodationRequired: z.boolean().optional(),
 });
 
 export const publicRsvpSchema = z.object({
@@ -161,6 +166,7 @@ export const publicRsvpSchema = z.object({
   dietaryRequirements: z.string().max(500).default(""),
   message: z.string().max(1000).default(""),
   side: z.enum(["groom", "bride", "both"]).default("both"),
+  accommodationRequired: z.boolean().optional(),
 });
 
 export type PublicRsvp = z.infer<typeof publicRsvpSchema>;

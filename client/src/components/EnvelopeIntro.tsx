@@ -201,7 +201,7 @@ export default function EnvelopeIntro({ onFinish, config }: Props) {
             }}
           >
             <img
-              src="/traditional-bengali-wedding-couple.png"
+              src="/bengali_wedding_couple.png"
               alt="Wedding Seal"
               className="w-full h-full object-cover"
               onError={(e) => {
