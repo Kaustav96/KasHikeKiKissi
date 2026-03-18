@@ -54,44 +54,44 @@ export async function seedDatabase(): Promise<void> {
   if (existingEvents.length === 0) {
     const events = [
       {
-        title: "Haldi",
-        description: "A joyful traditional ritual where turmeric paste is applied to the bride and groom, bringing blessings and glow. Join us for this vibrant, colorful ceremony filled with laughter, music, and family love.",
-        startTime: new Date("2026-12-12T09:30:00.000Z"), // 3:00 PM IST
-        endTime: new Date("2026-12-12T12:30:00.000Z"), // 6:00 PM IST
-        venueName: "",
-        venueAddress: "",
-        venueMapUrl: "",
-        isMainEvent: false,
-        dressCode: "Casual Indian — Yellows & Greens",
-        side: "both",
-        sortOrder: 1,
-        howToReach: "",
-        accommodation: "",
-        distanceInfo: "",
-        contactPerson: `Kaustav: ${process.env.GROOM_PHONE || "+919876543210"}`,
-      },
-      {
         title: "Engagement & Sangeet",
         description: "An enchanting evening of engagement ceremony followed by Sangeet night filled with music, dance performances, and celebrations. Join us as our families come together in joy and harmony.",
-        startTime: new Date("2026-12-12T13:00:00.000Z"), // 6:30 PM IST
-        endTime: new Date("2026-12-12T17:30:00.000Z"), // 11:00 PM IST
+        startTime: new Date("2026-08-06T13:00:00.000Z"), // August 6th, 6:30 PM IST
+        endTime: new Date("2026-08-06T17:30:00.000Z"), // August 6th, 11:00 PM IST
         venueName: "",
         venueAddress: "",
         venueMapUrl: "",
-        isMainEvent: false,
+        isMainEvent: true,
         dressCode: "Indian Formal — Bright Colors Welcome",
         side: "both",
-        sortOrder: 2,
+        sortOrder: 1,
         howToReach: "",
         accommodation: "",
         distanceInfo: "",
         contactPerson: "Wedding Coordinator: +91 98765 12345",
       },
       {
+        title: "Haldi",
+        description: "A joyful traditional ritual where turmeric paste is applied to the bride and groom, bringing blessings and glow. Join us for this vibrant, colorful ceremony filled with laughter, music, and family love.",
+        startTime: new Date("2026-08-07T04:30:00.000Z"), // August 7th, 10:00 AM IST
+        endTime: new Date("2026-08-07T07:30:00.000Z"), // August 7th, 1:00 PM IST
+        venueName: "",
+        venueAddress: "",
+        venueMapUrl: "",
+        isMainEvent: true,
+        dressCode: "Casual Indian — Yellows & Greens",
+        side: "both",
+        sortOrder: 2,
+        howToReach: "",
+        accommodation: "",
+        distanceInfo: "",
+        contactPerson: `Kaustav: ${process.env.GROOM_PHONE || "+919876543210"}`,
+      },
+      {
         title: "Wedding Ceremony",
         description: "The sacred union of Kaustav and Himasree in a traditional Bengali wedding ceremony. Witness the timeless rituals of Saptapadi and exchange of garlands as our couple begins their journey together.",
-        startTime: new Date("2026-12-13T00:00:00.000Z"), // 5:30 AM IST
-        endTime: new Date("2026-12-13T03:30:00.000Z"), // 9:00 AM IST
+        startTime: new Date("2026-08-07T13:00:00.000Z"), // August 7th, 6:30 PM IST
+        endTime: new Date("2026-08-07T17:30:00.000Z"), // August 7th, 11:00 PM IST
         venueName: "",
         venueAddress: "",
         venueMapUrl: "",
@@ -105,34 +105,17 @@ export async function seedDatabase(): Promise<void> {
         contactPerson: "Wedding Coordinator: +91 98765 12345",
       },
       {
-        title: "Vidai & Bashi Biye",
-        description: "A touching farewell ceremony as the bride departs from her parental home, followed by Bashi Biye—the post-wedding rituals. An emotional and beautiful Bengali tradition celebrating new beginnings.",
-        startTime: new Date("2026-12-14T04:30:00.000Z"), // 10:00 AM IST
-        endTime: new Date("2026-12-14T07:30:00.000Z"), // 1:00 PM IST
-        venueName: "",
-        venueAddress: "",
-        venueMapUrl: "",
-        isMainEvent: false,
-        dressCode: "Traditional Indian — Elegant Attire",
-        side: "bride",
-        sortOrder: 4,
-        howToReach: "",
-        accommodation: "",
-        distanceInfo: "",
-        contactPerson: `Himasree: ${process.env.BRIDE_PHONE || "+919876543211"}`,
-      },
-      {
         title: "Wedding Reception",
         description: "Celebrate with the newlyweds at a grand reception featuring live music, gourmet dining, and heartfelt moments shared with family and friends. An evening of elegance, joy, and beautiful memories.",
-        startTime: new Date("2026-12-15T12:30:00.000Z"), // 6:00 PM IST
-        endTime: new Date("2026-12-15T17:30:00.000Z"), // 11:00 PM IST
+        startTime: new Date("2026-08-10T12:30:00.000Z"), // August 10th, 6:00 PM IST (Tentative)
+        endTime: new Date("2026-08-10T17:30:00.000Z"), // August 10th, 11:00 PM IST (Tentative)
         venueName: "",
         venueAddress: "",
         venueMapUrl: "",
-        isMainEvent: false,
+        isMainEvent: true,
         dressCode: "Indian Formal — Sarees & Sherwanis",
         side: "both",
-        sortOrder: 5,
+        sortOrder: 4,
         howToReach: "",
         accommodation: "",
         distanceInfo: "",
@@ -159,6 +142,7 @@ export async function seedDatabase(): Promise<void> {
       { title: "Laughter & Comedy 😂🎤", date: "18th January 2026", description: "Our first stand-up comedy show together! An evening filled with belly laughs, sore cheeks, and pure joy. Finding someone who makes you laugh until you cry — that's the real magic.", imageUrl: "/IMG-20260304-WA0002.jpg", sortOrder: 8 },
       { title: "Our First Flight Together ✈️💕", date: "23rd January 2026", description: "Taking flight together for the first time — to meet each other's families and take the next step. Nervous excitement, hopeful hearts, and hands held tight. Some journeys change everything.", imageUrl: "/IMG-20260303-WA0000.jpg", sortOrder: 9 },
       { title: "Blessed in Siliguri 👨‍👩‍👧‍👦🌄", date: "24th January 2026", description: "A magical trip to Siliguri where both our families came together for the first time. Exploring the hills, sharing stories, and watching our loved ones bond over momos, oranges, and laughter. This is where we received the blessings that brought us here today.", imageUrl: "/Blessed_In_Siliguri.jpg", sortOrder: 10 },
+      { title: "The Dates Are Set! 📅💍", date: "13th March 2026", description: "After weeks of consulting pundits, checking calendars, and coordinating with both families, we finally locked the auspicious dates! August 6th to 10th, 2026 — when summer's warmth meets wedding festivities. The countdown to forever officially begins.", imageUrl: "", sortOrder: 11 },
     ];
     for (const s of stories) {
       await storage.createStoryMilestone(s);

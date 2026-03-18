@@ -327,6 +327,7 @@ const StorySection = React.memo(({ milestones, coupleStory }: { milestones: Stor
                             6: '/06_Comedy.png',
                             7: '/07_first_flight.png',
                             8: '/08_Siliguri.png',
+                            9: '/09_blessed.png',
                         };
 
                         const galleryImageUrl = galleryImageMap[milestoneIndex] || milestone.imageUrl;
