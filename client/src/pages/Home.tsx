@@ -1224,8 +1224,17 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
 
 const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
   const [activeTip, setActiveTip] = useState<number | null>(null);
+  const { side } = useWeddingTheme();
 
-  const wardrobeItems = events.map((ev) => {
+  // Filter events based on current side
+  const filteredEvents = useMemo(() => {
+    if (side === "groom" || side === "bride") {
+      return events.filter((e) => e.side === side || e.side === "both");
+    }
+    return events;
+  }, [events, side]);
+
+  const wardrobeItems = filteredEvents.map((ev) => {
     const { style, desc, tip, footwear, imageUrl } = getWardrobeTip(ev.title, ev.dressCode);
     const colors = getDressCodeColors(ev.title);
     const date = new Date(ev.startTime).toLocaleDateString("en-IN", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
@@ -1242,6 +1251,8 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
       imageUrl,
     };
   });
+
+  const sideName = side === "groom" ? "Kaustav's" : "Himasree's";
 
   return (
     <section id="wardrobe" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-bg)" }} data-testid="wardrobe-section">
@@ -1275,12 +1286,30 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
             Wardrobe Planner
           </h2>
           <SimpleDivider />
-          <p className="text-xs mt-4" style={{ color: "var(--wedding-muted)" }}>
+          <p className="text-xs mt-4 mb-2" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
+            Events for {sideName} side
+          </p>
+          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
             Tap the <Info size={11} className="inline mx-0.5" style={{ color: "var(--wedding-accent)" }} /> for our styling suggestions for each celebration
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        {wardrobeItems.length === 0 ? (
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{ background: "var(--wedding-card-bg)", border: "1px dashed var(--wedding-border)" }}
+          >
+            <Shirt size={28} className="mx-auto mb-3" style={{ color: "var(--wedding-muted)", opacity: 0.5 }} />
+            <p className="font-serif text-base mb-1" style={{ color: "var(--wedding-text)" }}>
+              No Events Yet
+            </p>
+            <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+              Wardrobe suggestions for {sideName} side will be shared soon!
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {wardrobeItems.map((item, idx) => {
             const ItemIcon = item.icon;
             const isOpen = activeTip === idx;
@@ -1413,6 +1442,8 @@ const WardrobePlannerSection = React.memo(({ events }: { events: WeddingEvent[] 
         >
           These are heartfelt suggestions — we want you to feel beautiful and comfortable celebrating with us!
         </motion.p>
+          </>
+        )}
       </div>
     </section>
   );

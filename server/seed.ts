@@ -114,7 +114,7 @@ export async function seedDatabase(): Promise<void> {
         venueMapUrl: "",
         isMainEvent: true,
         dressCode: "Indian Formal — Sarees & Sherwanis",
-        side: "both",
+        side: "groom",
         sortOrder: 4,
         howToReach: "",
         accommodation: "",
