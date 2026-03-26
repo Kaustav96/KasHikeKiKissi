@@ -2,6 +2,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "../shared/schema.js";
 
+// For serverless, use smaller pool and shorter timeouts
+const isServerless = process.env.VERCEL === "1" || process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl:
@@ -9,12 +12,14 @@ const pool = new Pool({
       ? { rejectUnauthorized: false }
       : false,
 
-  // Connection pool settings
-  max: 5, // limit concurrent connections
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
-  // Add statement timeout to prevent hanging queries
-  statement_timeout: 10000, // 10 seconds
+  // Serverless-optimized connection pool settings
+  max: isServerless ? 1 : 5, // 1 connection for serverless, 5 for traditional
+  idleTimeoutMillis: isServerless ? 1000 : 10000, // Quick cleanup for serverless
+  connectionTimeoutMillis: isServerless ? 3000 : 5000,
+  statement_timeout: isServerless ? 5000 : 10000, // 5s for serverless, 10s for traditional
+  
+  // Prevent connection leaks in serverless
+  allowExitOnIdle: isServerless,
 });
 
 pool.on("error", (err) => {

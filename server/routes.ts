@@ -1322,6 +1322,27 @@ export async function registerRoutes(
       res.status(500).json({ error: "Export failed" });
     }
   });
+
+  // Global error handler (must be last)
+  app.use((err: any, req: any, res: any, next: any) => {
+    logger.error("Unhandled error:", err);
+    console.error("Error details:", {
+      path: req.path,
+      method: req.method,
+      error: err.message,
+      stack: err.stack
+    });
+    
+    if (res.headersSent) {
+      return next(err);
+    }
+    
+    res.status(err.status || 500).json({
+      error: err.message || "Internal server error",
+      path: req.path
+    });
+  });
+
   // app.get("/api/events", async (_req, res) => {
   //   res.json(await storage.getWeddingEvents());
   // });

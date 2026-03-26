@@ -11,22 +11,39 @@ export async function seedDatabase(): Promise<void> {
   console.log("[Seed] Checking database...");
   console.log("[Seed] Database URL:", process.env.DATABASE_URL?.replace(/:\/\/[^:]+:[^@]+@/, "://****:****@"));
 
-  try {
-    const existingAdmin = await storage.getUserByUsername("admin");
-    if (!existingAdmin) {
-      const hash = await bcrypt.hash("wedding2025", 12);
-      await storage.createUser({ username: "admin", password: hash });
-      console.log("[Seed] Created admin user (username: admin, password: wedding2025)");
-    } else {
-      console.log("[Seed] Admin user already exists");
-    }
-  } catch (err) {
-    console.error("[Seed] Error checking/creating admin:", err);
-    throw err;
+  if (!process.env.DATABASE_URL) {
+    console.error("[Seed] DATABASE_URL is not set!");
+    throw new Error("DATABASE_URL environment variable is required");
   }
 
-  const existingConfig = await storage.getWeddingConfig();
-  if (!existingConfig) {
+  try {
+    // Test database connection first
+    try {
+      await storage.getWeddingConfig();
+      console.log("[Seed] Database connection successful");
+    } catch (connErr) {
+      console.error("[Seed] Database connection failed:", connErr);
+      throw new Error(`Database connection failed: ${connErr instanceof Error ? connErr.message : 'Unknown error'}`);
+    }
+
+    // Create admin user
+    try {
+      const existingAdmin = await storage.getUserByUsername("admin");
+      if (!existingAdmin) {
+        const hash = await bcrypt.hash("wedding2025", 12);
+        await storage.createUser({ username: "admin", password: hash });
+        console.log("[Seed] Created admin user (username: admin, password: wedding2025)");
+      } else {
+        console.log("[Seed] Admin user already exists");
+      }
+    } catch (err) {
+      console.error("[Seed] Error checking/creating admin:", err);
+      // Don't throw - admin might already exist with different table structure
+    }
+
+    // Create wedding config
+    const existingConfig = await storage.getWeddingConfig();
+    if (!existingConfig) {
     await storage.upsertWeddingConfig({
       weddingDate: null, // Default to TBD
       venueName: "To Be Announced",
@@ -173,6 +190,10 @@ export async function seedDatabase(): Promise<void> {
   // No default guests - they will be created via RSVP submissions
 
   console.log("[Seed] Database seeding complete.");
+  } catch (error) {
+    console.error("[Seed] Fatal error during seeding:", error);
+    throw error;
+  }
 }
 
 

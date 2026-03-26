@@ -3,14 +3,8 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import cookieParser from "cookie-parser";
-import { storage } from "../server/storage.js";
-import { requireAdmin, setAuthCookie, clearAuthCookie } from "../server/middleware/auth.js";
-import { rsvpSubmitSchema, publicRsvpSchema } from "../shared/schema.js";
-import { sendRsvpConfirmation } from "../server/services/whatsapp.js";
-import { verifyWebhookSignature } from "../server/services/whatsapp.js";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
-import { randomUUID } from "crypto";
+import { createServer } from "http";
+import { registerRoutes } from "../server/routes.js";
 
 const app = express();
 
@@ -26,112 +20,79 @@ app.use(
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 app.use(cookieParser());
 
-// Initialize database (seed if needed)
-let dbInitialized = false;
-async function initializeDatabase() {
-  if (!dbInitialized) {
-    try {
-      console.log("[API] Initializing database...");
-      const { seedDatabase } = await import("../server/seed.js");
-      await seedDatabase();
-      dbInitialized = true;
-      console.log("[API] Database initialized successfully");
-    } catch (error) {
-      console.error("[API] Database initialization error:", error);
-      dbInitialized = true; // Mark as initialized to prevent retry loops
-    }
+// Track initialization status
+let initPromise: Promise<void> | null = null;
+
+async function initialize() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        console.log("[API] Initializing serverless function...");
+        console.log("[API] DATABASE_URL present:", !!process.env.DATABASE_URL);
+        console.log("[API] NODE_ENV:", process.env.NODE_ENV);
+        
+        // Seed database
+        const { seedDatabase } = await import("../server/seed.js");
+        await seedDatabase();
+        console.log("[API] Database seeded successfully");
+        
+        // Register all routes
+        const httpServer = createServer(app);
+        await registerRoutes(httpServer, app);
+        console.log("[API] All routes registered successfully");
+      } catch (error) {
+        console.error("[API] Initialization error:", error);
+        throw error;
+      }
+    })();
   }
+  return initPromise;
 }
 
-// Initialize on first request
-app.use(async (_req, _res, next) => {
-  try {
-    await initializeDatabase();
-  } catch (error) {
-    console.error("[API] Middleware initialization error:", error);
-  }
-  next();
+// Initialize on module load (serverless warm-up)
+initialize().catch(err => {
+  console.error("[API] Failed to initialize:", err);
 });
 
-// Health check endpoint
-app.get("/api/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    dbInitialized,
-    hasDbUrl: !!process.env.DATABASE_URL,
-    nodeEnv: process.env.NODE_ENV
-  });
-});
-
-// Public API routes
-app.get("/api/config", async (_req, res) => {
+// Health check endpoint (available immediately)
+app.get("/api/health", async (_req, res) => {
   try {
-    const config = await storage.getWeddingConfig();
-    if (!config) return res.status(404).json({ error: "Config not found" });
-    const { adminPasswordHash, ...publicConfig } = config;
-    res.json(publicConfig);
+    await initialize();
+    res.json({
+      status: "ok",
+      hasDbUrl: !!process.env.DATABASE_URL,
+      nodeEnv: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error("Config error:", error);
-    res.status(500).json({ error: "Failed to fetch config" });
+    res.status(500).json({
+      status: "error",
+      message: error instanceof Error ? error.message : "Unknown error",
+      hasDbUrl: !!process.env.DATABASE_URL,
+    });
   }
 });
 
-app.get("/api/events", async (_req, res) => {
+// Wait for initialization before processing any request
+app.use(async (req, res, next) => {
   try {
-    const events = await storage.getWeddingEvents();
-    res.json(events);
+    await initialize();
+    next();
   } catch (error) {
-    console.error("Events error:", error);
-    res.status(500).json({ error: "Failed to fetch events" });
+    console.error("[API] Request blocked due to initialization failure:", error);
+    res.status(503).json({ 
+      error: "Service temporarily unavailable",
+      message: error instanceof Error ? error.message : "Server initialization failed"
+    });
   }
 });
 
-app.get("/api/stories", async (_req, res) => {
-  try {
-    const stories = await storage.getStoryMilestones();
-    res.json(stories);
-  } catch (error) {
-    console.error("Stories error:", error);
-    res.status(500).json({ error: "Failed to fetch stories" });
-  }
-});
-
-app.get("/api/faqs", async (_req, res) => {
-  try {
-    const faqs = await storage.getFaqs();
-    res.json(faqs);
-  } catch (error) {
-    console.error("FAQs error:", error);
-    res.status(500).json({ error: "Failed to fetch FAQs" });
-  }
-});
-
-// Admin login
-app.post("/api/admin/login", async (req, res) => {
-  try {
-    const schema = z.object({ username: z.string(), password: z.string() });
-    const parsed = schema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Invalid credentials" });
-
-    const user = await storage.getUserByUsername(parsed.data.username);
-    if (!user || !(await bcrypt.compare(parsed.data.password, user.password))) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    setAuthCookie(res, { userId: user.id, username: user.username });
-    res.json({ success: true, user: { id: user.id, username: user.username } });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-
-// Serve static files for Vercel
+// Serve static files for non-API routes
 const distPath = path.join(process.cwd(), "dist", "public");
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 
-  // Serve index.html for all non-API routes
+  // Serve index.html for all non-API routes (SPA fallback)
   app.get("*", (_req, res) => {
     const indexPath = path.join(distPath, "index.html");
     if (fs.existsSync(indexPath)) {

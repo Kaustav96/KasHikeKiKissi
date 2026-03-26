@@ -1,7 +1,20 @@
 {
+  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api" }
-  ]
+    {
+      "source": "/api/:path*",
+      "destination": "/api"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
