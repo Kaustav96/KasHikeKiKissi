@@ -338,11 +338,27 @@ export class FirestoreStorage implements IStorage {
   /* ================= STORIES ================= */
 
   async getStoryMilestones(): Promise<StoryMilestone[]> {
-    // ...existing code...
+    const snapshot = await firestore
+      .collection(Collections.STORY_MILESTONES)
+      .orderBy('sortOrder', 'asc')
+      .get();
+
+    return snapshot.docs.map(doc => {
+      const data = convertTimestamps(doc.data());
+      return { id: doc.id, ...data } as StoryMilestone;
+    });
   }
 
   async createStoryMilestone(milestone: InsertStoryMilestone): Promise<StoryMilestone> {
-    // ...existing code...
+    const docRef = firestore.collection(Collections.STORY_MILESTONES).doc();
+    const newMilestone = {
+      ...milestone,
+      id: docRef.id,
+      createdAt: new Date(),
+    };
+
+    await docRef.set(newMilestone);
+    return newMilestone as StoryMilestone;
   }
 
   async updateStoryMilestone(id: string, milestone: Partial<InsertStoryMilestone>): Promise<StoryMilestone | undefined> {
@@ -358,17 +374,33 @@ export class FirestoreStorage implements IStorage {
   }
 
   async deleteStoryMilestone(id: string): Promise<void> {
-    // ...existing code...
+    await firestore.collection(Collections.STORY_MILESTONES).doc(id).delete();
   }
 
   /* ================= VENUES ================= */
 
   async getVenues(): Promise<Venue[]> {
-    // ...existing code...
+    const snapshot = await firestore
+      .collection(Collections.VENUES)
+      .orderBy('sortOrder', 'asc')
+      .get();
+
+    return snapshot.docs.map(doc => {
+      const data = convertTimestamps(doc.data());
+      return { id: doc.id, ...data } as Venue;
+    });
   }
 
   async createVenue(venue: InsertVenue): Promise<Venue> {
-    // ...existing code...
+    const docRef = firestore.collection(Collections.VENUES).doc();
+    const newVenue = {
+      ...venue,
+      id: docRef.id,
+      createdAt: new Date(),
+    };
+
+    await docRef.set(newVenue);
+    return newVenue as Venue;
   }
 
   async updateVenue(id: string, venue: Partial<InsertVenue>): Promise<Venue | undefined> {
@@ -384,17 +416,33 @@ export class FirestoreStorage implements IStorage {
   }
 
   async deleteVenue(id: string): Promise<void> {
-    // ...existing code...
+    await firestore.collection(Collections.VENUES).doc(id).delete();
   }
 
   /* ================= FAQ ================= */
 
   async getFaqs(): Promise<Faq[]> {
-    // ...existing code...
+    const snapshot = await firestore
+      .collection(Collections.FAQS)
+      .orderBy('sortOrder', 'asc')
+      .get();
+
+    return snapshot.docs.map(doc => {
+      const data = convertTimestamps(doc.data());
+      return { id: doc.id, ...data } as Faq;
+    });
   }
 
   async createFaq(faq: InsertFaq): Promise<Faq> {
-    // ...existing code...
+    const docRef = firestore.collection(Collections.FAQS).doc();
+    const newFaq = {
+      ...faq,
+      id: docRef.id,
+      createdAt: new Date(),
+    };
+
+    await docRef.set(newFaq);
+    return newFaq as Faq;
   }
 
   async updateFaq(id: string, faq: Partial<InsertFaq>): Promise<Faq | undefined> {
@@ -410,21 +458,47 @@ export class FirestoreStorage implements IStorage {
   }
 
   async deleteFaq(id: string): Promise<void> {
-    // ...existing code...
+    await firestore.collection(Collections.FAQS).doc(id).delete();
   }
 
   /* ================= MESSAGE LOGS ================= */
 
   async getMessageLogs(limit = 100): Promise<MessageLog[]> {
-    // ...existing code...
+    const snapshot = await firestore
+      .collection(Collections.MESSAGE_LOGS)
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map(doc => {
+      const data = convertTimestamps(doc.data());
+      return { id: doc.id, ...data } as MessageLog;
+    });
   }
 
   async getMessageLogsByGuest(guestId: string): Promise<MessageLog[]> {
-    // ...existing code...
+    const snapshot = await firestore
+      .collection(Collections.MESSAGE_LOGS)
+      .where('guestId', '==', guestId)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    return snapshot.docs.map(doc => {
+      const data = convertTimestamps(doc.data());
+      return { id: doc.id, ...data } as MessageLog;
+    });
   }
 
   async createMessageLog(log: InsertMessageLog): Promise<MessageLog> {
-    // ...existing code...
+    const docRef = firestore.collection(Collections.MESSAGE_LOGS).doc();
+    const newLog = {
+      ...log,
+      id: docRef.id,
+      createdAt: new Date(),
+    };
+
+    await docRef.set(newLog);
+    return newLog as MessageLog;
   }
 
   async updateMessageLog(id: string, log: Partial<InsertMessageLog>): Promise<MessageLog | undefined> {
