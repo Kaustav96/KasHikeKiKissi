@@ -28,3 +28,6 @@ npm-debug.log*
 # WhatsApp test scripts (contain sensitive test data)
 test-whatsapp.js
 test-rsvp.js
+
+firebase-service-account.json
+.backups/

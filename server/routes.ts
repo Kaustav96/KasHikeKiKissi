@@ -3,12 +3,11 @@ import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage.js";
 import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth.js";
-import { rsvpSubmitSchema, publicRsvpSchema, guests, weddingConfig, weddingEvents, faqs, storyMilestones, venues } from "../shared/schema.js";
+import { rsvpSubmitSchema, publicRsvpSchema } from "../shared/schema.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { randomUUID } from "crypto";
-import { and, or, eq, sql } from "drizzle-orm";
-import { db } from "./db.js";
+import { firestore, Collections } from "./firebase.js";
 import { config } from "process";
 import cloudinary from "./cloudinary.js";
 import { logger } from "./utils/logger.js";
@@ -120,24 +119,29 @@ export async function registerRoutes(
 
       console.log("[VIEW COUNT DEBUG] Updating viewCount for config ID:", existing.id);
 
-      const [updated] = await db
-        .update(weddingConfig)
-        .set({
-          viewCount: sql`${weddingConfig.viewCount} + 1`,
+      // Use Firestore transaction to increment view count atomically
+      const configRef = firestore.collection(Collections.WEDDING_CONFIG).doc(existing.id);
+      
+      await firestore.runTransaction(async (transaction) => {
+        const doc = await transaction.get(configRef);
+        if (!doc.exists) {
+          throw new Error("Config not found");
+        }
+        const currentCount = doc.data()?.viewCount || 0;
+        transaction.update(configRef, {
+          viewCount: currentCount + 1,
           updatedAt: new Date(),
-        })
-        .where(eq(weddingConfig.id, existing.id))
-        .returning({ viewCount: weddingConfig.viewCount });
+        });
+      });
 
-      console.log("[VIEW COUNT DEBUG] Update result:", updated);
+      // Fetch updated config
+      const updatedDoc = await configRef.get();
+      const updatedData = updatedDoc.data();
+      const newViewCount = updatedData?.viewCount || 0;
 
-      if (!updated) {
-        console.log("[VIEW COUNT DEBUG] Update returned no result!");
-        return res.status(404).json({ error: "Config not found" });
-      }
-
-      console.log("[VIEW COUNT DEBUG] New viewCount:", updated.viewCount);
-      res.json({ viewCount: updated.viewCount });
+      console.log("[VIEW COUNT DEBUG] Update result:", newViewCount);
+      console.log("[VIEW COUNT DEBUG] New viewCount:", newViewCount);
+      res.json({ viewCount: newViewCount });
 
     } catch (error) {
       console.error("[VIEW COUNT DEBUG] Error:", error);
@@ -150,19 +154,15 @@ export async function registerRoutes(
   app.get("/api/events", async (req, res) => {
     const side = req.query.side as string | undefined;
 
-    const filters = [];
-
+    // Get all events from storage
+    let events = await storage.getWeddingEvents();
+    
+    // Filter by side if provided
     if (side) {
-      filters.push(
-        sql`${weddingEvents.side} = ${side} OR ${weddingEvents.side} = 'both'`
+      events = events.filter(event => 
+        event.side === side || event.side === 'both'
       );
     }
-
-    const events = await db
-      .select()
-      .from(weddingEvents)
-      .where(filters.length ? and(...filters) : undefined)
-      .orderBy(weddingEvents.sortOrder);
 
     res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(events);
@@ -266,98 +266,18 @@ export async function registerRoutes(
       delete (safeConfig as any).adminPasswordHash;
 
       // Events (side filtered for display)
-      let whereCondition;
-
+      let allEvents = await storage.getWeddingEvents();
+      let events = allEvents;
+      
       if (side !== "both") {
-        whereCondition = or(
-          eq(weddingEvents.side, side),
-          eq(weddingEvents.side, "both")
+        events = allEvents.filter(event => 
+          event.side === side || event.side === 'both'
         );
       }
-      const events = await db
-        .select({
-          id: weddingEvents.id,
-          title: weddingEvents.title,
-          description: weddingEvents.description,
-          startTime: weddingEvents.startTime,
-          endTime: weddingEvents.endTime,
-          venueName: weddingEvents.venueName,
-          venueAddress: weddingEvents.venueAddress,
-          venueMapUrl: weddingEvents.venueMapUrl,
-          isMainEvent: weddingEvents.isMainEvent,
-          dressCode: weddingEvents.dressCode,
-          howToReach: weddingEvents.howToReach,
-          accommodation: weddingEvents.accommodation,
-          distanceInfo: weddingEvents.distanceInfo,
-          contactPerson: weddingEvents.contactPerson,
-          side: weddingEvents.side,
-          sortOrder: weddingEvents.sortOrder,
-        })
-        .from(weddingEvents)
-        .where(whereCondition)
-        .orderBy(weddingEvents.sortOrder);
 
-      // All events (unfiltered, for RSVP form)
-      const allEvents = await db
-        .select({
-          id: weddingEvents.id,
-          title: weddingEvents.title,
-          description: weddingEvents.description,
-          startTime: weddingEvents.startTime,
-          endTime: weddingEvents.endTime,
-          venueName: weddingEvents.venueName,
-          venueAddress: weddingEvents.venueAddress,
-          venueMapUrl: weddingEvents.venueMapUrl,
-          isMainEvent: weddingEvents.isMainEvent,
-          dressCode: weddingEvents.dressCode,
-          howToReach: weddingEvents.howToReach,
-          accommodation: weddingEvents.accommodation,
-          distanceInfo: weddingEvents.distanceInfo,
-          contactPerson: weddingEvents.contactPerson,
-          side: weddingEvents.side,
-          sortOrder: weddingEvents.sortOrder,
-        })
-        .from(weddingEvents)
-        .orderBy(weddingEvents.sortOrder);
-
-      const stories = await db
-        .select({
-          id: storyMilestones.id,
-          title: storyMilestones.title,
-          date: storyMilestones.date,
-          description: storyMilestones.description,
-          imageUrl: storyMilestones.imageUrl,
-          sortOrder: storyMilestones.sortOrder,
-        })
-        .from(storyMilestones)
-        .orderBy(storyMilestones.sortOrder);
-
-      const venuesData = await db
-        .select({
-          id: venues.id,
-          name: venues.name,
-          address: venues.address,
-          description: venues.description,
-          mapUrl: venues.mapUrl,
-          mapEmbedUrl: venues.mapEmbedUrl,
-          directions: venues.directions,
-          accommodation: venues.accommodation,
-          contactInfo: venues.contactInfo,
-          imageUrl: venues.imageUrl,
-          sortOrder: venues.sortOrder,
-        })
-        .from(venues)
-        .orderBy(venues.sortOrder);
-
-      const faqList = await db
-        .select({
-          id: faqs.id,
-          question: faqs.question,
-          answer: faqs.answer,
-          category: faqs.category,
-        })
-        .from(faqs)
-        .orderBy(faqs.sortOrder);
+      const stories = await storage.getStoryMilestones();
+      const venuesData = await storage.getVenues();
+      const faqList = await storage.getFaqs();
 
       const result = {
         config: safeConfig,
@@ -383,10 +303,8 @@ export async function registerRoutes(
   /* ================= PUBLIC Stories ================= */
 
   app.get("/api/stories", async (_req, res) => {
-    const stories = await db
-      .select()
-      .from(storyMilestones)
-      .orderBy(storyMilestones.sortOrder);
+    const stories = await storage.getStoryMilestones();
+
 
     res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(stories);
@@ -395,10 +313,7 @@ export async function registerRoutes(
   /* ================= PUBLIC Venues ================= */
 
   app.get("/api/venues", async (_req, res) => {
-    const venuesList = await db
-      .select()
-      .from(venues)
-      .orderBy(venues.sortOrder);
+    const venuesList = await storage.getVenues();
 
     res.setHeader("Cache-Control", "public, max-age=300"); // 5 minutes
     res.json(venuesList);
@@ -414,15 +329,7 @@ export async function registerRoutes(
         return res.json(cached);
       }
 
-      const faqList = await db
-        .select({
-          id: faqs.id,
-          question: faqs.question,
-          answer: faqs.answer,
-          category: faqs.category,
-        })
-        .from(faqs)
-        .orderBy(faqs.sortOrder);
+      const faqList = await storage.getFaqs();
 
       faqCache.set("faqs", faqList);
 
@@ -451,20 +358,19 @@ export async function registerRoutes(
     const guest = await storage.getGuestBySlug(data.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
 
-    const updated = await storage.updateGuest(guest.id, {
+    const isDeclined = data.rsvpStatus === "declined";
+    const updateData: any = {
       rsvpStatus: data.rsvpStatus,
-      adultsCount: data.rsvpStatus === "declined" ? 0 : data.adultsCount,
-      childrenCount: data.rsvpStatus === "declined" ? 0 : data.childrenCount,
-      foodPreference:
-        data.rsvpStatus === "declined" ? "" : data.foodPreference,
-      eventsAttending:
-        data.rsvpStatus === "declined"
-          ? []
-          : normalizeEvents(data.eventsAttending),
-      dietaryRequirements: data.dietaryRequirements,
+      adultsCount: isDeclined ? 0 : data.adultsCount,
+      childrenCount: isDeclined ? 0 : data.childrenCount,
+      foodPreference: isDeclined ? "" : (data.foodPreference || ""),
+      eventsAttending: isDeclined ? [] : normalizeEvents(data.eventsAttending),
+      dietaryRequirements: isDeclined ? "" : data.dietaryRequirements,
       message: data.message,
-      accommodationRequired: data.rsvpStatus === "declined" ? false : (data.accommodationRequired || false),
-    });
+      accommodationRequired: isDeclined ? "" : (data.accommodationRequired || false),
+    };
+
+    const updated = await storage.updateGuest(guest.id, updateData);
 
     res.json({ success: true, rsvpStatus: updated?.rsvpStatus });
   });
@@ -495,19 +401,21 @@ export async function registerRoutes(
 
     if (existing) {
       logger.debug("Updating existing guest:", existing.name);
-      const updated = await storage.updateGuest(existing.id, {
+      
+      // Build update object without undefined values
+      const isDeclined = data.rsvpStatus === "declined";
+      const updateData: any = {
         rsvpStatus: data.rsvpStatus,
         adultsCount: data.adultsCount,
         childrenCount: data.childrenCount,
-        foodPreference: data.foodPreference,
-        eventsAttending:
-          data.rsvpStatus === "declined"
-            ? []
-            : normalizeEvents(data.eventsAttending),
-        dietaryRequirements: data.dietaryRequirements,
+        foodPreference: isDeclined ? "" : (data.foodPreference || ""),
+        eventsAttending: isDeclined ? [] : normalizeEvents(data.eventsAttending),
+        dietaryRequirements: isDeclined ? "" : data.dietaryRequirements,
         message: data.message,
-        accommodationRequired: data.rsvpStatus === "declined" ? false : (data.accommodationRequired || false),
-      });
+        accommodationRequired: isDeclined ? "" : (data.accommodationRequired || false),
+      };
+      
+      const updated = await storage.updateGuest(existing.id, updateData);
 
       return res.json({
         success: true,
@@ -531,11 +439,12 @@ export async function registerRoutes(
           : data.foodPreference || "vegetarian",
       eventsAttending:
         data.rsvpStatus === "declined" ? [] : data.eventsAttending,
-      dietaryRequirements: data.dietaryRequirements,
+      dietaryRequirements:
+        data.rsvpStatus === "declined" ? "" : data.dietaryRequirements,
       message: data.message,
       side: data.side,
       tableNumber: null,
-      accommodationRequired: data.rsvpStatus === "declined" ? false : (data.accommodationRequired || false),
+      accommodationRequired: data.rsvpStatus === "declined" ? "" as any : (data.accommodationRequired || false),
     });
 
     res.status(201).json({
@@ -662,11 +571,7 @@ export async function registerRoutes(
       if (data.brideMusicUrls !== undefined)
         updateData.brideMusicUrls = data.brideMusicUrls;
 
-      const [updated] = await db
-        .update(weddingConfig)
-        .set(updateData)
-        .where(eq(weddingConfig.id, existing.id))
-        .returning();
+      const updated = await storage.upsertWeddingConfig(updateData);
 
       // Clear home cache so changes appear instantly
       homeCache.clear();
@@ -694,6 +599,7 @@ export async function registerRoutes(
       venueName: z.string().max(200).default(""),
       venueAddress: z.string().max(500).default(""),
       venueMapUrl: z.string().url().optional().or(z.literal("")),
+      side: z.enum(["groom", "bride", "both"]).default("both"),
       // isMainEvent: z.boolean().default(false),
       isMainEvent: z
         .union([z.boolean(), z.string()])
@@ -718,6 +624,7 @@ export async function registerRoutes(
       startTime: parseISTDateTime(parsed.data.startTime),
       endTime: parsed.data.endTime ? parseISTDateTime(parsed.data.endTime) : null,
       venueMapUrl: parsed.data.venueMapUrl || "",
+      isMainEvent: parsed.data.isMainEvent ?? false,
     });
     res.status(201).json(event);
     homeCache.clear(); // Invalidate home cache to reflect new event on homepage
@@ -977,16 +884,7 @@ export async function registerRoutes(
   ========================================================= */
   app.get("/api/admin/faqs", requireAdmin, async (_req, res) => {
     try {
-      const faqList = await db
-        .select({
-          id: faqs.id,
-          question: faqs.question,
-          answer: faqs.answer,
-          category: faqs.category,
-          sortOrder: faqs.sortOrder,
-        })
-        .from(faqs)
-        .orderBy(faqs.sortOrder);
+      const faqList = await storage.getFaqs();
 
       res.json(faqList);
 
@@ -1014,16 +912,7 @@ export async function registerRoutes(
         });
       }
 
-      const [created] = await db
-        .insert(faqs)
-        .values(parsed.data)
-        .returning({
-          id: faqs.id,
-          question: faqs.question,
-          answer: faqs.answer,
-          category: faqs.category,
-          sortOrder: faqs.sortOrder,
-        });
+      const created = await storage.createFaq(parsed.data);
 
       res.status(201).json(created);
 
@@ -1056,17 +945,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No fields provided to update" });
       }
 
-      const [updated] = await db
-        .update(faqs)
-        .set(parsed.data)
-        .where(eq(faqs.id, String(req.params.id)))
-        .returning({
-          id: faqs.id,
-          question: faqs.question,
-          answer: faqs.answer,
-          category: faqs.category,
-          sortOrder: faqs.sortOrder,
-        });
+      const updated = await storage.updateFaq(String(req.params.id), parsed.data);
 
       if (!updated) {
         return res.status(404).json({ error: "FAQ not found" });
@@ -1083,9 +962,7 @@ export async function registerRoutes(
 
   app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
     try {
-      const deleted = await db
-        .delete(faqs)
-        .where(eq(faqs.id, String(req.params.id)));
+      await storage.deleteFaq(String(req.params.id));
 
       res.json({ success: true });
 
@@ -1130,33 +1007,20 @@ export async function registerRoutes(
     const limit = Math.min(Number(req.query.limit) || 20, 100);
     const offset = (page - 1) * limit;
 
-    const filters = [];
-
+    // Fetch all guests and filter in memory
+    let allGuests = await storage.getGuests(1000, 0);
+    
+    // Apply filters
     if (req.query.status) {
-      filters.push(eq(guests.rsvpStatus, String(req.query.status)));
+      allGuests = allGuests.filter(g => g.rsvpStatus === String(req.query.status));
     }
-
+    
     if (req.query.side) {
-      filters.push(eq(guests.side, String(req.query.side)));
+      allGuests = allGuests.filter(g => g.side === String(req.query.side));
     }
 
-    const whereClause = filters.length ? and(...filters) : undefined;
-
-    const [data, totalResult] = await Promise.all([
-      db
-        .select()
-        .from(guests)
-        .where(whereClause)
-        .limit(limit)
-        .offset(offset),
-
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(guests)
-        .where(whereClause),
-    ]);
-
-    const total = Number(totalResult[0]?.count ?? 0);
+    const total = allGuests.length;
+    const data = allGuests.slice(offset, offset + limit);
 
     res.json({
       data,
@@ -1173,53 +1037,35 @@ export async function registerRoutes(
 
   app.get("/api/admin/guests/export", requireAdmin, async (req, res) => {
     try {
-      const filters = [];
 
       const rsvpStatus = req.query.rsvp
         ? String(req.query.rsvp)
         : "confirmed";
 
-      filters.push(eq(guests.rsvpStatus, rsvpStatus));
+      // Fetch all guests and filter in memory (Firebase doesn't support complex where clauses)
+      let guestList = await storage.getGuests(1000, 0);
+      
+      // Apply filters
+      guestList = guestList.filter(guest => {
+        if (guest.rsvpStatus !== rsvpStatus) return false;
+        if (req.query.side && guest.side !== String(req.query.side)) return false;
+        if (req.query.food && guest.foodPreference !== String(req.query.food)) return false;
+        if (req.query.event) {
+          const eventId = String(req.query.event);
+          if (!guest.eventsAttending.includes(eventId)) return false;
+        }
+        return true;
+      });
+      
+      // Sort by tableNumber then name
+      guestList.sort((a, b) => {
+        if (a.tableNumber !== b.tableNumber) {
+          return (a.tableNumber || 999) - (b.tableNumber || 999);
+        }
+        return a.name.localeCompare(b.name);
+      });
 
-      if (req.query.side)
-        filters.push(eq(guests.side, String(req.query.side)));
-
-      if (req.query.food)
-        filters.push(eq(guests.foodPreference, String(req.query.food)));
-
-      if (req.query.event) {
-        filters.push(
-          sql`${guests.eventsAttending} @> ${JSON.stringify([
-            String(req.query.event),
-          ])}::jsonb`
-        );
-      }
-
-      const guestList = await db
-        .select({
-          name: guests.name,
-          side: guests.side,
-          rsvpStatus: guests.rsvpStatus,
-          adultsCount: guests.adultsCount,
-          childrenCount: guests.childrenCount,
-          foodPreference: guests.foodPreference,
-          eventsAttending: guests.eventsAttending,
-          dietaryRequirements: guests.dietaryRequirements,
-          tableNumber: guests.tableNumber,
-          message: guests.message,
-          inviteSlug: guests.inviteSlug,
-        })
-        .from(guests)
-        .where(and(...filters))
-        .orderBy(guests.tableNumber, guests.name);
-
-      const events = await db
-        .select({
-          id: weddingEvents.id,
-          title: weddingEvents.title,
-        })
-        .from(weddingEvents);
-
+      const events = await storage.getWeddingEvents();
       const eventMap = new Map(events.map((e) => [e.id, e.title]));
 
       const escapeCsv = (value: any) =>
