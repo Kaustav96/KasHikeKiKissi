@@ -25,7 +25,7 @@ import {
   faqs,
 } from "../shared/schema.js";
 
-import { db } from "./db";
+import { db } from "./db.js";
 import { eq, desc, asc, like, ilike, and, sql } from "drizzle-orm";
 
 /* =========================================================

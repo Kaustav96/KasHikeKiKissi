@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import cookieParser from "cookie-parser";
-import { storage } from "./storage";
-import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth";
+import { storage } from "./storage.js";
+import { requireAdmin, setAuthCookie, clearAuthCookie } from "./middleware/auth.js";
 import { rsvpSubmitSchema, publicRsvpSchema, guests, weddingConfig, weddingEvents, faqs, storyMilestones, venues } from "../shared/schema.js";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -10,9 +10,9 @@ import { randomUUID } from "crypto";
 import { and, or, eq, sql } from "drizzle-orm";
 import { db } from "./db.js";
 import { config } from "process";
-import cloudinary from "./cloudinary";
-import { logger } from "./utils/logger";
-import { MemoryCache } from "./utils/cache";
+import cloudinary from "./cloudinary.js";
+import { logger } from "./utils/logger.js";
+import { MemoryCache } from "./utils/cache.js";
 
 /* =========================================================
    Utilities

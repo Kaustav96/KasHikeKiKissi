@@ -19,7 +19,7 @@
  */
 
 import cron from "node-cron";
-import { storage } from "../storage";
+import { storage } from "../storage.js";
 // import { sendReminder } from "./whatsapp";
 // import { sendTelegramReminder, notifyAdminOfReminderBatch, isTelegramAvailable } from "./telegram";
 
