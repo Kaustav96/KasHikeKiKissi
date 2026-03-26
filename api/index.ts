@@ -87,21 +87,7 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Serve static files for non-API routes
-const distPath = path.join(process.cwd(), "dist", "public");
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-
-  // Serve index.html for all non-API routes (SPA fallback)
-  app.get("*", (_req, res) => {
-    const indexPath = path.join(distPath, "index.html");
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
-    } else {
-      res.status(404).send("Not found");
-    }
-  });
-}
-
 // Export the Express app for Vercel
+// Note: Static files are served directly by Vercel CDN from dist/public
+// This serverless function only handles /api/* routes
 export default app;
