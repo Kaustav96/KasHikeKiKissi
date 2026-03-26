@@ -8,12 +8,7 @@ function slugify(name: string): string {
 }
 
 export async function seedDatabase(): Promise<void> {
-  console.log("[Seed] Starting serverless-optimized database check...");
-
-  if (!process.env.DATABASE_URL) {
-    console.error("[Seed] DATABASE_URL is not set!");
-    throw new Error("DATABASE_URL environment variable is required");
-  }
+  console.log("[Seed] Starting Firebase database check...");
 
   try {
     // CRITICAL: Check if already seeded FIRST (one DB call with timeout)
@@ -83,7 +78,23 @@ export async function seedDatabase(): Promise<void> {
     // Create events (only check if needed)
     const existingEvents = await storage.getWeddingEvents();
     if (existingEvents.length === 0) {
-      const events = [
+      const events: Array<{
+        title: string;
+        description: string;
+        startTime: Date;
+        endTime: Date | null;
+        venueName: string;
+        venueAddress: string;
+        venueMapUrl: string;
+        isMainEvent: boolean;
+        dressCode: string;
+        side: "both" | "groom" | "bride";
+        sortOrder: number;
+        howToReach: string;
+        accommodation: string;
+        distanceInfo: string;
+        contactPerson: string;
+      }> = [
         {
           title: "Engagement & Sangeet",
           description: "An enchanting evening of engagement ceremony followed by Sangeet night filled with music, dance performances, and celebrations. Join us as our families come together in joy and harmony.",
