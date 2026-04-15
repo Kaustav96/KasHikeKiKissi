@@ -56,13 +56,13 @@ export default function ContactInfoSection() {
           </p>
           <div className="space-y-3">
             <motion.a
-              href="tel:+919876512345"
+              href="tel:+918376916635"
               className="flex items-center justify-center gap-3 text-lg font-semibold transition-opacity"
               style={{ color: "var(--wedding-accent)" }}
               whileHover={{ scale: 1.04 }}
             >
               <Phone size={20} />
-              <span>+91 98765 12345</span>
+              <span>+91 83769 16635</span>
             </motion.a>
             <motion.a
               href="mailto:wedding@kaustavhimasree.com"

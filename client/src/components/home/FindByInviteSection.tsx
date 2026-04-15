@@ -319,14 +319,14 @@ export default function FindByInviteSection({
           <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>Can't find your name?</p>
           <div className="flex flex-wrap justify-center gap-2 text-xs">
             <a
-              href="tel:+919876543210"
+              href="tel:+918376916635"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
               style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
             >
               <Phone size={11} /> Contact Kaustav (Groom Side)
             </a>
             <a
-              href="tel:+919876543211"
+              href="tel:+919582304872"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
               style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
             >
