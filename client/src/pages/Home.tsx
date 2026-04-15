@@ -6,7 +6,7 @@ import {
   MapPin, ChevronDown, Heart,
   Loader2, Check, Phone, Navigation, Plane, Train, Car,
   BedDouble, Info, Shirt, Building,
-  Users,
+  Users, Clock, XCircle,
 } from "lucide-react";
 import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { z } from "zod";
@@ -556,6 +556,10 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
   const [isUpdating, setIsUpdating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successStatus, setSuccessStatus] = useState<"confirmed" | "declined" | null>(null);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
+  const [isLockedGuest, setIsLockedGuest] = useState<"pending_approval" | "rejected" | null>(null);
+  // Set when debounced name-search finds a locked (pending/rejected) guest
+  const [nameSearchLocked, setNameSearchLocked] = useState<"pending_approval" | "rejected" | null>(null);
 
   const form = useForm<PublicRsvpForm>({
     resolver: zodResolver(publicRsvpFormSchema),
@@ -590,6 +594,19 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
     // Check if this is an existing guest (has rsvpStatus) or new name (no rsvpStatus)
     const isExistingGuest = prefillGuest.rsvpStatus !== null;
 
+    // Handle pending/rejected approval — lock the form
+    const approvalStatus = prefillGuest.rsvpApprovalStatus;
+    if (approvalStatus === "pending_approval" || approvalStatus === "rejected") {
+      setIsLockedGuest(approvalStatus);
+      setIsUpdating(false);
+      setSelectedGuest(prefillGuest);
+      form.setValue("name", prefillGuest.name);
+      // Don't set rsvpStatus — we don't want any button selected
+      return;
+    }
+
+    // Fully approved guest
+    setIsLockedGuest(null);
     if (isExistingGuest) {
       // Full prefill for existing guest
       setIsUpdating(true);
@@ -619,18 +636,42 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
       const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
       if (res.ok) {
         const guestList = await res.json();
-        // Show selection popup if any guests found (even if just 1)
-        if (Array.isArray(guestList) && guestList.length > 0) {
-          setFoundGuests(guestList);
+
+        // Separate editable guests from locked ones
+        const editableGuests = Array.isArray(guestList)
+          ? guestList.filter(
+              (g: any) =>
+                g.rsvpApprovalStatus !== "pending_approval" &&
+                g.rsvpApprovalStatus !== "rejected"
+            )
+          : [];
+
+        const lockedGuest = Array.isArray(guestList)
+          ? guestList.find(
+              (g: any) =>
+                g.rsvpApprovalStatus === "pending_approval" ||
+                g.rsvpApprovalStatus === "rejected"
+            )
+          : null;
+
+        if (editableGuests.length > 0) {
+          // Normal case — show selection popup
+          setNameSearchLocked(null);
+          setFoundGuests(editableGuests);
           setShowGuestSelectionPopup(true);
+        } else if (lockedGuest) {
+          // Name matches a locked guest — show inline status, block form
+          setNameSearchLocked(lockedGuest.rsvpApprovalStatus);
+          setFoundGuests([]);
         } else {
           // No guests found — if we were in update mode, exit it and reset fields
+          setNameSearchLocked(null);
           setFoundGuests([]);
           if (isUpdating) {
             setIsUpdating(false);
             setSelectedGuest(null);
             form.reset({
-              name,                              // keep the name they just typed
+              name,
               rsvpStatus: undefined as any,
               adultsCount: 1,
               childrenCount: 0,
@@ -645,6 +686,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
         }
       } else {
         // Name not in database — same reset logic
+        setNameSearchLocked(null);
         setFoundGuests([]);
         if (isUpdating) {
           setIsUpdating(false);
@@ -664,6 +706,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
         }
       }
     } catch (err) {
+      setNameSearchLocked(null);
       setFoundGuests([]);
     } finally {
       setCheckingName(false);
@@ -675,6 +718,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
   useEffect(() => {
     const name = form.watch("name");
     if (!name || name.length < 3) {
+      setNameSearchLocked(null);
       return;
     }
 
@@ -734,24 +778,35 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
 
   const rsvpMutation = useMutation({
     mutationFn: async (data: PublicRsvpForm) => {
+      // Block rejected guests on the client side too
+      if (nameSearchLocked === "rejected" || isLockedGuest === "rejected") {
+        throw new Error("blacklisted");
+      }
       // If updating existing guest, use their ID - but verify name matches!
       if (isUpdating && selectedGuest) {
         // Safety check: ensure the name being submitted matches the selected guest
         if (data.name.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
           // Name mismatch - treat as new guest instead
           const res = await apiRequest("POST", "/api/rsvp/public", data);
-          return res.json();
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || "Failed to submit RSVP");
+          return json;
         }
         const res = await apiRequest("POST", "/api/rsvp", { ...data, slug: selectedGuest.inviteSlug });
-        return res.json();
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to submit RSVP");
+        return json;
       } else {
         const res = await apiRequest("POST", "/api/rsvp/public", data);
-        return res.json();
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to submit RSVP");
+        return json;
       }
     },
     onSuccess: (result) => {
       // Show premium confirmation modal
-      setSuccessStatus(result.rsvpStatus);
+      setSuccessStatus(result.rsvpStatus === "pending" ? "confirmed" : result.rsvpStatus);
+      setIsPendingApproval(result.rsvpApprovalStatus === "pending_approval");
       setShowSuccess(true);
 
       // Reset all states
@@ -779,6 +834,11 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
       }
     },
     onError: (err: Error) => {
+      if (err.message === "blacklisted") {
+        // Set the name-search locked state so the banner shows
+        setNameSearchLocked("rejected");
+        return;
+      }
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
@@ -835,37 +895,99 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
             <label className="text-xs tracking-[0.15em] uppercase mb-3 block" style={{ color: "var(--wedding-accent)" }}>
               Will you be attending?
             </label>
-            <div className="flex flex-col sm:flex-row gap-3">
-              {(["confirmed", "declined"] as const).map((status) => (
-                <motion.button
-                  key={status}
-                  type="button"
-                  onClick={() => {
-                    form.setValue("rsvpStatus", status);
-                    if (status === "declined") {
-                      form.setValue("eventsAttending", []);
-                      form.setValue("foodPreference", undefined);
-                      form.setValue("accommodationRequired", undefined as any);
-                    }
-                    // Don't trigger validation here - let it happen on submit
-                  }}
-                  className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
-                  style={{
-                    background: rsvpStatus === status ? "var(--wedding-accent)" : "transparent",
-                    color: rsvpStatus === status ? "#fff" : "var(--wedding-text)",
-                    border: `1px solid ${rsvpStatus === status ? "var(--wedding-accent)" : "var(--wedding-border)"}`
-                  }}
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  data-testid={`rsvp-${status}`}
-                >
-                  {status === "confirmed" ? "Joyfully Accept" : "Respectfully Decline"}
-                </motion.button>
-              ))}
-            </div>
+
+            {/* Locked state for pending/rejected guests */}
+            {isLockedGuest ? (
+              <div
+                className="rounded-xl p-5 text-center"
+                style={{
+                  background: isLockedGuest === "rejected" ? "rgba(239,68,68,0.07)" : "rgba(245,158,11,0.07)",
+                  border: `1px solid ${isLockedGuest === "rejected" ? "#ef4444" : "#f59e0b"}`,
+                }}
+              >
+                <div className="flex justify-center mb-3">
+                  {isLockedGuest === "rejected"
+                    ? <XCircle size={32} style={{ color: "#ef4444" }} />
+                    : <Clock size={32} style={{ color: "#f59e0b" }} />}
+                </div>
+                <p className="font-semibold text-sm mb-1" style={{ color: isLockedGuest === "rejected" ? "#ef4444" : "#f59e0b" }}>
+                  {isLockedGuest === "rejected" ? "RSVP Request Declined" : "Awaiting Approval"}
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+                  {isLockedGuest === "rejected"
+                    ? "Your RSVP request was not approved. Please contact us directly if you believe this is a mistake."
+                    : "Your RSVP is under review. The wedding team will confirm your spot shortly — no further action is needed."}
+                </p>
+                {isLockedGuest === "rejected" && (
+                  <div className="flex flex-wrap justify-center gap-2 mt-4">
+                    <a href="tel:+918376916635" className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}>
+                      <Phone size={11} /> Groom Side
+                    </a>
+                    <a href="tel:+919582304872" className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}>
+                      <Phone size={11} /> Bride Side
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3">
+                {(["confirmed", "declined"] as const).map((status) => (
+                  <motion.button
+                    key={status}
+                    type="button"
+                    onClick={() => {
+                      form.setValue("rsvpStatus", status);
+                      if (status === "declined") {
+                        form.setValue("eventsAttending", []);
+                        form.setValue("foodPreference", undefined);
+                        form.setValue("accommodationRequired", undefined as any);
+                      }
+                      // Don't trigger validation here - let it happen on submit
+                    }}
+                    className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
+                    style={{
+                      background: rsvpStatus === status ? "var(--wedding-accent)" : "transparent",
+                      color: rsvpStatus === status ? "#fff" : "var(--wedding-text)",
+                      border: `1px solid ${rsvpStatus === status ? "var(--wedding-accent)" : "var(--wedding-border)"}`
+                    }}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    data-testid={`rsvp-${status}`}
+                  >
+                    {status === "confirmed" ? "Joyfully Accept" : "Respectfully Decline"}
+                  </motion.button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {rsvpStatus && (
+          {rsvpStatus && nameSearchLocked === "rejected" ? (
+            /* Blacklisted — collapse the entire form and show the block message */
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl p-5 text-center"
+              style={{ background: "rgba(239,68,68,0.07)", border: "1px solid #ef4444" }}
+            >
+              <div className="flex justify-center mb-3">
+                <XCircle size={32} style={{ color: "#ef4444" }} />
+              </div>
+              <p className="font-semibold text-sm mb-1" style={{ color: "#ef4444" }}>
+                RSVP Request Declined
+              </p>
+              <p className="text-xs leading-relaxed mb-4" style={{ color: "var(--wedding-muted)" }}>
+                Your RSVP request was not approved by the wedding team. You are unable to submit another response. Please contact us directly if you believe this is a mistake.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <a href="tel:+918376916635" className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}>
+                  <Phone size={11} /> Groom Side
+                </a>
+                <a href="tel:+919582304872" className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}>
+                  <Phone size={11} /> Bride Side
+                </a>
+              </div>
+            </motion.div>
+          ) : rsvpStatus && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -882,9 +1004,13 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                         shouldValidate: form.formState.isSubmitted,
                       });
 
+                      // Clear the search-locked banner whenever the name changes
+                      if (nameSearchLocked) setNameSearchLocked(null);
+
                       // AGGRESSIVE state clearing: if name doesn't match selected guest, clear everything
                       if (selectedGuest && newName.trim().toLowerCase() !== selectedGuest.name.trim().toLowerCase()) {
                         setIsUpdating(false);
+                        setIsLockedGuest(null);
                         setSelectedGuest(null);
                         setFoundGuests([]);
                         // Keep rsvpStatus (form stays open), only clear detail fields
@@ -901,7 +1027,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                     className="w-full px-4 py-2.5 rounded-lg text-sm"
                     style={{
                       background: "var(--wedding-bg)",
-                      border: "1px solid var(--wedding-border)",
+                      border: `1px solid ${nameSearchLocked ? (nameSearchLocked === "rejected" ? "#ef4444" : "#f59e0b") : "var(--wedding-border)"}`,
                       color: "var(--wedding-text)",
                     }}
                     data-testid="input-name"
@@ -911,7 +1037,36 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
                       <Loader2 className="animate-spin" size={12} /> Checking details...
                     </p>
                   )}
-                  {isUpdating && (
+                  {/* Inline locked-guest status banner from name search */}
+                  {!checkingName && nameSearchLocked === "pending_approval" && (
+                    <div
+                      className="mt-2 rounded-lg px-3 py-2.5 flex items-start gap-2 text-xs"
+                      style={{ background: "rgba(245,158,11,0.08)", border: "1px solid #f59e0b" }}
+                    >
+                      <Clock size={13} className="flex-shrink-0 mt-0.5" style={{ color: "#f59e0b" }} />
+                      <div>
+                        <p className="font-semibold mb-0.5" style={{ color: "#f59e0b" }}>RSVP Awaiting Approval</p>
+                        <p style={{ color: "var(--wedding-muted)" }}>
+                          Your RSVP request is currently under review by the wedding team. No further action is needed — we'll be in touch soon!
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {!checkingName && nameSearchLocked === "rejected" && (
+                    <div
+                      className="mt-2 rounded-lg px-3 py-2.5 flex items-start gap-2 text-xs"
+                      style={{ background: "rgba(239,68,68,0.07)", border: "1px solid #ef4444" }}
+                    >
+                      <XCircle size={13} className="flex-shrink-0 mt-0.5" style={{ color: "#ef4444" }} />
+                      <div>
+                        <p className="font-semibold mb-0.5" style={{ color: "#ef4444" }}>RSVP Request Declined</p>
+                        <p style={{ color: "var(--wedding-muted)" }}>
+                          Your RSVP request was not approved. Please contact us directly if you believe this is a mistake.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {isUpdating && !nameSearchLocked && (
                     <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "#22c55e" }}>
                       <Check size={12} /> Updating existing RSVP
                     </p>
@@ -1070,7 +1225,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
 
               <motion.button
                 type="submit"
-                disabled={rsvpMutation.isPending}
+                disabled={rsvpMutation.isPending || nameSearchLocked === "rejected" || isLockedGuest === "rejected"}
                 className="w-full py-3 rounded-lg text-sm font-medium tracking-wider uppercase transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
                 whileHover={{ scale: 1.02 }}
@@ -1215,6 +1370,7 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
           open={showSuccess}
           status={successStatus}
           config={config || null}
+          isPendingApproval={isPendingApproval}
           onClose={() => setShowSuccess(false)}
         />
       </div>

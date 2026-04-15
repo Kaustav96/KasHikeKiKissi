@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Loader2, User, ChevronRight, X as XIcon, Heart, Phone, Users, Check
+  Search, Loader2, User, ChevronRight, X as XIcon, Heart, Phone, Users, Check, Clock, XCircle
 } from "lucide-react";
 import SimpleDivider from "../SimpleDivider";
 import { ThinGoldDivider } from "../RoyalOrnaments";
@@ -22,9 +22,10 @@ export default function FindByInviteSection({
   const [results, setResults] = useState<any[] | null>(null);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
   const [clearingGuest, setClearingGuest] = useState(false); // transition state
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSearch = useCallback(async () => {
-    const name = query.trim();
+  const handleSearch = useCallback(async (searchQuery?: string) => {
+    const name = (searchQuery ?? query).trim();
     if (name.length < 2) return;
     setSearching(true);
     setResults(null);
@@ -43,6 +44,30 @@ export default function FindByInviteSection({
       setSearching(false);
     }
   }, [query]);
+
+  // Debounced auto-search: triggers 500ms after user stops typing (min 3 chars)
+  useEffect(() => {
+    const trimmed = query.trim();
+
+    // Clear results immediately when query is too short
+    if (trimmed.length < 3) {
+      if (trimmed.length === 0) {
+        setResults(null);
+        setSelectedGuest(null);
+      }
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      return;
+    }
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      handleSearch(trimmed);
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Expose search function to parent
   useEffect(() => {
@@ -95,7 +120,7 @@ export default function FindByInviteSection({
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative flex gap-2 mb-4"
+          className="relative flex gap-2 mb-1"
         >
           <div className="flex-1 relative">
             <Search
@@ -106,15 +131,7 @@ export default function FindByInviteSection({
             <input
               type="text"
               value={query}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setQuery(newValue);
-                // Clear results when search box is cleared
-                if (newValue.trim().length === 0) {
-                  setResults(null);
-                  setSelectedGuest(null);
-                }
-              }}
+              onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Enter your full name..."
               className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
@@ -126,7 +143,7 @@ export default function FindByInviteSection({
             />
           </div>
           <motion.button
-            onClick={handleSearch}
+            onClick={() => handleSearch()}
             disabled={searching || query.trim().length < 3}
             className="px-5 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
             style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
@@ -137,6 +154,20 @@ export default function FindByInviteSection({
             Search
           </motion.button>
         </motion.div>
+
+        {/* Subtle live-search hint */}
+        <div className="mb-4 min-h-[18px]">
+          {searching && (
+            <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--wedding-accent)" }}>
+              <Loader2 size={11} className="animate-spin" /> Searching…
+            </p>
+          )}
+          {!searching && query.trim().length >= 1 && query.trim().length < 3 && (
+            <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+              Type at least 3 characters to search
+            </p>
+          )}
+        </div>
 
         {/* Results */}
         <AnimatePresence mode="wait">
@@ -184,35 +215,47 @@ export default function FindByInviteSection({
               className="space-y-2"
             >
               <p className="text-xs text-center mb-3" style={{ color: "var(--wedding-muted)" }}>
-                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to view &amp; edit your RSVP
+                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to view your RSVP
               </p>
-              {results!.map((guest) => (
-                <motion.button
-                  key={guest.id}
-                  onClick={() => setSelectedGuest(guest)}
-                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:shadow-xl"
-                  style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-                  whileHover={{ scale: 1.01, y: -2 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(176,132,72,0.10)", color: "var(--wedding-accent)" }}
+              {results!.map((guest) => {
+                const isPending = guest.rsvpApprovalStatus === "pending_approval";
+                const isRejected = guest.rsvpApprovalStatus === "rejected";
+                return (
+                  <motion.button
+                    key={guest.id}
+                    onClick={() => setSelectedGuest(guest)}
+                    className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:shadow-xl"
+                    style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+                    whileHover={{ scale: 1.01, y: -2 }}
+                    whileTap={{ scale: 0.99 }}
                   >
-                    <User size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm" style={{ color: "var(--wedding-text)" }}>{guest.name}</p>
-                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-                      {guest.rsvpStatus === "confirmed" ? "✓ RSVP Confirmed" : guest.rsvpStatus === "declined" ? "✗ Declined" : "RSVP Pending"}
-                    </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
-                      Tap to view &amp; edit RSVP →
-                    </p>
-                  </div>
-                  <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
-                </motion.button>
-              ))}
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(176,132,72,0.10)", color: "var(--wedding-accent)" }}
+                    >
+                      {isPending ? <Clock size={16} /> : isRejected ? <XCircle size={16} style={{ color: "#ef4444" }} /> : <User size={16} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm" style={{ color: "var(--wedding-text)" }}>{guest.name}</p>
+                      <p className="text-xs" style={{ color: isPending ? "#f59e0b" : isRejected ? "#ef4444" : "var(--wedding-muted)" }}>
+                        {isPending
+                          ? "⏳ Awaiting approval"
+                          : isRejected
+                          ? "✗ Request declined"
+                          : guest.rsvpStatus === "confirmed"
+                          ? "✓ RSVP Confirmed"
+                          : guest.rsvpStatus === "declined"
+                          ? "✗ Declined"
+                          : "RSVP Pending"}
+                      </p>
+                      <p className="text-[10px] mt-0.5" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
+                        Tap to view →
+                      </p>
+                    </div>
+                    <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
+                  </motion.button>
+                );
+              })}
             </motion.div>
           )}
 
@@ -223,11 +266,15 @@ export default function FindByInviteSection({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               className="rounded-2xl overflow-hidden relative"
-              style={{ background: "var(--wedding-card-bg)", border: "2px solid var(--wedding-accent)", boxShadow: "0 8px 40px rgba(176,132,72,0.18)" }}
+              style={{ background: "var(--wedding-card-bg)", border: `2px solid ${selectedGuest.rsvpApprovalStatus === "rejected" ? "#ef4444" : selectedGuest.rsvpApprovalStatus === "pending_approval" ? "#f59e0b" : "var(--wedding-accent)"}`, boxShadow: "0 8px 40px rgba(176,132,72,0.18)" }}
             >
-              {/* Gold top bar */}
+              {/* Top bar — colour reflects status */}
               <div className="h-[4px]" style={{
-                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
+                background: selectedGuest.rsvpApprovalStatus === "rejected"
+                  ? "linear-gradient(90deg, transparent, #ef4444 40%, #ef4444 60%, transparent)"
+                  : selectedGuest.rsvpApprovalStatus === "pending_approval"
+                  ? "linear-gradient(90deg, transparent, #f59e0b 40%, #f59e0b 60%, transparent)"
+                  : "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
               }} />
 
               {/* Back / close corner button */}
@@ -241,17 +288,31 @@ export default function FindByInviteSection({
               </button>
 
               <div className="p-6 sm:p-8 text-center">
-                {/* Icon */}
+                {/* Icon — reflects status */}
                 <div
                   className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
                   style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
                 >
-                  <Heart size={28} style={{ color: "var(--wedding-accent)" }} />
+                  {selectedGuest.rsvpApprovalStatus === "rejected"
+                    ? <XCircle size={28} style={{ color: "#ef4444" }} />
+                    : selectedGuest.rsvpApprovalStatus === "pending_approval"
+                    ? <Clock size={28} style={{ color: "#f59e0b" }} />
+                    : <Heart size={28} style={{ color: "var(--wedding-accent)" }} />}
                 </div>
 
-                <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{ color: "var(--wedding-accent)", opacity: 0.7 }}>
-                  You're on the list!
+                <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{
+                  color: selectedGuest.rsvpApprovalStatus === "rejected" ? "#ef4444"
+                    : selectedGuest.rsvpApprovalStatus === "pending_approval" ? "#f59e0b"
+                    : "var(--wedding-accent)",
+                  opacity: 0.85
+                }}>
+                  {selectedGuest.rsvpApprovalStatus === "rejected"
+                    ? "Request Declined"
+                    : selectedGuest.rsvpApprovalStatus === "pending_approval"
+                    ? "Under Review"
+                    : "You're on the list!"}
                 </p>
+
                 <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3 leading-tight" style={{ color: "var(--wedding-text)" }}>
                   Hello, {selectedGuest.name.split(" ")[0]}!
                 </h3>
@@ -259,8 +320,11 @@ export default function FindByInviteSection({
                 <ThinGoldDivider className="mb-4" />
 
                 <p className="text-sm leading-[1.75] mb-5" style={{ color: "var(--wedding-muted)" }}>
-                  We can't wait to celebrate with you at our wedding.{" "}
-                  {selectedGuest.rsvpStatus === "confirmed"
+                  {selectedGuest.rsvpApprovalStatus === "rejected"
+                    ? "We're sorry, but your RSVP request was not approved. Please contact us directly if you have any questions."
+                    : selectedGuest.rsvpApprovalStatus === "pending_approval"
+                    ? "Your RSVP is under review by the wedding team. We'll confirm your spot soon — no further action needed from your side."
+                    : selectedGuest.rsvpStatus === "confirmed"
                     ? "Your RSVP is confirmed — we're so excited to see you!"
                     : selectedGuest.rsvpStatus === "declined"
                     ? "We see you've declined, but you're always welcome to reach out."
@@ -276,31 +340,70 @@ export default function FindByInviteSection({
                     <User size={12} style={{ color: "var(--wedding-accent)" }} />
                     <span style={{ color: "var(--wedding-muted)" }}>{selectedGuest.name}</span>
                   </div>
+                  {selectedGuest.rsvpApprovalStatus !== "pending_approval" && selectedGuest.rsvpApprovalStatus !== "rejected" && (
+                    <div className="flex items-center gap-2.5 text-xs">
+                      <Users size={12} style={{ color: "var(--wedding-accent)" }} />
+                      <span style={{ color: "var(--wedding-muted)" }}>
+                        {selectedGuest.adultsCount ?? 1} Adult{(selectedGuest.adultsCount ?? 1) > 1 ? "s" : ""}
+                        {selectedGuest.childrenCount > 0 ? `, ${selectedGuest.childrenCount} Child${selectedGuest.childrenCount > 1 ? "ren" : ""}` : ""}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2.5 text-xs">
-                    <Users size={12} style={{ color: "var(--wedding-accent)" }} />
-                    <span style={{ color: "var(--wedding-muted)" }}>
-                      {selectedGuest.adultsCount ?? 1} Adult{(selectedGuest.adultsCount ?? 1) > 1 ? "s" : ""}
-                      {selectedGuest.childrenCount > 0 ? `, ${selectedGuest.childrenCount} Child${selectedGuest.childrenCount > 1 ? "ren" : ""}` : ""}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <Check size={12} style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-accent)" }} />
-                    <span className="capitalize" style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-muted)" }}>
-                      {selectedGuest.rsvpStatus === "confirmed" ? "RSVP Confirmed" : selectedGuest.rsvpStatus === "declined" ? "Declined" : "RSVP Pending"}
+                    {selectedGuest.rsvpApprovalStatus === "rejected"
+                      ? <XCircle size={12} style={{ color: "#ef4444" }} />
+                      : selectedGuest.rsvpApprovalStatus === "pending_approval"
+                      ? <Clock size={12} style={{ color: "#f59e0b" }} />
+                      : <Check size={12} style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-accent)" }} />}
+                    <span style={{
+                      color: selectedGuest.rsvpApprovalStatus === "rejected" ? "#ef4444"
+                        : selectedGuest.rsvpApprovalStatus === "pending_approval" ? "#f59e0b"
+                        : selectedGuest.rsvpStatus === "confirmed" ? "#22c55e"
+                        : "var(--wedding-muted)"
+                    }}>
+                      {selectedGuest.rsvpApprovalStatus === "rejected"
+                        ? "Request Declined"
+                        : selectedGuest.rsvpApprovalStatus === "pending_approval"
+                        ? "Awaiting Approval"
+                        : selectedGuest.rsvpStatus === "confirmed"
+                        ? "RSVP Confirmed"
+                        : selectedGuest.rsvpStatus === "declined"
+                        ? "Declined"
+                        : "RSVP Pending"}
                     </span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onEditRsvp(selectedGuest)}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all mb-2"
-                  style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)", border: "none" }}
-                >
-                  Edit My RSVP
-                </button>
+                {/* Only show Edit button for fully approved guests */}
+                {selectedGuest.rsvpApprovalStatus !== "pending_approval" && selectedGuest.rsvpApprovalStatus !== "rejected" && (
+                  <button
+                    onClick={() => onEditRsvp(selectedGuest)}
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition-all mb-2"
+                    style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)", border: "none" }}
+                  >
+                    Edit My RSVP
+                  </button>
+                )}
+
+                {/* Contact prompt for rejected */}
+                {selectedGuest.rsvpApprovalStatus === "rejected" && (
+                  <div className="mb-2 space-y-2">
+                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                      Have questions? Please reach out directly.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <a href="tel:+918376916635" className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}>
+                        <Phone size={11} /> Groom Side
+                      </a>
+                      <a href="tel:+919582304872" className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}>
+                        <Phone size={11} /> Bride Side
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
-                    // Show a brief transition before clearing state
                     setClearingGuest(true);
                     setTimeout(() => {
                       setSelectedGuest(null);

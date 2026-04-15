@@ -101,6 +101,16 @@ const removeUndefined = (obj: any): any => {
   return cleaned;
 };
 
+/**
+ * Back-fill default values for fields added after initial deployment.
+ * Existing Firestore documents won't have rsvpApprovalStatus — default to "approved"
+ * so all previously-added (admin-invited) guests are treated as already approved.
+ */
+const hydrateGuest = (data: any): any => ({
+  rsvpApprovalStatus: "approved", // old guests are pre-approved by default
+  ...data,                        // real stored values win
+});
+
 export class FirestoreStorage implements IStorage {
 
   /* ================= CONFIG ================= */
@@ -163,7 +173,7 @@ export class FirestoreStorage implements IStorage {
       const data = convertTimestamps(doc.data());
       return {
         id: doc.id,
-        ...data,
+        ...hydrateGuest(data),
       } as Guest;
     });
   }
@@ -186,7 +196,7 @@ export class FirestoreStorage implements IStorage {
     if (!doc.exists) return undefined;
     
     const data = convertTimestamps(doc.data());
-    return { id: doc.id, ...data } as Guest;
+    return { id: doc.id, ...hydrateGuest(data) } as Guest;
   }
 
   async getGuestBySlug(slug: string): Promise<Guest | undefined> {
@@ -200,7 +210,7 @@ export class FirestoreStorage implements IStorage {
     
     const doc = snapshot.docs[0];
     const data = convertTimestamps(doc.data());
-    return { id: doc.id, ...data } as Guest;
+    return { id: doc.id, ...hydrateGuest(data) } as Guest;
   }
 
   async getGuestByName(name: string): Promise<Guest | undefined> {
@@ -214,7 +224,7 @@ export class FirestoreStorage implements IStorage {
     
     const doc = snapshot.docs[0];
     const data = convertTimestamps(doc.data());
-    return { id: doc.id, ...data } as Guest;
+    return { id: doc.id, ...hydrateGuest(data) } as Guest;
   }
 
   async searchGuestsByName(name: string): Promise<Guest[]> {
@@ -236,10 +246,7 @@ export class FirestoreStorage implements IStorage {
       .slice(0, 20)
       .map(doc => {
         const data = convertTimestamps(doc.data());
-        return {
-          id: doc.id,
-          ...data,
-        } as Guest;
+        return { id: doc.id, ...hydrateGuest(data) } as Guest;
       });
   }
 
@@ -259,7 +266,6 @@ export class FirestoreStorage implements IStorage {
   async updateGuest(id: string, guest: Partial<InsertGuest>): Promise<Guest | undefined> {
     const docRef = firestore.collection(Collections.GUESTS).doc(id);
     
-    // Remove undefined values (Firestore doesn't accept undefined)
     const cleanedGuest = removeUndefined({
       ...guest,
       updatedAt: new Date(),
@@ -271,7 +277,7 @@ export class FirestoreStorage implements IStorage {
     if (!updated.exists) return undefined;
     
     const data = convertTimestamps(updated.data());
-    return { id: updated.id, ...data } as Guest;
+    return { id: updated.id, ...hydrateGuest(data) } as Guest;
   }
 
   async deleteGuest(id: string): Promise<void> {

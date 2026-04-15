@@ -358,6 +358,11 @@ export async function registerRoutes(
     const guest = await storage.getGuestBySlug(data.slug);
     if (!guest) return res.status(404).json({ error: "Invite not found" });
 
+    // Blacklisted (admin-rejected) guests cannot resubmit
+    if ((guest as any).rsvpApprovalStatus === "rejected") {
+      return res.status(403).json({ error: "blacklisted", message: "Your RSVP request was declined by the wedding team." });
+    }
+
     const isDeclined = data.rsvpStatus === "declined";
     const updateData: any = {
       rsvpStatus: data.rsvpStatus,
@@ -401,7 +406,12 @@ export async function registerRoutes(
 
     if (existing) {
       logger.debug("Updating existing guest:", existing.name);
-      
+
+      // Blacklisted (admin-rejected) guests cannot resubmit under any name
+      if ((existing as any).rsvpApprovalStatus === "rejected") {
+        return res.status(403).json({ error: "blacklisted", message: "Your RSVP request was declined by the wedding team." });
+      }
+
       // Build update object without undefined values
       const isDeclined = data.rsvpStatus === "declined";
       const updateData: any = {
@@ -413,6 +423,7 @@ export async function registerRoutes(
         dietaryRequirements: isDeclined ? "" : data.dietaryRequirements,
         message: data.message,
         accommodationRequired: isDeclined ? "" : (data.accommodationRequired || false),
+        // Preserve existing approval status — admin-invited guests stay approved
       };
       
       const updated = await storage.updateGuest(existing.id, updateData);
@@ -420,36 +431,41 @@ export async function registerRoutes(
       return res.json({
         success: true,
         rsvpStatus: updated?.rsvpStatus,
+        rsvpApprovalStatus: (updated as any)?.rsvpApprovalStatus ?? "approved",
         isNew: false,
       });
     }
 
-    logger.debug("Creating new guest:", data.name);
+    // Unknown guest — NOT on the invite list.
+    logger.debug("Creating new guest:", data.name, "status:", data.rsvpStatus);
     const slug = generateSlug(data.name);
 
+    const isDeclined = data.rsvpStatus === "declined";
+
+    // Declines don't need admin approval — the guest is opting out.
+    // Only confirmations from unknown guests need approval.
     const newGuest = await storage.createGuest({
       name: data.name,
       inviteSlug: slug,
-      rsvpStatus: data.rsvpStatus,
-      adultsCount: data.adultsCount,
-      childrenCount: data.childrenCount,
-      foodPreference:
-        data.rsvpStatus === "declined"
-          ? ""
-          : data.foodPreference || "vegetarian",
-      eventsAttending:
-        data.rsvpStatus === "declined" ? [] : data.eventsAttending,
-      dietaryRequirements:
-        data.rsvpStatus === "declined" ? "" : data.dietaryRequirements,
+      rsvpStatus: isDeclined ? "declined" : "pending",
+      adultsCount: isDeclined ? 0 : data.adultsCount,
+      childrenCount: isDeclined ? 0 : data.childrenCount,
+      foodPreference: isDeclined ? "" : (data.foodPreference || "vegetarian"),
+      eventsAttending: isDeclined ? [] : data.eventsAttending,
+      dietaryRequirements: isDeclined ? "" : data.dietaryRequirements,
       message: data.message,
       side: data.side,
       tableNumber: null,
-      accommodationRequired: data.rsvpStatus === "declined" ? "" as any : (data.accommodationRequired || false),
-    });
+      accommodationRequired: isDeclined ? false : (data.accommodationRequired || false),
+      // Declined guests are auto-approved; confirmations need admin review
+      rsvpApprovalStatus: isDeclined ? "approved" : "pending_approval",
+      intendedRsvpStatus: isDeclined ? "declined" : data.rsvpStatus,
+    } as any);
 
     res.status(201).json({
       success: true,
-      rsvpStatus: newGuest.rsvpStatus,
+      rsvpStatus: isDeclined ? "declined" : "pending",
+      rsvpApprovalStatus: isDeclined ? "approved" : "pending_approval",
       isNew: true,
     });
   });
@@ -983,22 +999,107 @@ export async function registerRoutes(
       return res.status(400).json({ error: "Name must be at least 3 characters" });
     }
 
-    const guestList = await storage.searchGuestsByName(name);
-    res.json(guestList);
+    try {
+      const guestList = await storage.searchGuestsByName(name);
+      res.json(guestList);
+    } catch (err) {
+      logger.error("Search guests error:", err);
+      // Return empty array instead of 503 — the UI will show "not found" gracefully
+      res.json([]);
+    }
   });
 
 
   /* =========================================================
      ================= ADMIN Guests =================
   ========================================================= */
+
+  // Create guest (admin-added guests are pre-approved)
+  app.post("/api/admin/guests", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      name: z.string().min(1).max(200),
+      side: z.enum(["bride", "groom", "both"]).default("both"),
+      tableNumber: z.number().int().positive().optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid guest data" });
+
+    const slug = generateSlug(parsed.data.name);
+    const guest = await storage.createGuest({
+      ...parsed.data,
+      inviteSlug: slug,
+      rsvpStatus: "pending",
+      adultsCount: 1,
+      childrenCount: 0,
+      foodPreference: "vegetarian",
+      eventsAttending: [],
+      dietaryRequirements: "",
+      message: "",
+      accommodationRequired: false,
+      tableNumber: parsed.data.tableNumber ?? null,
+      rsvpApprovalStatus: "approved", // admin-created = pre-approved
+    } as any);
+    res.status(201).json(guest);
+  });
+
+  // Update guest
+  app.patch("/api/admin/guests/:id", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      name: z.string().min(1).max(200).optional(),
+      side: z.enum(["bride", "groom", "both"]).optional(),
+      tableNumber: z.number().int().positive().nullable().optional(),
+      rsvpStatus: z.enum(["pending", "confirmed", "declined"]).optional(),
+      rsvpApprovalStatus: z.enum(["approved", "pending_approval", "rejected"]).optional(),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid data" });
+
+    const updated = await storage.updateGuest(String(req.params.id), parsed.data as any);
+    if (!updated) return res.status(404).json({ error: "Guest not found" });
+    res.json(updated);
+  });
+
+  // Delete guest
   app.delete("/api/admin/guests/:id", requireAdmin, async (req, res) => {
     await storage.deleteGuest(String(req.params.id));
     res.json({ success: true });
   });
-  // app.delete("/api/admin/faqs/:id", requireAdmin, async (req, res) => {
-  //   await storage.deleteFaq(String(req.params.id));
-  //   res.json({ success: true });
-  // });
+
+  // Approve a pending guest — sets rsvpStatus to what they originally requested AND marks approved
+  app.post("/api/admin/guests/:id/approve", requireAdmin, async (req, res) => {
+    try {
+      const guest = await storage.getGuestById(String(req.params.id));
+      if (!guest) return res.status(404).json({ error: "Guest not found" });
+
+      // Restore the intended rsvpStatus from the stored data
+      // (it was saved but rsvpStatus was forced to "pending" for unknown guests)
+      const intendedStatus = (guest as any).intendedRsvpStatus || "confirmed";
+
+      const updated = await storage.updateGuest(String(req.params.id), {
+        rsvpApprovalStatus: "approved",
+        rsvpStatus: intendedStatus,
+      } as any);
+      res.json({ success: true, guest: updated });
+    } catch (err) {
+      logger.error("Approval error:", err);
+      res.status(500).json({ error: "Failed to approve guest" });
+    }
+  });
+
+  // Reject a pending guest
+  app.post("/api/admin/guests/:id/reject", requireAdmin, async (req, res) => {
+    try {
+      const updated = await storage.updateGuest(String(req.params.id), {
+        rsvpApprovalStatus: "rejected",
+        rsvpStatus: "declined",
+      } as any);
+      if (!updated) return res.status(404).json({ error: "Guest not found" });
+      res.json({ success: true, guest: updated });
+    } catch (err) {
+      logger.error("Reject error:", err);
+      res.status(500).json({ error: "Failed to reject guest" });
+    }
+  });
 
   /* ================= ADMIN GUEST LIST (PAGINATED) ================= */
 

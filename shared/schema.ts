@@ -55,6 +55,10 @@ export const guestSchema = z.object({
   inviteSlug: z.string(),
   side: z.enum(["groom", "bride", "both"]).default("both"),
   tableNumber: z.number().int().nullable().optional(),
+  // "approved"  = admin-created guest (pre-approved) or admin has approved the submission
+  // "pending_approval" = submitted via public form by someone NOT on the admin invite list
+  // "rejected"  = admin has rejected the submission
+  rsvpApprovalStatus: z.enum(["approved", "pending_approval", "rejected"]).default("approved"),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

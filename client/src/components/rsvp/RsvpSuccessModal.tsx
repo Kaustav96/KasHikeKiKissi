@@ -1,12 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import KHCrest from "@/components/KHCrest";
-import { Sparkles, Calendar } from "lucide-react";
+import { Sparkles, Calendar, Clock } from "lucide-react";
 import type { WeddingConfig } from "@shared/schema";
 
 interface Props {
   open: boolean;
   status: "confirmed" | "declined" | null;
   config: WeddingConfig | null;
+  isPendingApproval?: boolean;
   onClose: () => void;
 }
 
@@ -77,7 +78,7 @@ function downloadCalendar(config: WeddingConfig) {
   URL.revokeObjectURL(link.href);
 }
 
-export default function RsvpSuccessModal({ open, status, config, onClose }: Props) {
+export default function RsvpSuccessModal({ open, status, config, isPendingApproval, onClose }: Props) {
 
   return (
     <AnimatePresence>
@@ -165,7 +166,9 @@ export default function RsvpSuccessModal({ open, status, config, onClose }: Prop
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
             >
-              {status === "confirmed"
+              {isPendingApproval
+                ? "We've Received Your RSVP"
+                : status === "confirmed"
                 ? "Your Presence Means Everything"
                 : "Thank You For Letting Us Know"}
             </motion.h2>
@@ -177,10 +180,31 @@ export default function RsvpSuccessModal({ open, status, config, onClose }: Prop
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
             >
-              {status === "confirmed"
+              {isPendingApproval
+                ? "Your response is under review by the wedding team. We'll confirm your spot soon. Thank you for your patience! 🙏"
+                : status === "confirmed"
                 ? "We are delighted to celebrate this beautiful day with you."
                 : "We will miss you, but your blessings mean the world to us."}
             </motion.p>
+
+            {/* Pending approval info box */}
+            {isPendingApproval && (
+              <motion.div
+                className="rounded-xl p-3 mb-6 flex items-start gap-3 text-left relative z-10"
+                style={{ background: "rgba(176,132,72,0.08)", border: "1px solid var(--wedding-border)" }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 }}
+              >
+                <Clock size={16} style={{ color: "var(--wedding-accent)", flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <p className="text-xs font-medium mb-0.5" style={{ color: "var(--wedding-text)" }}>What happens next?</p>
+                  <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                    The wedding team will review your request and confirm your attendance. You may be contacted directly once approved.
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Decorative divider */}
             <div className="flex items-center justify-center gap-2 mb-6">
@@ -191,15 +215,12 @@ export default function RsvpSuccessModal({ open, status, config, onClose }: Prop
 
             {/* Action buttons */}
             <div className="flex flex-col gap-3 relative z-10">
-              {/* Add to Calendar - only for confirmed RSVPs with wedding date set */}
-              {status === "confirmed" && config?.weddingDate && (
+              {/* Add to Calendar — only for confirmed + approved RSVPs with wedding date set */}
+              {status === "confirmed" && !isPendingApproval && config?.weddingDate && (
                 <motion.button
                   onClick={() => downloadCalendar(config)}
                   className="w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all hover:shadow-lg flex items-center justify-center gap-2"
-                  style={{
-                    background: "var(--wedding-accent)",
-                    color: "var(--wedding-bg)",
-                  }}
+                  style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   initial={{ opacity: 0, y: 10 }}
@@ -216,13 +237,13 @@ export default function RsvpSuccessModal({ open, status, config, onClose }: Prop
                 onClick={onClose}
                 className="w-full px-6 py-2.5 rounded-lg text-sm font-medium transition-all relative hover:shadow-md"
                 style={{
-                  background: status === "confirmed" && config?.weddingDate
+                  background: status === "confirmed" && !isPendingApproval && config?.weddingDate
                     ? "transparent"
                     : "var(--wedding-accent)",
-                  color: status === "confirmed" && config?.weddingDate
+                  color: status === "confirmed" && !isPendingApproval && config?.weddingDate
                     ? "var(--wedding-text)"
                     : "var(--wedding-bg)",
-                  border: status === "confirmed" && config?.weddingDate
+                  border: status === "confirmed" && !isPendingApproval && config?.weddingDate
                     ? "1px solid var(--wedding-border)"
                     : "none",
                 }}
@@ -230,7 +251,7 @@ export default function RsvpSuccessModal({ open, status, config, onClose }: Prop
                 whileTap={{ scale: 0.96 }}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: status === "confirmed" && config?.weddingDate ? 0.7 : 0.6 }}
+                transition={{ delay: status === "confirmed" && !isPendingApproval && config?.weddingDate ? 0.7 : 0.6 }}
               >
                 Close
               </motion.button>

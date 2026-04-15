@@ -6,7 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Users, Calendar, Settings, Download,
   Plus, Trash2, Edit, LogOut, BarChart3, BookOpen,
-  MapPin, HelpCircle, Gift, Music, Eye
+  MapPin, HelpCircle, Gift, Music, Eye,
+  CheckCircle, XCircle, Clock, AlertCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
@@ -138,6 +139,15 @@ export default function AdminDashboard() {
           <TabsList className="mb-4 sm:mb-6 flex-wrap h-auto gap-1 w-full justify-start" data-testid="admin-tabs">
             <TabsTrigger value="overview" data-testid="tab-overview" className="text-xs"><BarChart3 size={14} className="mr-1" /> <span className="hidden sm:inline">Overview</span></TabsTrigger>
             <TabsTrigger value="guests" data-testid="tab-guests" className="text-xs"><Users size={14} className="mr-1" /> Guests</TabsTrigger>
+            <TabsTrigger value="approvals" data-testid="tab-approvals" className="text-xs relative">
+              <Clock size={14} className="mr-1" />
+              <span className="hidden sm:inline">Approvals</span>
+              {guests.filter(g => (g as any).rsvpApprovalStatus === "pending_approval").length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center font-bold">
+                  {guests.filter(g => (g as any).rsvpApprovalStatus === "pending_approval").length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="events" data-testid="tab-events" className="text-xs"><Calendar size={14} className="mr-1" /> Events</TabsTrigger>
             <TabsTrigger value="stories" data-testid="tab-stories" className="text-xs"><BookOpen size={14} className="mr-1" /> <span className="hidden sm:inline">Stories</span></TabsTrigger>
             <TabsTrigger value="venues" data-testid="tab-venues" className="text-xs"><MapPin size={14} className="mr-1" /> <span className="hidden sm:inline">Venues</span></TabsTrigger>
@@ -159,6 +169,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="guests">
             <GuestsTab guests={guests} events={events} qc={qc} toast={toast} />
+          </TabsContent>
+
+          <TabsContent value="approvals">
+            <ApprovalsTab guests={guests} qc={qc} toast={toast} />
           </TabsContent>
 
           <TabsContent value="events">
@@ -524,12 +538,24 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
                     </span>
                   </td>
                   <td className="py-2 pr-2 sm:pr-4">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" :
-                      g.rsvpStatus === "declined" ? "bg-red-100 text-red-800" :
-                        "bg-yellow-100 text-yellow-800"
-                      }`}>
-                      {g.rsvpStatus}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" :
+                        g.rsvpStatus === "declined" ? "bg-red-100 text-red-800" :
+                          "bg-yellow-100 text-yellow-800"
+                        }`}>
+                        {g.rsvpStatus}
+                      </span>
+                      {(g as any).rsvpApprovalStatus === "rejected" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 w-fit">
+                          admin rejected
+                        </span>
+                      )}
+                      {(g as any).rsvpApprovalStatus === "pending_approval" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
+                          awaiting approval
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2 pr-2 sm:pr-4 hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
@@ -841,6 +867,189 @@ function CrudTab({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ApprovalsTab({ guests, qc, toast }: { guests: Guest[]; qc: any; toast: any }) {
+  const pendingGuests = guests.filter(g => (g as any).rsvpApprovalStatus === "pending_approval");
+  const rejectedGuests = guests.filter(g => (g as any).rsvpApprovalStatus === "rejected");
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/admin/guests/${id}/approve`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/guests"] });
+      toast({ title: "Guest approved ✓", description: "RSVP has been confirmed." });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/admin/guests/${id}/reject`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/guests"] });
+      toast({ title: "Guest rejected", description: "RSVP has been declined." });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/guests/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/admin/guests"] });
+      toast({ title: "Entry deleted" });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
+          <Clock size={18} className="text-amber-500" />
+          RSVP Approval Queue
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          These guests submitted an RSVP but are not on your invite list. Approve to confirm their attendance or reject to decline.
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+          <p className="text-xl font-bold text-amber-700">{pendingGuests.length}</p>
+          <p className="text-[10px] text-amber-600 font-medium">Awaiting Review</p>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+          <p className="text-xl font-bold text-green-700">
+            {guests.filter(g => (g as any).rsvpApprovalStatus === "approved" && g.rsvpStatus !== "pending").length}
+          </p>
+          <p className="text-[10px] text-green-600 font-medium">Approved</p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+          <p className="text-xl font-bold text-red-700">{rejectedGuests.length}</p>
+          <p className="text-[10px] text-red-600 font-medium">Rejected</p>
+        </div>
+      </div>
+
+      {/* Pending */}
+      {pendingGuests.length === 0 ? (
+        <div className="bg-card border rounded-lg p-8 text-center">
+          <CheckCircle size={32} className="mx-auto mb-3 text-green-500 opacity-60" />
+          <p className="text-sm font-medium text-foreground">All caught up!</p>
+          <p className="text-xs text-muted-foreground mt-1">No pending RSVP submissions right now.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-amber-700 flex items-center gap-2">
+            <AlertCircle size={14} /> {pendingGuests.length} Pending Review
+          </h3>
+          {pendingGuests.map((guest) => {
+            const intended = (guest as any).intendedRsvpStatus ?? "confirmed";
+            return (
+              <div key={guest.id} className="bg-card border-2 border-amber-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-foreground">{guest.name}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        intended === "confirmed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        Wants to {intended === "confirmed" ? "Attend ✓" : "Decline ✗"}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                        {guest.side}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
+                        <Clock size={9} /> Pending
+                      </span>
+                    </div>
+                    <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+                      {guest.adultsCount > 0 && (
+                        <p>👥 {guest.adultsCount} adult{guest.adultsCount > 1 ? "s" : ""}
+                          {guest.childrenCount > 0 ? `, ${guest.childrenCount} child${guest.childrenCount > 1 ? "ren" : ""}` : ""}
+                        </p>
+                      )}
+                      {guest.foodPreference && intended === "confirmed" && (
+                        <p className="capitalize">🍽️ {guest.foodPreference}</p>
+                      )}
+                      {guest.accommodationRequired && intended === "confirmed" && (
+                        <p>🏨 Accommodation requested</p>
+                      )}
+                      {guest.message && (
+                        <p className="italic">💬 "{guest.message}"</p>
+                      )}
+                      {guest.createdAt && (
+                        <p className="text-[10px] opacity-60">
+                          Submitted: {new Date(guest.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approveMutation.mutate(guest.id)}
+                    disabled={approveMutation.isPending}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    <CheckCircle size={13} /> Approve
+                  </button>
+                  <button
+                    onClick={() => rejectMutation.mutate(guest.id)}
+                    disabled={rejectMutation.isPending}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
+                    <XCircle size={13} /> Reject
+                  </button>
+                  <button
+                    onClick={() => deleteMutation.mutate(guest.id)}
+                    disabled={deleteMutation.isPending}
+                    className="px-3 py-2 rounded-lg text-xs text-destructive hover:bg-destructive/10 transition-colors border border-destructive/30"
+                    title="Delete entry entirely"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Rejected */}
+      {rejectedGuests.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-red-600 flex items-center gap-2">
+            <XCircle size={14} /> {rejectedGuests.length} Rejected
+          </h3>
+          {rejectedGuests.map((guest) => (
+            <div key={guest.id} className="bg-card border border-red-100 rounded-lg p-3 flex items-center justify-between gap-3 opacity-75">
+              <div>
+                <p className="text-sm font-medium text-foreground">{guest.name}</p>
+                <p className="text-xs text-muted-foreground">{guest.side} • Rejected</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => approveMutation.mutate(guest.id)}
+                  disabled={approveMutation.isPending}
+                  className="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                >
+                  Re-approve
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(guest.id)}
+                  disabled={deleteMutation.isPending}
+                  className="text-destructive hover:text-destructive/80"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
