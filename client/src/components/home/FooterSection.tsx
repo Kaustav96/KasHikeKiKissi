@@ -29,7 +29,7 @@ export default function FooterSection() {
         </h3>
 
         <p className="text-xs tracking-[0.3em] uppercase mb-4" style={{ color: "var(--wedding-muted)", opacity: 0.7 }}>
-          December 2026 &middot; Kolkata
+          August 2026 &middot; Siliguri
         </p>
 
         <p className="text-xs leading-relaxed mb-6 italic" style={{ color: "var(--wedding-muted)", opacity: 0.65 }}>
