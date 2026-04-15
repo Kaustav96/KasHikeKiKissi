@@ -21,6 +21,7 @@ export default function FindByInviteSection({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
+  const [clearingGuest, setClearingGuest] = useState(false); // transition state
 
   const handleSearch = useCallback(async () => {
     const name = query.trim();
@@ -298,12 +299,46 @@ export default function FindByInviteSection({
                   Edit My RSVP
                 </button>
                 <button
-                  onClick={() => { setSelectedGuest(null); setQuery(""); setResults(null); }}
+                  onClick={() => {
+                    // Show a brief transition before clearing state
+                    setClearingGuest(true);
+                    setTimeout(() => {
+                      setSelectedGuest(null);
+                      setQuery("");
+                      setResults(null);
+                      setClearingGuest(false);
+                    }, 800);
+                  }}
                   className="w-full py-2 rounded-xl text-xs font-medium transition-all"
                   style={{ background: "transparent", color: "var(--wedding-muted)", border: "1px solid var(--wedding-border)" }}
                 >
                   Search for Another Guest
                 </button>
+
+                {/* Transition overlay when clearing */}
+                <AnimatePresence>
+                  {clearingGuest && (
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl flex items-center justify-center z-10"
+                      style={{ background: "var(--wedding-card-bg)" }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      <motion.div
+                        className="text-center"
+                        initial={{ scale: 0.85, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                      >
+                        <Search size={28} className="mx-auto mb-2" style={{ color: "var(--wedding-accent)" }} />
+                        <p className="text-sm font-medium" style={{ color: "var(--wedding-text)" }}>Searching for another guest…</p>
+                        <p className="text-xs mt-1" style={{ color: "var(--wedding-muted)" }}>Clearing your selection</p>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
