@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Loader2, User, ChevronRight, X as XIcon, Heart, Phone, Users, Check
+  Search, Loader2, User, ChevronRight, X as XIcon, Heart, Phone, Users, Check, Sparkles
 } from "lucide-react";
 import SimpleDivider from "../SimpleDivider";
 import { ThinGoldDivider } from "../RoyalOrnaments";
@@ -21,7 +21,7 @@ export default function FindByInviteSection({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<any[] | null>(null);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
-  const [clearingGuest, setClearingGuest] = useState(false); // transition state
+  const [clearingGuest, setClearingGuest] = useState(false);
 
   const handleSearch = useCallback(async () => {
     const name = query.trim();
@@ -33,7 +33,12 @@ export default function FindByInviteSection({
       const res = await apiRequest("GET", `/api/guests/by-name?name=${encodeURIComponent(name)}`);
       if (res.ok) {
         const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        const guests = Array.isArray(data) ? data : [];
+        setResults(guests);
+        // Auto-select if exactly one result (skip duplicate found-list state)
+        if (guests.length === 1) {
+          setSelectedGuest(guests[0]);
+        }
       } else {
         setResults([]);
       }
@@ -53,6 +58,15 @@ export default function FindByInviteSection({
   const notFound = results !== null && results.length === 0;
   const found = results !== null && results.length > 0;
 
+  const handleContinueToRsvp = () => {
+    onSubmitDirect(query.trim());
+    const el = document.getElementById("rsvp");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", window.location.pathname);
+    }
+  };
+
   return (
     <section id="find-invite" className="py-24 md:py-32 px-4 sm:px-8 relative" style={{ background: "var(--wedding-alt-bg)" }} data-testid="find-invite-section">
       {/* Subtle background texture */}
@@ -64,6 +78,7 @@ export default function FindByInviteSection({
       />
 
       <div className="max-w-lg mx-auto relative">
+        {/* Section Header */}
         <motion.div
           className="text-center mb-10"
           initial={{ opacity: 0, y: 18 }}
@@ -76,26 +91,26 @@ export default function FindByInviteSection({
             style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
             whileHover={{ scale: 1.05, rotate: 6 }}
           >
-            <Search size={18} style={{ color: "var(--wedding-accent)" }} />
+            <Heart size={18} style={{ color: "var(--wedding-accent)" }} />
           </motion.div>
           <p className="text-[10px] tracking-[0.4em] uppercase mb-2 font-medium" style={{ color: "var(--wedding-muted)" }}>
-            Check Your Invite
+            Your Invitation
           </p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--wedding-text)" }}>
-            Find Your Invitation
+            You're Warmly Invited
           </h2>
           <SimpleDivider />
           <p className="text-sm mt-4 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-            Search for your name to view your personalized invitation details
+            Search your name to view your personalized details, or simply continue to RSVP
           </p>
         </motion.div>
 
-        {/* Search input */}
+        {/* Search input — visually secondary */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative flex gap-2 mb-4"
+          className="relative flex gap-2 mb-2"
         >
           <div className="flex-1 relative">
             <Search
@@ -109,7 +124,6 @@ export default function FindByInviteSection({
               onChange={(e) => {
                 const newValue = e.target.value;
                 setQuery(newValue);
-                // Clear results when search box is cleared
                 if (newValue.trim().length === 0) {
                   setResults(null);
                   setSelectedGuest(null);
@@ -117,7 +131,7 @@ export default function FindByInviteSection({
               }}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Enter your full name..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
               style={{
                 background: "var(--wedding-card-bg)",
                 border: "1px solid var(--wedding-border)",
@@ -125,194 +139,227 @@ export default function FindByInviteSection({
               }}
             />
           </div>
+          {/* Search button — outlined/secondary style */}
           <motion.button
             onClick={handleSearch}
             disabled={searching || query.trim().length < 3}
-            className="px-5 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
+            className="px-4 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-40"
+            style={{ background: "var(--wedding-card-bg)", color: "var(--wedding-accent)", border: "1px solid var(--wedding-border)" }}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
           >
-            {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
             Search
           </motion.button>
         </motion.div>
 
+        {/* Cleaner helper text */}
+        <p className="text-[10px] text-center mb-5" style={{ color: "var(--wedding-muted)", opacity: 0.55 }}>
+          Find your name for personalized details (optional)
+        </p>
+
         {/* Results */}
         <AnimatePresence mode="wait">
+          {/* Refined not-found copy */}
           {notFound && (
             <motion.div
               key="not-found"
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="rounded-xl p-5 text-center"
-              style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
+              className="rounded-xl px-4 py-3 mb-4 text-center"
+              style={{ background: "rgba(176,132,72,0.06)", border: "1px solid var(--wedding-border)" }}
             >
-              <User size={28} className="mx-auto mb-3" style={{ color: "var(--wedding-accent)", opacity: 0.4 }} />
-              <p className="font-serif text-base font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                We couldn't find your name
+              <p className="text-sm mb-0.5" style={{ color: "var(--wedding-text)" }}>
+                We couldn't find an exact match — no worries 💛
               </p>
-              <p className="text-xs mb-4" style={{ color: "var(--wedding-muted)" }}>
-                Don't worry! You can still RSVP directly or reach out to us.
+              <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                Try your full name as it appears on your invitation, or continue to RSVP below.
               </p>
-              <motion.button
-                onClick={() => {
-                  onSubmitDirect(query.trim());
-                  const el = document.getElementById("rsvp");
-                  if (el) {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    history.replaceState(null, "", window.location.pathname);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg transition-opacity hover:opacity-80"
-                style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)", border: "none", cursor: "pointer" }}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-              >
-                Submit RSVP Directly <ChevronRight size={11} />
-              </motion.button>
             </motion.div>
           )}
 
-          {found && !selectedGuest && (
+          {/* Multi-result list — only when >1 match (single auto-opens detail) */}
+          {found && !selectedGuest && results!.length > 1 && (
             <motion.div
               key="found-list"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="space-y-2"
+              className="space-y-2 mb-4"
             >
               <p className="text-xs text-center mb-3" style={{ color: "var(--wedding-muted)" }}>
-                Found {results!.length} guest{results!.length > 1 ? "s" : ""} — tap to view &amp; edit your RSVP
+                We found {results!.length} guests — please select yours
               </p>
               {results!.map((guest) => (
                 <motion.button
                   key={guest.id}
                   onClick={() => setSelectedGuest(guest)}
-                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-all hover:shadow-xl"
+                  className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-all hover:shadow-lg"
                   style={{ background: "var(--wedding-card-bg)", border: "1px solid var(--wedding-border)" }}
-                  whileHover={{ scale: 1.01, y: -2 }}
+                  whileHover={{ scale: 1.01, y: -1 }}
                   whileTap={{ scale: 0.99 }}
                 >
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ background: "rgba(176,132,72,0.10)", color: "var(--wedding-accent)" }}
                   >
-                    <User size={16} />
+                    <User size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm" style={{ color: "var(--wedding-text)" }}>{guest.name}</p>
-                    <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-                      {guest.rsvpStatus === "confirmed" ? "✓ RSVP Confirmed" : guest.rsvpStatus === "declined" ? "✗ Declined" : "RSVP Pending"}
-                    </p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
-                      Tap to view &amp; edit RSVP →
+                    <p className="text-[10px]" style={{ color: "var(--wedding-accent)", opacity: 0.8 }}>
+                      Tap to view your invitation →
                     </p>
                   </div>
-                  <ChevronRight size={14} style={{ color: "var(--wedding-accent)", opacity: 0.5 }} />
+                  <ChevronRight size={13} style={{ color: "var(--wedding-accent)", opacity: 0.4 }} />
                 </motion.button>
               ))}
             </motion.div>
           )}
 
+          {/* Guest detail card — compact with spring animation + gold glow */}
           {selectedGuest && (
             <motion.div
               key="guest-detail"
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              className="rounded-2xl overflow-hidden relative"
-              style={{ background: "var(--wedding-card-bg)", border: "2px solid var(--wedding-accent)", boxShadow: "0 8px 40px rgba(176,132,72,0.18)" }}
+              initial={{ opacity: 0, scale: 0.93, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              className="rounded-2xl overflow-hidden relative mb-4"
+              style={{
+                background: "var(--wedding-card-bg)",
+                border: "2px solid var(--wedding-accent)",
+                boxShadow: "0 4px 30px rgba(176,132,72,0.15), 0 0 60px rgba(176,132,72,0.06)",
+              }}
             >
               {/* Gold top bar */}
-              <div className="h-[4px]" style={{
-                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 40%, var(--wedding-accent) 60%, transparent)"
+              <div className="h-[3px]" style={{
+                background: "linear-gradient(90deg, transparent, var(--wedding-accent) 30%, var(--wedding-accent) 70%, transparent)"
               }} />
 
-              {/* Back / close corner button */}
               <button
                 onClick={() => setSelectedGuest(null)}
-                className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-opacity hover:opacity-70"
-                style={{ background: "rgba(176,132,72,0.12)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
+                className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center transition-opacity hover:opacity-70 z-10"
+                style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)", color: "var(--wedding-accent)" }}
                 aria-label="Back to results"
               >
-                <XIcon size={13} />
+                <XIcon size={11} />
               </button>
 
-              <div className="p-6 sm:p-8 text-center">
-                {/* Icon */}
-                <div
-                  className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
+              <div className="px-5 py-5 sm:px-7 sm:py-6 text-center">
+                {/* Icon with gold glow pulse */}
+                <motion.div
+                  className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
                   style={{ background: "rgba(176,132,72,0.10)", border: "1px solid var(--wedding-border)" }}
+                  animate={{
+                    boxShadow: [
+                      "0 0 0px rgba(176,132,72,0.0)",
+                      "0 0 20px rgba(176,132,72,0.25)",
+                      "0 0 0px rgba(176,132,72,0.0)",
+                    ]
+                  }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <Heart size={28} style={{ color: "var(--wedding-accent)" }} />
-                </div>
+                  <Heart size={24} style={{ color: "var(--wedding-accent)" }} />
+                </motion.div>
 
-                <p className="text-[10px] tracking-[0.35em] uppercase mb-2" style={{ color: "var(--wedding-accent)", opacity: 0.7 }}>
-                  You're on the list!
-                </p>
-                <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3 leading-tight" style={{ color: "var(--wedding-text)" }}>
-                  Hello, {selectedGuest.name.split(" ")[0]}!
-                </h3>
+                {/* Emotional copy */}
+                <motion.p
+                  className="text-[10px] tracking-[0.3em] uppercase mb-1.5"
+                  style={{ color: "var(--wedding-accent)", opacity: 0.8 }}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 0.8, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  {selectedGuest.rsvpStatus === "declined"
+                    ? "We'll miss you at our celebration 💛"
+                    : "We're so happy you're joining us ✨"}
+                </motion.p>
+                <motion.h3
+                  className="font-serif text-xl sm:text-2xl font-bold mb-2 leading-tight"
+                  style={{ color: "var(--wedding-text)" }}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  Welcome, {selectedGuest.name.split(" ")[0]} 💛
+                </motion.h3>
 
-                <ThinGoldDivider className="mb-4" />
+                <ThinGoldDivider className="mb-3" />
 
-                <p className="text-sm leading-[1.75] mb-5" style={{ color: "var(--wedding-muted)" }}>
-                  We can't wait to celebrate with you at our wedding.{" "}
+                <p className="text-xs leading-[1.7] mb-4" style={{ color: "var(--wedding-muted)" }}>
                   {selectedGuest.rsvpStatus === "confirmed"
-                    ? "Your RSVP is confirmed — we're so excited to see you!"
+                    ? "Your RSVP is confirmed — we can't wait to celebrate with you!"
                     : selectedGuest.rsvpStatus === "declined"
-                    ? "We see you've declined, but you're always welcome to reach out."
-                    : "Your invite is ready — please complete your RSVP below."}
+                    ? "We see you've declined, but you're always welcome to change your mind."
+                    : "Your invite is ready — we'd love for you to complete your RSVP."}
                 </p>
 
-                {/* Guest details card */}
+                {/* Guest details — compact */}
                 <div
-                  className="rounded-xl px-4 py-4 mb-5 text-left space-y-2"
-                  style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)" }}
+                  className="rounded-lg px-3.5 py-3 mb-4 text-left space-y-1.5"
+                  style={{ background: "rgba(176,132,72,0.04)", border: "1px solid var(--wedding-border)" }}
                 >
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <User size={12} style={{ color: "var(--wedding-accent)" }} />
+                  <div className="flex items-center gap-2 text-xs">
+                    <User size={11} style={{ color: "var(--wedding-accent)" }} />
                     <span style={{ color: "var(--wedding-muted)" }}>{selectedGuest.name}</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <Users size={12} style={{ color: "var(--wedding-accent)" }} />
+                  <div className="flex items-center gap-2 text-xs">
+                    <Users size={11} style={{ color: "var(--wedding-accent)" }} />
                     <span style={{ color: "var(--wedding-muted)" }}>
                       {selectedGuest.adultsCount ?? 1} Adult{(selectedGuest.adultsCount ?? 1) > 1 ? "s" : ""}
                       {selectedGuest.childrenCount > 0 ? `, ${selectedGuest.childrenCount} Child${selectedGuest.childrenCount > 1 ? "ren" : ""}` : ""}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-xs">
-                    <Check size={12} style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-accent)" }} />
-                    <span className="capitalize" style={{ color: selectedGuest.rsvpStatus === "confirmed" ? "#22c55e" : "var(--wedding-muted)" }}>
-                      {selectedGuest.rsvpStatus === "confirmed" ? "RSVP Confirmed" : selectedGuest.rsvpStatus === "declined" ? "Declined" : "RSVP Pending"}
-                    </span>
+                  <div className="flex items-center gap-2 text-xs">
+                    {selectedGuest.rsvpStatus === "confirmed" ? (
+                      <motion.div
+                        className="flex items-center gap-2"
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      >
+                        <Sparkles size={11} style={{ color: "#22c55e" }} />
+                        <span style={{ color: "#22c55e" }}>RSVP Confirmed ✨</span>
+                      </motion.div>
+                    ) : (
+                      <>
+                        <Check size={11} style={{ color: "var(--wedding-accent)" }} />
+                        <span style={{ color: "var(--wedding-muted)" }}>
+                          {selectedGuest.rsvpStatus === "declined" ? "Declined" : "RSVP Pending"}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <button
+                {/* Dynamic CTA based on status */}
+                <motion.button
                   onClick={() => onEditRsvp(selectedGuest)}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all mb-2"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all mb-2"
                   style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)", border: "none" }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  Edit My RSVP
-                </button>
+                  {selectedGuest.rsvpStatus === "confirmed" ? "View Your Invitation" : "Edit My RSVP"}
+                </motion.button>
+
+                {/* Subtle secondary "search another" */}
                 <button
                   onClick={() => {
-                    // Show a brief transition before clearing state
                     setClearingGuest(true);
                     setTimeout(() => {
                       setSelectedGuest(null);
                       setQuery("");
                       setResults(null);
                       setClearingGuest(false);
-                    }, 800);
+                    }, 600);
                   }}
-                  className="w-full py-2 rounded-xl text-xs font-medium transition-all"
-                  style={{ background: "transparent", color: "var(--wedding-muted)", border: "1px solid var(--wedding-border)" }}
+                  className="w-full py-1.5 text-[10px] font-medium transition-all opacity-50 hover:opacity-75"
+                  style={{ background: "transparent", color: "var(--wedding-muted)", border: "none" }}
                 >
-                  Search for Another Guest
+                  Search for another guest
                 </button>
 
                 {/* Transition overlay when clearing */}
@@ -324,17 +371,16 @@ export default function FindByInviteSection({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.25 }}
+                      transition={{ duration: 0.2 }}
                     >
                       <motion.div
                         className="text-center"
                         initial={{ scale: 0.85, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.3, delay: 0.1 }}
+                        transition={{ duration: 0.25, delay: 0.05 }}
                       >
-                        <Search size={28} className="mx-auto mb-2" style={{ color: "var(--wedding-accent)" }} />
-                        <p className="text-sm font-medium" style={{ color: "var(--wedding-text)" }}>Searching for another guest…</p>
-                        <p className="text-xs mt-1" style={{ color: "var(--wedding-muted)" }}>Clearing your selection</p>
+                        <Search size={24} className="mx-auto mb-2" style={{ color: "var(--wedding-accent)" }} />
+                        <p className="text-xs font-medium" style={{ color: "var(--wedding-text)" }}>Clearing selection…</p>
                       </motion.div>
                     </motion.div>
                   )}
@@ -344,6 +390,40 @@ export default function FindByInviteSection({
           )}
         </AnimatePresence>
 
+        {/* PRIMARY CTA — prominent, always visible when no guest detail open */}
+        {!selectedGuest && (
+          <motion.div
+            className="text-center mb-6"
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.button
+              onClick={handleContinueToRsvp}
+              className="inline-flex items-center gap-2.5 px-10 py-4 rounded-xl text-sm font-bold tracking-wide transition-all"
+              style={{
+                background: "var(--wedding-accent)",
+                color: "var(--wedding-bg)",
+                border: "none",
+                boxShadow: "0 4px 24px rgba(176,132,72,0.3)",
+              }}
+              whileHover={{
+                scale: 1.04,
+                boxShadow: "0 6px 32px rgba(176,132,72,0.45)",
+              }}
+              whileTap={{ scale: 0.96 }}
+            >
+              <Sparkles size={16} />
+              Continue to RSVP
+              <ChevronRight size={15} />
+            </motion.button>
+            <p className="text-[10px] mt-2.5" style={{ color: "var(--wedding-muted)", opacity: 0.55 }}>
+              No search needed — we'd love to celebrate with you 💛
+            </p>
+          </motion.div>
+        )}
+
         {/* Bottom contact links */}
         <motion.div
           className="mt-6 text-center space-y-3"
@@ -351,7 +431,7 @@ export default function FindByInviteSection({
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>Can't find your name?</p>
+          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>Need help? Reach out to us</p>
           <div className="flex flex-wrap justify-center gap-2 text-xs">
             <a
               href="tel:+918376916635"
