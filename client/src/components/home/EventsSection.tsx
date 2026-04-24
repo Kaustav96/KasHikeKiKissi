@@ -184,9 +184,14 @@ const EventsSection = React.memo(({ events }: { events: WeddingEvent[] }) => {
                       </span>
                     </div>
                     {event.venueName && (
-                      <div className="flex items-center gap-2.5">
-                        <MapPin size={13} style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
-                        <span style={{ color: "var(--wedding-text)" }}>{event.venueName}</span>
+                      <div className="flex items-start gap-2.5">
+                        <MapPin size={13} className="mt-0.5" style={{ color: "var(--wedding-accent)", flexShrink: 0 }} />
+                        <div>
+                          <span style={{ color: "var(--wedding-text)" }}>{event.venueName}</span>
+                          {event.venueAddress && (
+                            <p className="text-xs mt-0.5" style={{ color: "var(--wedding-muted)" }}>{event.venueAddress}</p>
+                          )}
+                        </div>
                       </div>
                     )}
                     {event.dressCode && (

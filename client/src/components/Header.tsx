@@ -42,7 +42,7 @@ export default function Header() {
     { id: "find-invite", label: "Find Invite" },
     { id: "events", label: "Events" },
     { id: "venue", label: "Venue" },
-    { id: "wardrobe", label: "Wardrobe" },
+    // { id: "wardrobe", label: "Wardrobe" },
     { id: "story", label: "Our Story" },
     { id: "rsvp", label: "RSVP" },
     { id: "contact", label: "Contact" },

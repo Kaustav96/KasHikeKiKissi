@@ -221,6 +221,10 @@ export default function AdminDashboard() {
                 { name: "mapEmbedUrl", label: "Maps Embed URL", type: "text" },
                 { name: "directions", label: "Travel Directions", type: "textarea" },
                 { name: "accommodation", label: "Accommodation", type: "textarea" },
+                { name: "accommodationName", label: "Accommodation Name (if different)", type: "text" },
+                { name: "accommodationAddress", label: "Accommodation Address", type: "text" },
+                { name: "accommodationMapUrl", label: "Accommodation Google Maps URL", type: "text" },
+                { name: "accommodationMapEmbedUrl", label: "Accommodation Maps Embed URL", type: "text" },
                 { name: "contactInfo", label: "Contact Info", type: "text" },
               ]}
               displayField="name"

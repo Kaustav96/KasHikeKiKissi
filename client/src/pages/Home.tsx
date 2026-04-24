@@ -259,6 +259,9 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
   const venueCities = ["Siliguri", "Faridabad"];
   const activeVenue = venueList[activeVenueIdx] ?? null;
 
+  // Normalize literal \n from Firestore into real newlines
+  const normalizeNewlines = (text: string) => text.replace(/\\n/g, "\n");
+
   const travelModes = [
     { icon: Plane, label: "By Air" },
     { icon: Train, label: "By Train" },
@@ -437,17 +440,59 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                 {/* ── Accommodation tab ── */}
                 {activeSubSection === "stay" && (
                   <div>
+                    {/* Show accommodation name if different from venue */}
+                    {activeVenue.accommodationName && (
+                      <div className="mb-4">
+                        <h4 className="font-serif text-lg font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
+                          {activeVenue.accommodationName}
+                        </h4>
+                        {activeVenue.accommodationAddress && (
+                          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
+                            {activeVenue.accommodationAddress}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {activeVenue.accommodation ? (
                       <div
                         className="rounded-xl p-4 text-sm leading-[1.8] whitespace-pre-line"
                         style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
                       >
-                        {activeVenue.accommodation}
+                        {normalizeNewlines(activeVenue.accommodation)}
                       </div>
                     ) : (
                       <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
                         Accommodation details will be shared soon. Please contact us for suggestions.
                       </p>
+                    )}
+
+                    {/* Accommodation Map */}
+                    {(activeVenue.accommodationMapEmbedUrl || activeVenue.mapEmbedUrl) && (
+                      <div className="mt-4">
+                        <div className="rounded-xl overflow-hidden mb-3 border" style={{ borderColor: "var(--wedding-border)" }}>
+                          <iframe
+                            src={activeVenue.accommodationMapEmbedUrl || activeVenue.mapEmbedUrl}
+                            width="100%"
+                            height="220"
+                            style={{ border: 0, display: "block" }}
+                            allowFullScreen
+                            loading="lazy"
+                            title={`Accommodation Map - ${activeVenue.name}`}
+                            referrerPolicy="no-referrer-when-downgrade"
+                          />
+                        </div>
+                        {(activeVenue.accommodationMapUrl || activeVenue.mapUrl) && (
+                          <a
+                            href={activeVenue.accommodationMapUrl || activeVenue.mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl font-medium transition-opacity hover:opacity-85"
+                            style={{ background: "var(--wedding-accent)", color: "var(--wedding-bg)" }}
+                          >
+                            <Navigation size={12} /> Get Directions
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -472,7 +517,7 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                         className="rounded-xl p-4 text-sm leading-[1.85] whitespace-pre-line"
                         style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
                       >
-                        {activeVenue.directions}
+                        {normalizeNewlines(activeVenue.directions)}
                       </div>
                     ) : (
                       <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
@@ -1741,7 +1786,7 @@ export default function Home() {
               <EventsSection events={events} />
             </Suspense>
             <VenueSection venueList={venueList} />
-            <WardrobePlannerSection events={allEvents} />
+            {/* <WardrobePlannerSection events={allEvents} /> */}
             <Suspense fallback={<div className="py-24 md:py-32" />}>
               <StorySection milestones={milestones} coupleStory={config?.coupleStory} />
             </Suspense>
