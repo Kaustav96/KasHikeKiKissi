@@ -227,7 +227,7 @@ const HeroSection = React.memo(({ config }: { config: WeddingConfig }) => {
               style={{ color: "var(--wedding-muted)" }}
             >
               <MapPin size={12} />
-              {config.venueName}, Kolkata
+              {config.venueName}{config.venueAddress ? `, ${config.venueAddress}` : ""}
             </p>
           )}
         </motion.div>
@@ -382,14 +382,14 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                   boxShadow: "0 4px 20px rgba(46,43,39,0.07)",
                 }}
               >
-                {/* Venue name + address header */}
+                {/* Venue name + address header (override with accommodation details on stay tab) */}
                 <div className="mb-4">
                   <p className="font-serif text-lg font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                    {activeVenue.name}
+                    {activeSubSection === "stay" && activeVenue.accommodationName ? activeVenue.accommodationName : activeVenue.name}
                   </p>
                   <p className="text-sm flex items-start gap-2" style={{ color: "var(--wedding-muted)" }}>
                     <MapPin size={13} className="mt-0.5 flex-shrink-0" style={{ color: "var(--wedding-accent)" }} />
-                    {activeVenue.address}
+                    {activeSubSection === "stay" && activeVenue.accommodationAddress ? activeVenue.accommodationAddress : activeVenue.address}
                   </p>
                 </div>
 
@@ -440,19 +440,6 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                 {/* ── Accommodation tab ── */}
                 {activeSubSection === "stay" && (
                   <div>
-                    {/* Show accommodation name if different from venue */}
-                    {activeVenue.accommodationName && (
-                      <div className="mb-4">
-                        <h4 className="font-serif text-lg font-semibold mb-1" style={{ color: "var(--wedding-text)" }}>
-                          {activeVenue.accommodationName}
-                        </h4>
-                        {activeVenue.accommodationAddress && (
-                          <p className="text-xs" style={{ color: "var(--wedding-muted)" }}>
-                            {activeVenue.accommodationAddress}
-                          </p>
-                        )}
-                      </div>
-                    )}
                     {activeVenue.accommodation ? (
                       <div
                         className="rounded-xl p-4 text-sm leading-[1.8] whitespace-pre-line"
@@ -512,17 +499,41 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                         </div>
                       ))}
                     </div>
+
+                    {/* Venue directions */}
                     {activeVenue.directions ? (
-                      <div
-                        className="rounded-xl p-4 text-sm leading-[1.85] whitespace-pre-line"
-                        style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
-                      >
-                        {normalizeNewlines(activeVenue.directions)}
+                      <div className="space-y-3">
+                        {activeVenue.accommodationDirections && activeVenue.accommodationName && (
+                          <h4 className="font-serif text-sm font-semibold" style={{ color: "var(--wedding-text)" }}>
+                            📍 To {activeVenue.name}
+                          </h4>
+                        )}
+                        <div
+                          className="rounded-xl p-4 text-sm leading-[1.85] whitespace-pre-line"
+                          style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
+                        >
+                          {normalizeNewlines(activeVenue.directions)}
+                        </div>
                       </div>
                     ) : (
                       <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
                         Travel details coming soon. Feel free to reach out for directions.
                       </p>
+                    )}
+
+                    {/* Accommodation directions (only if different) */}
+                    {activeVenue.accommodationDirections && activeVenue.accommodationName && (
+                      <div className="mt-5 space-y-3">
+                        <h4 className="font-serif text-sm font-semibold" style={{ color: "var(--wedding-text)" }}>
+                          🏨 To {activeVenue.accommodationName}
+                        </h4>
+                        <div
+                          className="rounded-xl p-4 text-sm leading-[1.85] whitespace-pre-line"
+                          style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
+                        >
+                          {normalizeNewlines(activeVenue.accommodationDirections)}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
