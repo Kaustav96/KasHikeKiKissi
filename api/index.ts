@@ -42,6 +42,7 @@ async function initialize() {
         console.log("[API] All routes registered successfully");
       } catch (error) {
         console.error("[API] Initialization error:", error);
+        initPromise = null; // Reset so next request can retry
         throw error;
       }
     })();
