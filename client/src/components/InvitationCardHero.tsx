@@ -314,7 +314,7 @@ export default function InvitationCardHero({ config }: InvitationCardHeroProps) 
                 <p className="font-serif text-base sm:text-lg italic mb-3" style={{ color: "#0F1B2E" }}>Date To Be Announced</p>
               )}
 
-              {config.venueName && (
+              {config.venueName && config.venueName !== "To Be Announced" && (
                 <div
                   className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full"
                   style={{

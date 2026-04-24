@@ -225,6 +225,7 @@ export default function AdminDashboard() {
                 { name: "accommodationAddress", label: "Accommodation Address", type: "text" },
                 { name: "accommodationMapUrl", label: "Accommodation Google Maps URL", type: "text" },
                 { name: "accommodationMapEmbedUrl", label: "Accommodation Maps Embed URL", type: "text" },
+                { name: "accommodationDirections", label: "Accommodation Directions (if different)", type: "textarea" },
                 { name: "contactInfo", label: "Contact Info", type: "text" },
               ]}
               displayField="name"
@@ -858,6 +859,8 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
       return {
         weddingDate: "",
         dateToBeDecided: true,
+        venueName: "",
+        venueAddress: "",
         coupleStory: "",
         upiId: "",
         backgroundMusicUrl: [] as { name: string; url: string }[],
@@ -880,6 +883,8 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
           })()
         : "",
       dateToBeDecided: !hasWeddingDate,
+      venueName: config.venueName ?? "",
+      venueAddress: config.venueAddress ?? "",
       coupleStory: config.coupleStory ?? "",
       upiId: config.upiId ?? "",
       backgroundMusicUrl: Array.isArray(config.backgroundMusicUrl)
@@ -921,6 +926,8 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
           })()
         : "",
       dateToBeDecided: !hasWeddingDate,
+      venueName: config.venueName ?? "",
+      venueAddress: config.venueAddress ?? "",
       coupleStory: config.coupleStory ?? "",
       upiId: config.upiId ?? "",
       backgroundMusicUrl: Array.isArray(config.backgroundMusicUrl)
@@ -1065,6 +1072,8 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
   const saveMutation = useMutation({
     mutationFn: (data: any) => {
       const payload: any = {
+        venueName: data.venueName,
+        venueAddress: data.venueAddress,
         coupleStory: data.coupleStory,
         upiId: data.upiId,
       };
@@ -1078,31 +1087,34 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
       const hasBrideMusic = Array.isArray(data.brideMusicUrls) &&
         data.brideMusicUrls.some((t: any) => t.url && t.url.trim());
 
-      if (hasBackgroundMusic) {
-        // Background music takes precedence - clear groom/bride
-        payload.backgroundMusicUrl = data.backgroundMusicUrl.filter(
+      // Only include music fields if user explicitly modified them
+      if (musicUrlsModified.current.background) {
+        if (hasBackgroundMusic) {
+          payload.backgroundMusicUrl = data.backgroundMusicUrl.filter(
+            (track: { name: string; url: string }) => track.url && track.url.trim()
+          );
+          // If background music set, clear groom/bride
+          payload.groomMusicUrls = [];
+          payload.brideMusicUrls = [];
+        } else {
+          payload.backgroundMusicUrl = [];
+        }
+      }
+      if (musicUrlsModified.current.groom) {
+        payload.groomMusicUrls = data.groomMusicUrls.filter(
           (track: { name: string; url: string }) => track.url && track.url.trim()
         );
-        payload.groomMusicUrls = [];
-        payload.brideMusicUrls = [];
-      } else if (hasGroomMusic || hasBrideMusic) {
-        // Groom/Bride music exists - clear background
-        payload.backgroundMusicUrl = [];
-        if (musicUrlsModified.current.groom) {
-          payload.groomMusicUrls = data.groomMusicUrls.filter(
-            (track: { name: string; url: string }) => track.url && track.url.trim()
-          );
+        if (payload.groomMusicUrls.length > 0) {
+          payload.backgroundMusicUrl = [];
         }
-        if (musicUrlsModified.current.bride) {
-          payload.brideMusicUrls = data.brideMusicUrls.filter(
-            (track: { name: string; url: string }) => track.url && track.url.trim()
-          );
+      }
+      if (musicUrlsModified.current.bride) {
+        payload.brideMusicUrls = data.brideMusicUrls.filter(
+          (track: { name: string; url: string }) => track.url && track.url.trim()
+        );
+        if (payload.brideMusicUrls.length > 0) {
+          payload.backgroundMusicUrl = [];
         }
-      } else {
-        // No music at all - set all to empty
-        payload.backgroundMusicUrl = [];
-        payload.groomMusicUrls = [];
-        payload.brideMusicUrls = [];
       }
 
       if (!data.dateToBeDecided && data.weddingDate?.trim()) {
@@ -1172,6 +1184,33 @@ function ConfigTab({ config, qc, toast }: { config: WeddingConfig | undefined; q
             </div>
           </div>
         )}
+
+        {/* Venue Details (shown on invitation card) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+              <MapPin size={12} /> Venue Name (Invitation Card)
+            </label>
+            <input
+              value={form.venueName}
+              onChange={(e) => setForm({ ...form, venueName: e.target.value })}
+              placeholder="e.g., সৌভাগ্য প্যালেস (Soubhagya Palace)"
+              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+              <MapPin size={12} /> Venue City/Address
+            </label>
+            <input
+              value={form.venueAddress}
+              onChange={(e) => setForm({ ...form, venueAddress: e.target.value })}
+              placeholder="e.g., Siliguri"
+              className="w-full px-3 py-2 rounded bg-background border text-sm text-foreground"
+            />
+          </div>
+        </div>
+
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Couple Story</label>
           <textarea

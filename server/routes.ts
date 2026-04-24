@@ -556,6 +556,12 @@ export async function registerRoutes(
           data.weddingDate === null ? null : parseISTDateTime(data.weddingDate);
       }
 
+      if (data.venueName !== undefined)
+        updateData.venueName = data.venueName;
+
+      if (data.venueAddress !== undefined)
+        updateData.venueAddress = data.venueAddress;
+
       if (data.coupleStory !== undefined)
         updateData.coupleStory = data.coupleStory;
 
@@ -805,6 +811,8 @@ export async function registerRoutes(
 
         accommodationMapEmbedUrl: z.string().trim().max(2000).optional().transform(v => v ?? ""),
 
+        accommodationDirections: z.string().trim().max(2000).optional().transform(v => v ?? ""),
+
         contactInfo: z.string().trim().max(500).optional().transform(v => v ?? ""),
 
         imageUrl: z.string().trim().max(500).optional().transform(v => v ?? ""),
@@ -854,6 +862,8 @@ export async function registerRoutes(
         accommodationMapUrl: z.string().trim().max(2000).optional(),
 
         accommodationMapEmbedUrl: z.string().trim().max(2000).optional(),
+
+        accommodationDirections: z.string().trim().max(2000).optional(),
 
         contactInfo: z.string().trim().max(500).optional(),
 

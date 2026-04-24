@@ -170,6 +170,7 @@ export const venueSchema = z.object({
   accommodationAddress: z.string().default(""),
   accommodationMapUrl: z.string().default(""),
   accommodationMapEmbedUrl: z.string().default(""),
+  accommodationDirections: z.string().default(""),
   contactInfo: z.string().default(""),
   imageUrl: z.string().default(""),
   sortOrder: z.number().int().default(0),
