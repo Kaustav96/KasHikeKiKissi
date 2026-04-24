@@ -789,13 +789,21 @@ export async function registerRoutes(
 
         description: z.string().trim().max(2000).optional().transform(v => v ?? ""),
 
-        mapUrl: z.string().trim().max(500).optional().transform(v => v ?? ""),
+        mapUrl: z.string().trim().max(2000).optional().transform(v => v ?? ""),
 
-        mapEmbedUrl: z.string().trim().max(500).optional().transform(v => v ?? ""),
+        mapEmbedUrl: z.string().trim().max(2000).optional().transform(v => v ?? ""),
 
         directions: z.string().trim().max(2000).optional().transform(v => v ?? ""),
 
         accommodation: z.string().trim().max(2000).optional().transform(v => v ?? ""),
+
+        accommodationName: z.string().trim().max(200).optional().transform(v => v ?? ""),
+
+        accommodationAddress: z.string().trim().max(500).optional().transform(v => v ?? ""),
+
+        accommodationMapUrl: z.string().trim().max(2000).optional().transform(v => v ?? ""),
+
+        accommodationMapEmbedUrl: z.string().trim().max(2000).optional().transform(v => v ?? ""),
 
         contactInfo: z.string().trim().max(500).optional().transform(v => v ?? ""),
 
@@ -831,13 +839,21 @@ export async function registerRoutes(
 
         description: z.string().trim().max(2000).optional(),
 
-        mapUrl: z.string().trim().max(500).optional(),
+        mapUrl: z.string().trim().max(2000).optional(),
 
-        mapEmbedUrl: z.string().trim().max(500).optional(),
+        mapEmbedUrl: z.string().trim().max(2000).optional(),
 
         directions: z.string().trim().max(2000).optional(),
 
         accommodation: z.string().trim().max(2000).optional(),
+
+        accommodationName: z.string().trim().max(200).optional(),
+
+        accommodationAddress: z.string().trim().max(500).optional(),
+
+        accommodationMapUrl: z.string().trim().max(2000).optional(),
+
+        accommodationMapEmbedUrl: z.string().trim().max(2000).optional(),
 
         contactInfo: z.string().trim().max(500).optional(),
 
