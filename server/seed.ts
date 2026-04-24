@@ -17,7 +17,7 @@ export async function seedDatabase(): Promise<void> {
 
     const configCheckPromise = storage.getWeddingConfig();
     const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error("Database query timeout after 5 seconds")), 5000)
+        setTimeout(() => reject(new Error("Database query timeout after 15 seconds")), 15000)
     );
 
     let existingConfig;
