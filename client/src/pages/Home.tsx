@@ -440,14 +440,15 @@ const VenueSection = React.memo(({ venueList }: { venueList: Venue[] }) => {
                 {/* ── Accommodation tab ── */}
                 {activeSubSection === "stay" && (
                   <div>
-                    {activeVenue.accommodation ? (
+                    {activeVenue.accommodation && (
                       <div
                         className="rounded-xl p-4 text-sm leading-[1.8] whitespace-pre-line"
                         style={{ background: "rgba(176,132,72,0.05)", border: "1px solid var(--wedding-border)", color: "var(--wedding-muted)" }}
                       >
                         {normalizeNewlines(activeVenue.accommodation)}
                       </div>
-                    ) : (
+                    )}
+                    {!activeVenue.accommodation && !activeVenue.accommodationName && !activeVenue.accommodationMapEmbedUrl && !activeVenue.mapEmbedUrl && (
                       <p className="text-sm" style={{ color: "var(--wedding-muted)" }}>
                         Accommodation details will be shared soon. Please contact us for suggestions.
                       </p>
