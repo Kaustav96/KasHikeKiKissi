@@ -1,5 +1,6 @@
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ViewingSideOverlayProps {
   onBackToSelection: () => void;
@@ -11,10 +12,9 @@ export default function ViewingSideOverlay({ onBackToSelection, onSideChange }: 
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const accentColor = "var(--wedding-accent)";
-  const textColor = "var(--wedding-text)";
-  const mutedColor = "var(--wedding-muted)";
   const otherSide = side === "groom" ? "bride" : "groom";
+  const sideLabel = side === "groom" ? "Groom" : "Bride";
+  const otherLabel = otherSide === "groom" ? "Groom" : "Bride";
 
   // Close when clicking/tapping outside
   useEffect(() => {
@@ -36,81 +36,101 @@ export default function ViewingSideOverlay({ onBackToSelection, onSideChange }: 
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-4 left-3 sm:bottom-6 sm:left-6 z-[60] touch-manipulation"
+      className="fixed bottom-5 left-4 sm:bottom-6 sm:left-5 z-[60] touch-manipulation"
       data-testid="viewing-side-overlay"
     >
-      <div
-        className="flex flex-col gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl backdrop-blur-md shadow-lg border transition-all duration-300"
+      {/* Main toggle pill */}
+      <motion.button
+        onClick={() => setIsOpen((v) => !v)}
+        className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-left"
         style={{
-          background: "var(--wedding-card-bg)",
-          borderColor: accentColor,
-          minWidth: "170px",
-          pointerEvents: "auto",
-          overflow: "hidden",
+          background: "linear-gradient(135deg, #0B1F3A 0%, #162840 100%)",
+          border: "1.5px solid #C6A75E",
+          boxShadow: "0 4px 20px rgba(11,31,58,0.5), 0 0 12px rgba(198,167,94,0.15)",
+          minWidth: "160px",
         }}
+        whileHover={{ scale: 1.03, boxShadow: "0 6px 24px rgba(11,31,58,0.6), 0 0 18px rgba(198,167,94,0.25)" }}
+        whileTap={{ scale: 0.97 }}
       >
-        {/* Toggle button — tap/click to open */}
-        <button
-          onClick={() => setIsOpen((v) => !v)}
-          className="flex flex-col gap-1 px-3 py-2.5 sm:px-4 sm:py-3 w-full text-left"
+        {/* Dot indicator */}
+        <motion.div
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{
+            background: side === "groom" ? "#C6A75E" : "#C04060",
+            boxShadow: `0 0 8px ${side === "groom" ? "rgba(198,167,94,0.8)" : "rgba(192,64,96,0.8)"}`,
+          }}
+          animate={{ opacity: [1, 0.5, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        <div className="flex-1">
+          <p className="text-[9px] tracking-wider uppercase" style={{ color: "rgba(198,167,94,0.6)" }}>
+            Viewing
+          </p>
+          <p className="text-sm font-bold" style={{ color: "#C6A75E" }}>
+            {sideLabel} Side
+          </p>
+        </div>
+        <motion.svg
+          width="12" height="12" viewBox="0 0 12 12" fill="none"
+          style={{ color: "#C6A75E", flexShrink: 0 }}
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.25 }}
         >
-          <span className="text-[9px] sm:text-[10px] tracking-wider uppercase" style={{ color: mutedColor }}>
-            Viewing As:
-          </span>
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-sm sm:text-base font-bold capitalize"
-              style={{ color: accentColor }}
-            >
-              {side === "groom" ? "Groom" : "Bride"} Side
-            </span>
-            {/* Chevron indicator */}
-            <svg
-              width="12" height="12" viewBox="0 0 12 12" fill="none"
-              style={{
-                color: accentColor,
-                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 0.25s ease",
-                flexShrink: 0,
-              }}
-            >
-              <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-        </button>
+          <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </motion.svg>
+      </motion.button>
 
-        {/* Expandable options */}
+      {/* Dropdown options */}
+      <AnimatePresence>
         {isOpen && (
-          <div
-            className="px-3 pb-3 sm:px-4 sm:pb-4 pt-0 border-t space-y-1.5 sm:space-y-2"
-            style={{ borderColor: "var(--wedding-border)" }}
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute bottom-full mb-2 left-0 rounded-2xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #0B1F3A 0%, #162840 100%)",
+              border: "1.5px solid rgba(198,167,94,0.4)",
+              boxShadow: "0 8px 32px rgba(11,31,58,0.6), 0 0 20px rgba(198,167,94,0.1)",
+              minWidth: "200px",
+            }}
           >
-            <button
-              onClick={() => { onSideChange(otherSide); setIsOpen(false); }}
-              className="w-full text-left text-xs sm:text-sm px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all active:opacity-70"
-              style={{
-                background: "var(--wedding-secondary)",
-                color: textColor,
-              }}
-              data-testid={`switch-to-${otherSide}`}
-            >
-              Switch to {otherSide === "groom" ? "Groom" : "Bride"} Side
-            </button>
-            <button
-              onClick={() => { setIsOpen(false); onBackToSelection(); }}
-              className="w-full text-[10px] sm:text-xs px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all active:opacity-70"
-              style={{
-                background: "transparent",
-                border: `2px solid ${accentColor}`,
-                color: accentColor,
-              }}
-              data-testid="back-to-selection"
-            >
-              ← Back to Selection
-            </button>
-          </div>
+            {/* Shimmer top line */}
+            <div className="h-[1px]" style={{ background: "linear-gradient(90deg, transparent, #C6A75E, transparent)" }} />
+
+            <div className="p-3 space-y-2">
+              <button
+                onClick={() => { onSideChange(otherSide); setIsOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                style={{
+                  background: "rgba(198,167,94,0.12)",
+                  color: "#C6A75E",
+                  border: "1px solid rgba(198,167,94,0.2)",
+                }}
+                data-testid={`switch-to-${otherSide}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{
+                  background: otherSide === "groom" ? "#C6A75E" : "#C04060",
+                }} />
+                Switch to {otherLabel} Side
+              </button>
+              <button
+                onClick={() => { setIsOpen(false); onBackToSelection(); }}
+                className="w-full px-3 py-2 rounded-xl text-xs font-medium transition-all"
+                style={{
+                  background: "transparent",
+                  color: "rgba(198,167,94,0.6)",
+                  border: "1px solid rgba(198,167,94,0.2)",
+                }}
+                data-testid="back-to-selection"
+              >
+                ← Back to Selection
+              </button>
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 }

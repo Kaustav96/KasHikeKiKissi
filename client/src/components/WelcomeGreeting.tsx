@@ -33,37 +33,141 @@ import type { WeddingSide } from "@/context/ThemeContext";
 interface WelcomeGreetingProps {
   side: WeddingSide;
   onComplete: () => void;
+  /**
+   * overlayMode: renders as a fixed transparent overlay on top of the main site
+   * instead of a full-screen blocking view. The animation auto-dismisses and
+   * onComplete is still called when done.
+   */
+  overlayMode?: boolean;
 }
 
-export default function WelcomeGreeting({ side, onComplete }: WelcomeGreetingProps) {
+export default function WelcomeGreeting({ side, onComplete, overlayMode = false }: WelcomeGreetingProps) {
   const [animationPhase, setAnimationPhase] = useState<"enter" | "wave" | "exit">("enter");
 
   const isGroom = side === "groom";
-  const greetingText = isGroom ? "Hi! Welcome to Our Wedding Celebration." : "Hi! Welcome to Our Wedding Celebration.";
+  const greetingText = isGroom
+    ? `Welcome to the Groom's Side`
+    : `Welcome to the Bride's Side`;
   const primaryColor = isGroom ? "#F5D77A" : "#D4AF37";
   const bgGradient = isGroom
     ? "linear-gradient(180deg, #0F1B2E 0%, #14233C 60%, #0C1626 100%)"
     : "linear-gradient(180deg, #9F2A3B 0%, #8B1E2D 60%, #5E141F 100%)";
 
-  useEffect(() => {
-    // Animation sequence timing
-    const waveTimer = setTimeout(() => {
-      setAnimationPhase("wave");
-      // Optional: Play gentle chime sound here
-      // const audio = new Audio("/greeting-chime.mp3");
-      // audio.volume = 0.3;
-      // audio.play().catch(() => {}); // Ignore autoplay errors
-    }, 500);
-    const exitTimer = setTimeout(() => setAnimationPhase("exit"), 2300);
-    const completeTimer = setTimeout(() => onComplete(), 3000);
+  // Overlay mode: snappy — 1.2s total visible, ~1.5s before onComplete
+  const timings = overlayMode
+    ? { wave: 200, exit: 1000, complete: 1500 }
+    : { wave: 500, exit: 2300, complete: 3000 };
 
+  useEffect(() => {
+    const waveTimer = setTimeout(() => setAnimationPhase("wave"), timings.wave);
+    const exitTimer = setTimeout(() => setAnimationPhase("exit"), timings.exit);
+    const completeTimer = setTimeout(() => onComplete(), timings.complete);
     return () => {
       clearTimeout(waveTimer);
       clearTimeout(exitTimer);
       clearTimeout(completeTimer);
     };
-  }, [onComplete]);
+  }, [onComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── OVERLAY MODE: centred card floating above the main site ──────────────
+  if (overlayMode) {
+    return (
+      <AnimatePresence>
+        {animationPhase !== "exit" && (
+          <motion.div
+            className="fixed inset-0 z-[90] flex items-center justify-center pointer-events-none px-4"
+            style={{ background: "rgba(11,31,58,0.55)", backdropFilter: "blur(6px)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.div
+              className="relative flex flex-col items-center"
+              initial={{ scale: 0.85, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: -20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 24 }}
+            >
+              {/* Character */}
+              <motion.div
+                animate={{ y: [0, -7, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                {isGroom
+                  ? <GroomCharacter animationPhase={animationPhase} />
+                  : <BrideCharacter animationPhase={animationPhase} />}
+              </motion.div>
+
+              {/* Speech bubble */}
+              <AnimatePresence>
+                {animationPhase === "wave" && (
+                  <motion.div
+                    className="mt-5 px-6 py-4 rounded-2xl shadow-2xl relative max-w-[260px] sm:max-w-xs text-center"
+                    style={{
+                      background: "rgba(255,255,255,0.97)",
+                      border: `2px solid ${primaryColor}`,
+                      boxShadow: `0 10px 40px rgba(0,0,0,0.35), 0 0 24px ${primaryColor}50`,
+                    }}
+                    initial={{ opacity: 0, scale: 0.6, y: 14 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.85, y: -8 }}
+                    transition={{ type: "spring", stiffness: 220, damping: 18 }}
+                  >
+                    {/* Tail */}
+                    <div
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 rotate-45"
+                      style={{
+                        background: "rgba(255,255,255,0.97)",
+                        border: `2px solid ${primaryColor}`,
+                        borderRight: "none",
+                        borderBottom: "none",
+                      }}
+                    />
+                    <p className="font-serif text-base sm:text-lg font-semibold relative z-10"
+                      style={{ color: isGroom ? "#14233C" : "#8B1E2D" }}>
+                      👋 {greetingText}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Confetti burst */}
+              <AnimatePresence>
+                {animationPhase === "wave" && (
+                  <div className="absolute inset-0 pointer-events-none overflow-visible">
+                    {[...Array(16)].map((_, i) => {
+                      const colors = [primaryColor, "#D4AF37", "#C6A75E", "#F5D77A"];
+                      const angle = (i * 22.5 * Math.PI) / 180;
+                      const dist = 120 + Math.random() * 80;
+                      return (
+                        <motion.div
+                          key={i}
+                          className="absolute w-2 h-3 rounded-sm"
+                          style={{ background: colors[i % colors.length], left: "50%", top: "40%" }}
+                          initial={{ opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }}
+                          animate={{
+                            opacity: [0, 1, 0.8, 0],
+                            scale: [0, 1, 0.8, 0],
+                            x: Math.cos(angle) * dist,
+                            y: Math.sin(angle) * dist - 40,
+                            rotate: Math.random() * 540 - 270,
+                          }}
+                          transition={{ duration: 1.4, delay: i * 0.025, ease: [0.16, 1, 0.3, 1] }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // ── LEGACY FULLSCREEN MODE (unchanged) ──────────────────────────────────
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"

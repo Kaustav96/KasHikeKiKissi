@@ -237,7 +237,7 @@ export default function SplitSideSelection({ onSelectSide }: SplitSideSelectionP
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
           >
-            Select your side to begin the celebration
+            Choose your side to begin the celebration
           </motion.p>
         </motion.div>
       </div>
@@ -297,7 +297,7 @@ export default function SplitSideSelection({ onSelectSide }: SplitSideSelectionP
           </div>
 
           <p className="text-[9px] tracking-wide text-white/90">
-            Select your side to begin the celebration
+            Choose your side to begin the celebration
           </p>
         </motion.div>
 
