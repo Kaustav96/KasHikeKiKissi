@@ -1,19 +1,39 @@
 import { motion } from "framer-motion";
-import { MapPin, ChevronDown } from "lucide-react";
+import { MapPin, ChevronDown, Heart } from "lucide-react";
 import { Countdown } from "./Countdown";
 import type { WeddingConfig } from "@shared/schema";
 
 interface InvitationCardHeroProps {
   config: WeddingConfig;
+  onFindInvitation?: () => void;
+  onRsvpNow?: () => void;
 }
 
-export default function InvitationCardHero({ config }: InvitationCardHeroProps) {
+export default function InvitationCardHero({ config, onFindInvitation, onRsvpNow }: InvitationCardHeroProps) {
   const handleScrollDown = () => {
     const nextSection = document.querySelector('[data-section="events"]');
     if (nextSection) {
       nextSection.scrollIntoView({ behavior: "smooth" });
     } else {
       window.scrollTo({ top: window.innerHeight, behavior: "smooth" });
+    }
+  };
+
+  const handleFindInvitation = () => {
+    if (onFindInvitation) {
+      onFindInvitation();
+    } else {
+      const el = document.getElementById("find-invite");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleRsvpNow = () => {
+    if (onRsvpNow) {
+      onRsvpNow();
+    } else {
+      const el = document.getElementById("rsvp");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -339,11 +359,35 @@ export default function InvitationCardHero({ config }: InvitationCardHeroProps) 
               <p className="text-[11px] sm:text-xs leading-relaxed max-w-md mx-auto mb-2 sm:mb-3 px-2" style={{ color: "#9E7C1B" }}>
                 With the blessings of our families and loved ones,<br />we invite you to join us in this joyous celebration
               </p>
-              <div className="flex items-center justify-center gap-2 text-lg sm:text-xl">
+              <div className="flex items-center justify-center gap-2 text-lg sm:text-xl mb-4 sm:mb-5">
                 <span>✨</span>
                 <span>🙏</span>
                 <span>✨</span>
               </div>
+            </motion.div>
+
+            {/* PRIMARY CTA BUTTONS */}
+            <motion.div
+              className="flex justify-center mt-2"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.3, duration: 0.6 }}
+            >
+              <motion.button
+                onClick={handleRsvpNow}
+                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #C6A75E 0%, #D4AF37 100%)",
+                  color: "#0B1F3A",
+                  border: "2px solid #C6A75E",
+                  boxShadow: "0 4px 20px rgba(198,167,94,0.4)",
+                }}
+                whileHover={{ scale: 1.04, boxShadow: "0 6px 28px rgba(198,167,94,0.55)" }}
+                whileTap={{ scale: 0.96 }}
+              >
+                <Heart size={15} />
+                RSVP Now
+              </motion.button>
             </motion.div>
           </div>
 

@@ -14,11 +14,10 @@ import { Countdown } from "@/components/Countdown";
 import KHCrest from "@/components/KHCrest";
 import SplitSideSelection from "@/components/SplitSideSelection";
 import WelcomeGreeting from "@/components/WelcomeGreeting";
-import RoyalSealGate from "@/components/RoyalSealGate";
-import DoorOpeningAnimation from "@/components/DoorOpeningAnimation";
 import InvitationCardHero from "@/components/InvitationCardHero";
 import Header from "@/components/Header";
 import ViewingSideOverlay from "@/components/ViewingSideOverlay";
+import RSVPQuickModal from "@/components/rsvp/RSVPQuickModal";
 import { useWeddingTheme } from "@/context/ThemeContext";
 import { useMusic } from "@/context/MusicContext";
 import FloatingContact from "@/components/FloatingContact";
@@ -1510,11 +1509,12 @@ export default function Home() {
   const { setMusicUrl, fadeIn, stop, setOnTrackEnd, hasStarted, isPlaying } = useMusic();
   const { setSide, side } = useWeddingTheme();
 
-  // New flow states
-  const [splitSelectionDone, setSplitSelectionDone] = useState(false); // Step 1: Split side selection
-  const [greetingShown, setGreetingShown] = useState(false); // Step 2: Welcome greeting
-  const [sealClicked, setSealClicked] = useState(false); // Step 3: Seal clicked
-  const [showMainSite, setShowMainSite] = useState(false); // Step 4: Show main website
+  // Streamlined flow: only 2 steps - side selection then main site
+  const [splitSelectionDone, setSplitSelectionDone] = useState(false);
+  // Greeting overlay: shows on top of main site for ~2s then auto-fades
+  const [showGreeting, setShowGreeting] = useState(false);
+  // RSVP quick modal (triggered from hero CTA)
+  const [rsvpModalOpen, setRsvpModalOpen] = useState(false);
 
   const [pendingRsvpGuest, setPendingRsvpGuest] = useState<any>(null);
   const [searchTrigger, setSearchTrigger] = useState<{ fn: () => void; query: string } | null>(null);
@@ -1591,12 +1591,12 @@ export default function Home() {
   /* ================= APPLY PLAYLIST WHEN IT CHANGES ================= */
 
   useEffect(() => {
-    if (!playlist.length || !showMainSite) return;
+    if (!playlist.length || !splitSelectionDone) return;
 
     // ALWAYS update this ref first to track that side has been selected
     // This prevents isFreshSelection from being true on multiple effect runs
-    const isFreshSelection = !prevSideSelectedRef.current && showMainSite;
-    prevSideSelectedRef.current = showMainSite;
+    const isFreshSelection = !prevSideSelectedRef.current && splitSelectionDone;
+    prevSideSelectedRef.current = splitSelectionDone;
 
     // CRITICAL: If music has already been started (playing OR paused) and we're using background music,
     // NEVER restart it - preserve the current state (playing or paused position)
@@ -1642,7 +1642,7 @@ export default function Home() {
       console.log('[Home] Not starting music. Updating ref only.');
       currentPlaylistRef.current = playlist;
     }
-  }, [playlist, isBackgroundMusic, showMainSite, stop, setMusicUrl, fadeIn, hasStarted, isPlaying]);
+  }, [playlist, isBackgroundMusic, splitSelectionDone, stop, setMusicUrl, fadeIn, hasStarted, isPlaying]);
 
   /* ================= AUTO NEXT TRACK ================= */
 
@@ -1706,50 +1706,13 @@ export default function Home() {
         onSelectSide={(selectedSide) => {
           setSide(selectedSide);
           setSplitSelectionDone(true);
+          setShowGreeting(true); // show greeting overlay on top of main site
         }}
       />
     );
   }
 
-  // Step 2: Welcome Greeting Animation
-  if (!greetingShown) {
-    return (
-      <WelcomeGreeting
-        side={side}
-        onComplete={() => {
-          setGreetingShown(true);
-        }}
-      />
-    );
-  }
-
-  // Step 3: Royal Seal Gate
-  if (!sealClicked) {
-    return (
-      <RoyalSealGate
-        currentSide={side}
-        onOpen={() => {
-          // After seal opens, show main site directly
-          setSealClicked(true);
-          // Short delay then show main site
-          setTimeout(() => {
-            setShowMainSite(true);
-          }, 900);
-        }}
-        onBackToSelection={() => {
-          // Go back to split selection (reset entire flow)
-          setSplitSelectionDone(false);
-          setGreetingShown(false);
-        }}
-        onSelectSide={(newSide) => {
-          // Allow switching side from seal page without going back
-          setSide(newSide);
-        }}
-      />
-    );
-  }
-
-  // Step 4: Main Wedding Website
+  // Step 2: Main Wedding Website (with greeting overlay on top)
   return (
     <motion.div
       key="main"
@@ -1759,24 +1722,72 @@ export default function Home() {
     >
       <Header />
 
+      {/* Non-blocking greeting overlay — auto-dismisses after ~2.2s */}
+      {showGreeting && (
+        <WelcomeGreeting
+          side={side}
+          overlayMode
+          onComplete={() => setShowGreeting(false)}
+        />
+      )}
+
       <ViewingSideOverlay
         onBackToSelection={() => {
-          // Go back to split selection (reset entire flow)
-          setShowMainSite(false);
-          setSealClicked(false);
-          setGreetingShown(false);
+          // Stop music and fully reset state before going back to selection
+          stop();
+          currentPlaylistRef.current = [];
+          currentTrackIndexRef.current = 0;
+          prevSideSelectedRef.current = false;
           setSplitSelectionDone(false);
+          setShowGreeting(false);
         }}
         onSideChange={(newSide) => {
           setSide(newSide);
+          setShowGreeting(true); // show greeting for new side too
+        }}
+      />
+
+      {/* RSVP Quick Modal — name lookup only; resolves to single RsvpSection */}
+      <RSVPQuickModal
+        open={rsvpModalOpen}
+        onClose={() => setRsvpModalOpen(false)}
+        onResolve={(guest, name) => {
+          // guest is set only for single unambiguous matches — safe to prefill fully.
+          // name-only (multi-picker selection, not-found, skip with text) → prefill
+          //   just the name field so the form isn't entirely blank but stays editable.
+          // pure skip with no name typed → null → fully blank form.
+          if (guest) {
+            setPendingRsvpGuest(guest);
+          } else if (name) {
+            // Name hint only: {name, rsvpStatus: null} → form pre-fills name, form is otherwise empty
+            setPendingRsvpGuest({ name, rsvpStatus: null });
+          } else {
+            setPendingRsvpGuest(null);
+          }
+          // Scroll to the single RSVP section after modal closes
+          setTimeout(() => {
+            const el = document.getElementById("rsvp");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 300);
+          setRsvpModalOpen(false);
         }}
       />
 
       <main>
         {/* Invitation Card as Hero */}
-        <InvitationCardHero config={config} />
+        <InvitationCardHero
+          config={config}
+          onFindInvitation={() => {
+            const el = document.getElementById("find-invite");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          onRsvpNow={() => {
+            setRsvpModalOpen(true);
+          }}
+        />
             <FindByInviteSection
               onEditRsvp={(guest) => {
+                // Prefill RsvpSection and scroll to it
                 setPendingRsvpGuest(guest);
                 setTimeout(() => {
                   const el = document.getElementById("rsvp");
