@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, X as XIcon, ChevronRight, User } from "lucide-react";
+import { Loader2, X as XIcon, ChevronRight, User } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface RSVPQuickModalProps {
@@ -127,7 +127,7 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
               <div>
                 <p className="text-[10px] tracking-[0.3em] uppercase font-medium"
                   style={{ color: "var(--wedding-accent)", opacity: 0.7 }}>
-                  {multipleGuests.length > 0 ? "Multiple matches found" : "Let's get started"}
+                  {multipleGuests.length > 0 ? "Multiple matches found" : "Let's get you started"}
                 </p>
                 <h2 className="font-serif text-xl font-bold mt-0.5"
                   style={{ color: "var(--wedding-text)" }}>
@@ -234,8 +234,8 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
                     exit={{ opacity: 0, x: -16 }}
                     transition={{ duration: 0.18 }}
                   >
-                    <p className="text-sm mb-5 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
-                      Enter your name so we can find your invitation and personalise your RSVP.
+                    <p className="text-sm mb-6 leading-relaxed" style={{ color: "var(--wedding-muted)" }}>
+                      Enter your name to find your invitation and continue your RSVP.
                     </p>
 
                     <label className="text-[11px] tracking-[0.2em] uppercase font-semibold block mb-2"
@@ -243,14 +243,13 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
                       Your Name
                     </label>
 
-                    {/* Stacked layout on mobile — full-width input, full-width button */}
-                    <div className="flex flex-col gap-2.5 mb-4">
+                    <div className="flex flex-col gap-3 mb-5">
                       <input
                         type="text"
                         value={nameInput}
                         onChange={(e) => { setNameInput(e.target.value); setNameNotFound(false); }}
                         onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                        placeholder="Enter your full name..."
+                        placeholder="Enter your full name"
                         autoFocus={!isTouch}
                         autoComplete="name"
                         autoCorrect="off"
@@ -261,7 +260,6 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
                           border: "1.5px solid var(--wedding-border)",
                           color: "var(--wedding-text)",
                           outline: "none",
-                          // 16px prevents iOS auto-zoom on focus
                           fontSize: 16,
                           height: 52,
                         }}
@@ -269,7 +267,7 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
                       <motion.button
                         onClick={handleSearch}
                         disabled={searching || nameInput.trim().length < 2}
-                        className="w-full rounded-xl flex items-center justify-center gap-2 font-semibold disabled:opacity-40 active:scale-[0.97]"
+                        className="w-full rounded-xl flex items-center justify-center gap-2 font-semibold disabled:opacity-40"
                         style={{
                           background: "var(--wedding-accent)",
                           color: "var(--wedding-bg)",
@@ -282,7 +280,7 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
                       >
                         {searching
                           ? <><Loader2 size={16} className="animate-spin" /> Searching…</>
-                          : <><Search size={16} /> Find My Invitation</>}
+                          : <>Continue <ChevronRight size={16} /></>}
                       </motion.button>
                     </div>
 
@@ -318,17 +316,19 @@ export default function RSVPQuickModal({ open, onClose, onResolve, initialName }
                     {!nameNotFound && (
                       <button
                         onClick={() => resolve(null, nameInput.trim())}
-                        className="w-full rounded-2xl text-sm flex items-center justify-center gap-1.5 transition-all active:opacity-70"
+                        className="w-full rounded-2xl text-sm flex items-center justify-center gap-1 transition-all active:opacity-70"
                         style={{
-                          minHeight: 48,
+                          minHeight: 44,
                           background: "transparent",
                           color: "var(--wedding-muted)",
-                          border: "1px solid var(--wedding-border)",
-                          opacity: 0.7,
-                          fontSize: 14,
+                          border: "none",
+                          opacity: 0.65,
+                          fontSize: 13,
+                          textDecoration: "underline",
+                          textUnderlineOffset: 3,
                         }}
                       >
-                        Skip — go straight to RSVP <ChevronRight size={13} />
+                        I'll fill my details manually →
                       </button>
                     )}
                   </motion.div>
