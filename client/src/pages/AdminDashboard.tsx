@@ -501,88 +501,169 @@ function GuestsTab({ guests, events, qc, toast }: { guests: Guest[]; events: Wed
         </div>
       )}
 
-      <div className="overflow-x-auto -mx-3 sm:mx-0">
-        <table className="w-full text-sm min-w-[640px]" data-testid="guests-table">
-          <thead>
-            <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="pb-2 pr-2 sm:pr-4 pl-3 sm:pl-0">Name</th>
-              <th className="pb-2 pr-2 sm:pr-4">Side</th>
-              <th className="pb-2 pr-2 sm:pr-4">RSVP</th>
-              <th className="pb-2 pr-2 sm:pr-4 hidden md:table-cell">Events</th>
-              <th className="pb-2 pr-2 sm:pr-4 hidden lg:table-cell">Food</th>
-              <th className="pb-2 pr-2 sm:pr-4 hidden xl:table-cell">Accom</th>
-              <th className="pb-2 pr-2 sm:pr-4 hidden xl:table-cell">Invite Link</th>
-              <th className="pb-2 pr-3 sm:pr-0"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredGuests.map((g) => {
-              const guestEventIds = Array.isArray(g.eventsAttending) ? g.eventsAttending : [];
-              const guestEventNames = guestEventIds.map(id => eventMap.get(id) || "").filter(Boolean);
-
-              return (
-                <tr key={g.id} className="border-b border-border" data-testid={`guest-row-${g.id}`}>
-                  <td className="py-2 pr-2 sm:pr-4 pl-3 sm:pl-0 text-foreground">{g.name}</td>
-                  <td className="py-2 pr-2 sm:pr-4">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                      {g.side}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-2 sm:pr-4">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" :
-                      g.rsvpStatus === "declined" ? "bg-red-100 text-red-800" :
-                        "bg-yellow-100 text-yellow-800"
-                      }`}>
-                      {g.rsvpStatus}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-2 sm:pr-4 hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {guestEventNames.length > 0 ? (
-                        guestEventNames.map((name, idx) => (
-                          <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
-                            {name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2 pr-2 sm:pr-4 hidden lg:table-cell">
-                    <span className="text-xs text-muted-foreground capitalize">
-                      {g.foodPreference || "—"}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-2 sm:pr-4 hidden xl:table-cell">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      g.accommodationRequired
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-gray-100 text-gray-600"
-                    }`}>
-                      {g.accommodationRequired ? "Yes" : "No"}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-2 sm:pr-4 hidden xl:table-cell">
-                    <code className="text-[10px] bg-muted px-2 py-0.5 rounded text-muted-foreground">
-                      /invite/{g.inviteSlug}
-                    </code>
-                  </td>
-                  <td className="py-2">
-                    <button
-                      onClick={() => deleteMutation.mutate(g.id)}
-                      className="text-destructive hover:text-destructive/80"
-                      data-testid={`delete-guest-${g.id}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Mobile card list */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {filteredGuests.map((g) => {
+          const guestEventIds = Array.isArray(g.eventsAttending) ? g.eventsAttending : [];
+          const guestEventNames = guestEventIds.map(id => eventMap.get(id) || "").filter(Boolean);
+          return (
+            <div key={g.id} className="bg-card border rounded-lg p-3 space-y-2" data-testid={`guest-row-${g.id}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{g.name}</p>
+                  <code className="text-[10px] text-muted-foreground">/invite/{g.inviteSlug}</code>
+                </div>
+                <button
+                  onClick={() => deleteMutation.mutate(g.id)}
+                  className="text-destructive hover:text-destructive/80 shrink-0 mt-0.5"
+                  data-testid={`delete-guest-${g.id}`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{g.side}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" : g.rsvpStatus === "declined" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}>
+                  {g.rsvpStatus}
+                </span>
+                {g.foodPreference && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 capitalize">{g.foodPreference}</span>
+                )}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${g.accommodationRequired ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}`}>
+                  Accom: {g.accommodationRequired ? "Yes" : "No"}
+                </span>
+              </div>
+              {guestEventNames.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {guestEventNames.map((name, idx) => (
+                    <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">{name}</span>
+                  ))}
+                </div>
+              )}
+              {g.dietaryRequirements && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Dietary:</span> {g.dietaryRequirements}
+                </div>
+              )}
+              {g.message && (
+                <div className="text-xs text-muted-foreground border-t pt-1.5 mt-1">
+                  <span className="font-medium text-foreground">Message:</span> {g.message}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
+
+      {/* Desktop table */}
+      {(() => {
+        const anyDietary = filteredGuests.some(g => !!g.dietaryRequirements);
+        const anyMessage = filteredGuests.some(g => !!g.message);
+        return (
+          <div className="overflow-x-auto -mx-3 sm:mx-0 hidden md:block">
+            <table className="w-full text-sm min-w-[800px]" data-testid="guests-table">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th className="pb-2 pr-3 pl-3 sm:pl-0">Name</th>
+                  <th className="pb-2 pr-3">Side</th>
+                  <th className="pb-2 pr-3">RSVP</th>
+                  <th className="pb-2 pr-3">Events</th>
+                  <th className="pb-2 pr-3">Food</th>
+                  <th className="pb-2 pr-3">Accom</th>
+                  {anyDietary && <th className="pb-2 pr-3">Dietary</th>}
+                  {anyMessage && <th className="pb-2 pr-3">Message</th>}
+                  <th className="pb-2 pr-3 hidden xl:table-cell">Invite Link</th>
+                  <th className="pb-2 pr-3 sm:pr-0"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGuests.map((g) => {
+                  const guestEventIds = Array.isArray(g.eventsAttending) ? g.eventsAttending : [];
+                  const guestEventNames = guestEventIds.map(id => eventMap.get(id) || "").filter(Boolean);
+
+                  return (
+                    <tr key={g.id} className="border-b border-border align-top" data-testid={`guest-row-${g.id}`}>
+                      <td className="py-2 pr-3 pl-3 sm:pl-0 text-foreground font-medium">{g.name}</td>
+                      <td className="py-2 pr-3">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                          {g.side}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${g.rsvpStatus === "confirmed" ? "bg-green-100 text-green-800" :
+                          g.rsvpStatus === "declined" ? "bg-red-100 text-red-800" :
+                            "bg-yellow-100 text-yellow-800"
+                          }`}>
+                          {g.rsvpStatus}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <div className="flex flex-wrap gap-1">
+                          {guestEventNames.length > 0 ? (
+                            guestEventNames.map((name, idx) => (
+                              <span key={idx} className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                                {name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {g.foodPreference || "—"}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          g.accommodationRequired
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {g.accommodationRequired ? "Yes" : "No"}
+                        </span>
+                      </td>
+                      {anyDietary && (
+                        <td className="py-2 pr-3 max-w-[160px]">
+                          {g.dietaryRequirements ? (
+                            <span className="text-xs text-foreground break-words">{g.dietaryRequirements}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      )}
+                      {anyMessage && (
+                        <td className="py-2 pr-3 max-w-[200px]">
+                          {g.message ? (
+                            <span className="text-xs text-foreground break-words italic">"{g.message}"</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      )}
+                      <td className="py-2 pr-3 hidden xl:table-cell">
+                        <code className="text-[10px] bg-muted px-2 py-0.5 rounded text-muted-foreground">
+                          /invite/{g.inviteSlug}
+                        </code>
+                      </td>
+                      <td className="py-2">
+                        <button
+                          onClick={() => deleteMutation.mutate(g.id)}
+                          className="text-destructive hover:text-destructive/80"
+                          data-testid={`delete-guest-${g.id}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
     </div>
   );
 }
