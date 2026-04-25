@@ -650,18 +650,35 @@ function RsvpSection({ events, config, prefillGuest, onRsvpSuccess }: { events: 
       // Full prefill for existing guest
       setIsUpdating(true);
       setSelectedGuest(prefillGuest);
-      form.setValue("rsvpStatus", prefillGuest.rsvpStatus);
-      form.setValue("adultsCount", prefillGuest.adultsCount || 1);
-      form.setValue("childrenCount", prefillGuest.childrenCount || 0);
-      form.setValue("foodPreference", prefillGuest.foodPreference || "");
-      form.setValue("accommodationRequired", prefillGuest.accommodationRequired || false);
-      form.setValue("eventsAttending", Array.isArray(prefillGuest.eventsAttending) ? prefillGuest.eventsAttending : []);
-      form.setValue("dietaryRequirements", prefillGuest.dietaryRequirements || "");
-      form.setValue("message", prefillGuest.message || "");
+      form.reset({
+        name: prefillGuest.name,
+        rsvpStatus: prefillGuest.rsvpStatus,
+        adultsCount: prefillGuest.adultsCount || 1,
+        childrenCount: prefillGuest.childrenCount || 0,
+        foodPreference: prefillGuest.foodPreference || "",
+        accommodationRequired: prefillGuest.accommodationRequired || false,
+        eventsAttending: Array.isArray(prefillGuest.eventsAttending) ? prefillGuest.eventsAttending : [],
+        dietaryRequirements: prefillGuest.dietaryRequirements || "",
+        message: prefillGuest.message || "",
+        side: side as "groom" | "bride" | "both",
+      });
+    } else {
+      // Name-only (not found or new guest) — reset all fields, only keep name
+      setIsUpdating(false);
+      setSelectedGuest(null);
+      form.reset({
+        name: prefillGuest.name,
+        rsvpStatus: undefined as any,
+        adultsCount: 1,
+        childrenCount: 0,
+        foodPreference: undefined,
+        accommodationRequired: undefined as any,
+        eventsAttending: [],
+        dietaryRequirements: "",
+        message: "",
+        side: side as "groom" | "bride" | "both",
+      });
     }
-
-    // Always set the name (whether existing or new)
-    form.setValue("name", prefillGuest.name);
   }, [prefillGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for existing guest by name
